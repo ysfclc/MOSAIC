@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - "incoming/mosaic.zip"
+      - "incoming/MOSAIC-Phase-1-Repository.zip"
   workflow_dispatch:
 
 permissions:
@@ -40,7 +41,11 @@ jobs:
 
           ARCHIVE_PATH=""
           if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
-            ARCHIVE_PATH="incoming/mosaic.zip"
+            if [[ -s "$GITHUB_WORKSPACE/incoming/mosaic.zip" ]]; then
+              ARCHIVE_PATH="incoming/mosaic.zip"
+            elif [[ -s "$GITHUB_WORKSPACE/incoming/MOSAIC-Phase-1-Repository.zip" ]]; then
+              ARCHIVE_PATH="incoming/MOSAIC-Phase-1-Repository.zip"
+            fi
           elif [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
             ARCHIVE_PATH="$(python3 - "$GITHUB_EVENT_PATH" <<'PY_EVENT'
           import json, sys
@@ -51,14 +56,20 @@ jobs:
               changed.update(commit.get("added", []))
               changed.update(commit.get("modified", []))
               changed.update(commit.get("removed", []))
-          if "incoming/mosaic.zip" in changed:
-              print("incoming/mosaic.zip")
+          candidates = (
+              "incoming/mosaic.zip",
+              "incoming/MOSAIC-Phase-1-Repository.zip",
+          )
+          for candidate in candidates:
+              if candidate in changed:
+                  print(candidate)
+                  break
           PY_EVENT
           )"
           fi
 
           if [[ -z "$ARCHIVE_PATH" || ! -s "$GITHUB_WORKSPACE/$ARCHIVE_PATH" ]]; then
-            echo "::error::Upload a non-empty source archive at incoming/mosaic.zip."
+            echo "::error::Upload a non-empty source archive as incoming/mosaic.zip or incoming/MOSAIC-Phase-1-Repository.zip."
             exit 1
           fi
 
