@@ -1,0 +1,675 @@
+name: Build MOSAIC Android APK
+
+on:
+  push:
+    paths:
+      - "incoming/mosaic.zip"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mosaic-android-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    name: Resolve upload revision and prevent duplicate imports
+    runs-on: ubuntu-latest
+    outputs:
+      already_imported: ${{ steps.resolve.outputs.already_imported }}
+      archive_path: ${{ steps.resolve.outputs.archive_path }}
+      upload_commit: ${{ steps.resolve.outputs.upload_commit }}
+    steps:
+      - name: Check out the exact triggering revision
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Resolve the uploaded source ZIP
+        id: resolve
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF_TYPE" != "branch" ]]; then
+            echo "::error::MOSAIC imports must run from a branch."
+            exit 1
+          fi
+
+          ARCHIVE_PATH=""
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+            ARCHIVE_PATH="incoming/mosaic.zip"
+          elif [[ "$GITHUB_EVENT_NAME" == "push" ]]; then
+            ARCHIVE_PATH="$(python3 - "$GITHUB_EVENT_PATH" <<'PY_EVENT'
+          import json, sys
+          with open(sys.argv[1], encoding="utf-8") as stream:
+              event = json.load(stream)
+          changed = set()
+          for commit in event.get("commits", []):
+              changed.update(commit.get("added", []))
+              changed.update(commit.get("modified", []))
+              changed.update(commit.get("removed", []))
+          if "incoming/mosaic.zip" in changed:
+              print("incoming/mosaic.zip")
+          PY_EVENT
+          )"
+          fi
+
+          if [[ -z "$ARCHIVE_PATH" || ! -s "$GITHUB_WORKSPACE/$ARCHIVE_PATH" ]]; then
+            echo "::error::Upload a non-empty source archive at incoming/mosaic.zip."
+            exit 1
+          fi
+
+          UPLOAD_COMMIT="$(git log -1 --format=%H "$GITHUB_SHA" -- "$ARCHIVE_PATH")"
+          if [[ ! "$UPLOAD_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::Unable to identify the upload commit for $ARCHIVE_PATH."
+            exit 1
+          fi
+
+          git fetch --no-tags origin "$GITHUB_REF_NAME"
+          NOTE_PATH="notes/imports/${UPLOAD_COMMIT}.md"
+          ALREADY_IMPORTED="false"
+          if git cat-file -e "FETCH_HEAD:$NOTE_PATH" 2>/dev/null; then
+            ALREADY_IMPORTED="true"
+            echo "This exact upload commit was already integrated. Rerun is an idempotent no-op."
+          fi
+
+          {
+            echo "already_imported=$ALREADY_IMPORTED"
+            echo "archive_path=$ARCHIVE_PATH"
+            echo "upload_commit=$UPLOAD_COMMIT"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Record preflight failure
+        if: failure()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP"
+          cat > "$RUNNER_TEMP/MOSAIC-Preflight-Failure.md" <<NOTE
+          # MOSAIC import preflight failed
+
+          - Repository: $GITHUB_REPOSITORY
+          - Ref: $GITHUB_REF
+          - Commit: $GITHUB_SHA
+          - Event: $GITHUB_EVENT_NAME
+          - Workflow: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
+
+          No source archive was extracted or integrated by this run.
+          NOTE
+          cat "$RUNNER_TEMP/MOSAIC-Preflight-Failure.md" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload preflight report
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: MOSAIC-Preflight-Report
+          path: ${{ runner.temp }}/MOSAIC-Preflight-Failure.md
+          if-no-files-found: warn
+          retention-days: 7
+
+  build:
+    needs: preflight
+    if: needs.preflight.outputs.already_imported != 'true'
+    name: Validate, extract, build and integrate
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    env:
+      MOSAIC_ARCHIVE_PATH: ${{ needs.preflight.outputs.archive_path }}
+      MOSAIC_UPLOAD_COMMIT: ${{ needs.preflight.outputs.upload_commit }}
+    steps:
+      - name: Check out upload revision
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Initialize build log
+        shell: bash
+        run: |
+          set -euo pipefail
+          LOG_FILE="$RUNNER_TEMP/MOSAIC-Build-Validation.log"
+          : > "$LOG_FILE"
+          echo "MOSAIC_BUILD_LOG=$LOG_FILE" >> "$GITHUB_ENV"
+          {
+            echo "MOSAIC import started: $(date -u +'%Y-%m-%dT%H:%M:%SZ')"
+            echo "Repository: $GITHUB_REPOSITORY"
+            echo "Branch: $GITHUB_REF_NAME"
+            echo "Upload commit: $MOSAIC_UPLOAD_COMMIT"
+          } | tee -a "$LOG_FILE"
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          accept-android-sdk-licenses: true
+
+      - name: Install pinned Android SDK packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdkmanager --install \
+            "platform-tools" \
+            "platforms;android-37" \
+            "build-tools;36.0.0" 2>&1 | tee -a "$MOSAIC_BUILD_LOG"
+
+      - name: Install pinned Gradle 9.3.1
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: "9.3.1"
+
+      - name: Validate and safely extract source ZIP
+        id: import
+        shell: bash
+        run: |
+          set -euo pipefail
+          ZIP_FILE="$GITHUB_WORKSPACE/$MOSAIC_ARCHIVE_PATH"
+          STAGING_DIR="$RUNNER_TEMP/mosaic-zip-staging"
+          rm -rf "$STAGING_DIR"
+          mkdir -p "$STAGING_DIR"
+          test -s "$ZIP_FILE"
+          sha256sum "$ZIP_FILE" | tee "$RUNNER_TEMP/MOSAIC-Source-Archive-SHA256.txt" | tee -a "$MOSAIC_BUILD_LOG"
+
+          python3 - "$ZIP_FILE" "$STAGING_DIR" <<'PY_IMPORT' 2>&1 | tee -a "$MOSAIC_BUILD_LOG"
+          import os
+          import re
+          import shutil
+          import stat
+          import sys
+          import zipfile
+          from pathlib import Path, PurePosixPath, PureWindowsPath
+
+          archive = Path(sys.argv[1])
+          staging = Path(sys.argv[2]).resolve()
+          MAX_ARCHIVE = 750 * 1024 * 1024
+          MAX_TOTAL = 3 * 1024 * 1024 * 1024
+          MAX_FILE = 512 * 1024 * 1024
+          MAX_ENTRIES = 60000
+          MAX_RATIO = 250
+          SECRET_SUFFIXES = {".jks", ".keystore", ".p12", ".pfx", ".pem", ".p8", ".key", ".mobileprovision"}
+          SECRET_NAMES = {
+              "local.properties", ".env", ".npmrc", ".pypirc", ".netrc",
+              "keystore.properties", "key.properties", "signing.properties",
+          }
+          TEXT_SUFFIXES = {
+              ".txt", ".md", ".properties", ".gradle", ".kts", ".kt", ".java",
+              ".json", ".yaml", ".yml", ".xml", ".py", ".sh", ".toml", ".ini",
+              ".conf", ".config", ".js", ".ts", ".tsx", ".jsx", ".html", ".css",
+          }
+          SECRET_PATTERNS = [
+              re.compile(rb"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----"),
+              re.compile(rb"\bAKIA[0-9A-Z]{16}\b"),
+              re.compile(rb"\bAIza[0-9A-Za-z_-]{35}\b"),
+              re.compile(rb"\bgh[pousr]_[A-Za-z0-9]{30,}\b"),
+              re.compile(rb"\bgithub_pat_[A-Za-z0-9_]{30,}\b"),
+              re.compile(rb"(?im)^\s*(?:storePassword|keyPassword|signingPassword)\s*[:=]\s*['\"][^'\"]{4,}['\"]"),
+              re.compile(rb"(?im)^\s*(?:client_secret|api_key|access_token|refresh_token)\s*[:=]\s*['\"][A-Za-z0-9_./+=-]{20,}['\"]"),
+          ]
+
+          def fail(message):
+              print(f"::error::{message}", file=sys.stderr)
+              raise SystemExit(1)
+
+          if not archive.is_file() or archive.stat().st_size == 0:
+              fail("The uploaded archive is missing or empty.")
+          if archive.stat().st_size > MAX_ARCHIVE:
+              fail("Archive exceeds the 750 MiB compressed upload limit.")
+          if not zipfile.is_zipfile(archive):
+              fail("incoming/mosaic.zip is not a valid ZIP file.")
+
+          try:
+              with zipfile.ZipFile(archive) as zf:
+                  infos = zf.infolist()
+                  if not infos or len(infos) > MAX_ENTRIES:
+                      fail("Archive is empty or contains too many entries.")
+                  if zf.testzip() is not None:
+                      fail("ZIP CRC verification failed.")
+
+                  normalized, folded = set(), set()
+                  total_size = 0
+                  safe = []
+                  for info in infos:
+                      raw = info.filename
+                      if not raw or "\x00" in raw or "\\" in raw:
+                          fail(f"Invalid ZIP path: {raw!r}")
+                      if raw.startswith("/") or PurePosixPath(raw).is_absolute() or PureWindowsPath(raw).is_absolute() or PureWindowsPath(raw).drive:
+                          fail(f"Absolute or drive-qualified path rejected: {raw!r}")
+                      parts = [p for p in raw.rstrip("/").split("/") if p not in ("", ".")]
+                      if not parts or any(p == ".." for p in parts):
+                          fail(f"Parent traversal or empty path rejected: {raw!r}")
+                      rel = PurePosixPath(*parts).as_posix()
+                      if rel in normalized or rel.casefold() in folded:
+                          fail(f"Duplicate or case-colliding path rejected: {rel}")
+                      normalized.add(rel)
+                      folded.add(rel.casefold())
+
+                      mode = (info.external_attr >> 16) & 0xFFFF
+                      file_type = stat.S_IFMT(mode)
+                      is_dir = info.is_dir() or raw.endswith("/")
+                      if file_type == stat.S_IFLNK or file_type not in (0, stat.S_IFREG, stat.S_IFDIR):
+                          fail(f"Symlink or special file rejected: {rel}")
+                      if info.flag_bits & 0x1:
+                          fail(f"Encrypted ZIP entry rejected: {rel}")
+                      if info.file_size > MAX_FILE:
+                          fail(f"Entry exceeds per-file size limit: {rel}")
+                      total_size += info.file_size
+                      if total_size > MAX_TOTAL:
+                          fail("Archive exceeds the 3 GiB total uncompressed size limit.")
+                      if info.file_size and info.compress_size == 0:
+                          fail(f"Invalid compression size: {rel}")
+                      if info.compress_size and info.file_size / info.compress_size > MAX_RATIO:
+                          fail(f"Suspicious compression ratio: {rel}")
+
+                      lower = [p.lower() for p in parts]
+                      basename = lower[-1]
+                      if ".git" in lower:
+                          fail("Do not include .git history in the source ZIP; GitHub retains upload commits separately.")
+                      if any(p in {".ssh", ".aws", ".gnupg"} for p in lower) or ".config/gcloud" in "/".join(lower):
+                          fail(f"Local credential directory rejected: {rel}")
+                      if basename in SECRET_NAMES or basename.endswith(tuple(SECRET_SUFFIXES)):
+                          fail(f"Local secret/signing file rejected: {rel}")
+                      if basename.startswith(("id_rsa", "id_ed25519", "id_ecdsa", "service-account", "firebase-adminsdk")):
+                          fail(f"Private key or service-account file rejected: {rel}")
+                      if basename in {".gradle", "build", "node_modules", ".idea", ".kotlin", ".cxx", "__pycache__"} and is_dir:
+                          # These generated caches are not source and are intentionally omitted.
+                          continue
+                      if any(p in {".gradle", "build", "node_modules", ".idea", ".kotlin", ".cxx", "__pycache__"} for p in lower[:-1]):
+                          continue
+
+                      if not is_dir and Path(basename).suffix.lower() in TEXT_SUFFIXES:
+                          with zf.open(info) as stream:
+                              data = stream.read(min(info.file_size + 1, 8 * 1024 * 1024))
+                          if len(data) <= 8 * 1024 * 1024 and any(pattern.search(data) for pattern in SECRET_PATTERNS):
+                              fail(f"Recognizable credential material found inside text file: {rel}")
+                      safe.append((info, parts, is_dir))
+
+                  for info, parts, is_dir in safe:
+                      target = staging.joinpath(*parts)
+                      resolved = target.resolve()
+                      if resolved != staging and staging not in resolved.parents:
+                          fail(f"Extraction path escaped staging directory: {info.filename}")
+                      if is_dir:
+                          target.mkdir(parents=True, exist_ok=True)
+                      else:
+                          target.parent.mkdir(parents=True, exist_ok=True)
+                          with zf.open(info) as source, target.open("xb") as destination:
+                              shutil.copyfileobj(source, destination, length=1024 * 1024)
+
+          except (zipfile.BadZipFile, OSError, RuntimeError) as exc:
+              fail(f"ZIP validation/extraction failed: {exc}")
+
+          candidates = []
+          for settings in staging.rglob("settings.gradle.kts"):
+              project = settings.parent
+              if (project / "build.gradle.kts").is_file() and (project / "app/build.gradle.kts").is_file() and (project / "app/src/main/AndroidManifest.xml").is_file():
+                  candidates.append(project)
+          if len(candidates) != 1:
+              fail(f"Expected exactly one MOSAIC Android project root, found {len(candidates)}.")
+          project = candidates[0]
+          relative = project.relative_to(staging).as_posix() or "."
+          (staging / "project-root.txt").write_text(relative + "\n", encoding="utf-8")
+          (staging / "MOSAIC-Project-Root-Detection.txt").write_text(
+              "MOSAIC ZIP import validation: PASS\n"
+              f"Archive bytes: {archive.stat().st_size}\n"
+              f"Entries validated: {len(infos)}\n"
+              f"Extracted entries: {len(safe)}\n"
+              f"Detected project root: {relative}\n"
+              "Active .github workflows, .git, incoming ZIP history and prior notes are preserved by the importer.\n",
+              encoding="utf-8",
+          )
+          print((staging / "MOSAIC-Project-Root-Detection.txt").read_text(encoding="utf-8"))
+          PY_IMPORT
+
+          PROJECT_RELATIVE="$(cat "$STAGING_DIR/project-root.txt")"
+          PROJECT_DIR="$STAGING_DIR/$PROJECT_RELATIVE"
+          test -s "$PROJECT_DIR/settings.gradle.kts"
+          test -s "$PROJECT_DIR/app/build.gradle.kts"
+          echo "MOSAIC_STAGING_DIR=$STAGING_DIR" >> "$GITHUB_ENV"
+          echo "MOSAIC_PROJECT_DIR=$PROJECT_DIR" >> "$GITHUB_ENV"
+
+      - name: Integrate validated project files
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -d "$MOSAIC_PROJECT_DIR"
+          echo "Replacing project working tree while preserving .git, active .github, incoming uploads and prior notes." | tee -a "$MOSAIC_BUILD_LOG"
+          rsync -a --delete \
+            --exclude='/.git/' \
+            --exclude='/.github/' \
+            --exclude='/incoming/' \
+            --exclude='/notes/' \
+            "$MOSAIC_PROJECT_DIR/" "$GITHUB_WORKSPACE/"
+          mkdir -p "$GITHUB_WORKSPACE/notes"
+          if [[ -d "$MOSAIC_PROJECT_DIR/notes" ]]; then
+            rsync -a --ignore-existing "$MOSAIC_PROJECT_DIR/notes/" "$GITHUB_WORKSPACE/notes/"
+          fi
+          mkdir -p "$GITHUB_WORKSPACE/incoming"
+          echo "Project files integrated; historical notes and active automation remain intact." | tee -a "$MOSAIC_BUILD_LOG"
+
+      - name: Verify source invariants and Python tooling
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          python3 tools/verify_source.py 2>&1 | tee -a "$MOSAIC_BUILD_LOG"
+          python3 -m unittest discover -s tools/tests -v 2>&1 | tee -a "$MOSAIC_BUILD_LOG"
+
+      - name: Generate and verify the Gradle Wrapper
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          gradle --no-daemon wrapper --gradle-version 9.3.1 --distribution-type bin 2>&1 | tee -a "$MOSAIC_BUILD_LOG"
+          python3 - <<'PY_WRAPPER'
+          from pathlib import Path
+          properties = Path("gradle/wrapper/gradle-wrapper.properties")
+          lines = [line for line in properties.read_text(encoding="utf-8").splitlines() if not line.startswith("distributionSha256Sum=")]
+          url_index = next((i for i, line in enumerate(lines) if line.startswith("distributionUrl=")), None)
+          if url_index is None or "gradle-9.3.1-bin.zip" not in lines[url_index]:
+              raise SystemExit("Generated Gradle Wrapper does not reference the pinned Gradle 9.3.1 binary distribution.")
+          lines.insert(url_index + 1, "distributionSha256Sum=b266d5ff6b90eada6dc3b20cb090e3731302e553a27c5d3e4df1f0d76beaff06")
+          properties.write_text("\n".join(lines) + "\n", encoding="utf-8")
+          wrapper_jar = Path("gradle/wrapper/gradle-wrapper.jar")
+          import hashlib
+          wrapper_sha = hashlib.sha256(wrapper_jar.read_bytes()).hexdigest()
+          expected_wrapper_sha = "b3a875ddc1f044746e1b1a55f645584505f4a10438c1afea9f15e92a7c42ec13"
+          if wrapper_sha != expected_wrapper_sha:
+              raise SystemExit(f"Generated Gradle Wrapper JAR checksum mismatch: {wrapper_sha}")
+          task_board = Path("docs/TASKS.md")
+          task_text = task_board.read_text(encoding="utf-8")
+          old = "| P1-011 | Generate official Gradle wrapper + distribution checksum | TODO | No Gradle distribution in authoring container; CI currently pins Gradle 9.3.1 |"
+          new = "| P1-011 | Generate official Gradle wrapper + distribution checksum | DONE | Generated by the first successful CI import; Gradle 9.3.1 SHA-256 is pinned in wrapper properties |"
+          if old in task_text:
+              task_board.write_text(task_text.replace(old, new), encoding="utf-8")
+          PY_WRAPPER
+          chmod +x ./gradlew
+          ./gradlew --no-daemon --version 2>&1 | tee -a "$MOSAIC_BUILD_LOG"
+
+      - name: Run Android unit tests, lint and debug APK build
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          ./gradlew --no-daemon --stacktrace \
+            :core:media:testDebugUnitTest \
+            :app:testDebugUnitTest \
+            :app:lintDebug \
+            :app:assembleDebug 2>&1 | tee -a "$MOSAIC_BUILD_LOG"
+
+      - name: Verify debug APK and record release policy
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="$GITHUB_WORKSPACE/app/build/outputs/apk/debug/app-debug.apk"
+          if [[ ! -s "$APK" ]]; then
+            echo "::error::Gradle reported success but app-debug.apk is missing."
+            exit 1
+          fi
+          mkdir -p "$RUNNER_TEMP/mosaic-delivery"
+          cp "$APK" "$RUNNER_TEMP/mosaic-delivery/MOSAIC-debug.apk"
+          sha256sum "$RUNNER_TEMP/mosaic-delivery/MOSAIC-debug.apk" > "$RUNNER_TEMP/mosaic-delivery/MOSAIC-debug.apk.sha256.txt"
+          echo "Debug APK assembled. Release APK is intentionally not built until signing is explicitly configured through GitHub Actions secrets." | tee -a "$MOSAIC_BUILD_LOG"
+
+      - name: Mark CI-verified Phase 1 engineering tasks
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          python3 - "$GITHUB_RUN_ID" "$GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID" <<'PY_STATE'
+          import sys
+          from pathlib import Path
+
+          run_id, run_url = sys.argv[1], sys.argv[2]
+          task_path = Path("docs/TASKS.md")
+          task_lines = task_path.read_text(encoding="utf-8").splitlines()
+          verified_rows = {
+              "P1-010": "| P1-010 | Add source verifier and ZIP-import CI workflow | DONE | ZIP import, source verifier, Python tests, Gradle build, lint and APK verification passed in CI |",
+              "P1-011": "| P1-011 | Generate official Gradle wrapper + distribution checksum | DONE | Generated in CI; Gradle 9.3.1 distribution SHA-256 is pinned |",
+              "P1-012": "| P1-012 | Run GitHub Actions debug build, lint and unit tests | DONE | Successful workflow run: " + run_url + " |",
+          }
+          for task_id, replacement in verified_rows.items():
+              prefix = "| " + task_id + " |"
+              for index, line in enumerate(task_lines):
+                  if line.startswith(prefix):
+                      task_lines[index] = replacement
+                      break
+          task_path.write_text("\n".join(task_lines) + "\n", encoding="utf-8")
+
+          state_path = Path("PROJECT_STATE.md")
+          state_lines = state_path.read_text(encoding="utf-8").splitlines()
+          replacements = {
+              "- Source verifier:": "- Source verifier: **passed** in GitHub Actions run " + run_id + ".",
+              "- Python workflow tests": "- Python workflow tests: **passed** in GitHub Actions run " + run_id + ".",
+              "- Gradle Android build:": "- Gradle Android build: **passed** (unit tests, lint and debug APK assembly) in GitHub Actions run " + run_id + ".",
+              "- APK:": "- APK: **debug APK assembled and checksum verified** in GitHub Actions run " + run_id + "; physical device acceptance remains pending.",
+          }
+          updated = []
+          for line in state_lines:
+              replacement = next((value for prefix, value in replacements.items() if line.startswith(prefix)), None)
+              if replacement is None:
+                  updated.append(line)
+              else:
+                  updated.append(replacement)
+          state = "\n".join(updated) + "\n"
+          state = state.replace(
+              "**Last source snapshot:** 2026-10-30 · Phase 1 bootstrap",
+              "**Last integrated CI verification:** run " + run_id + " · " + run_url,
+          )
+          state = state.replace(
+              "4. Add Gradle wrapper generation and pin its distribution checksum as a tracked task once a Gradle environment is available.",
+              "4. Complete physical device acceptance on the Redmi Note 12 Pro 5G before Phase 2.",
+          )
+          state_path.write_text(state, encoding="utf-8")
+
+          changelog = Path("docs/CHANGELOG.md")
+          with changelog.open("a", encoding="utf-8") as stream:
+              stream.write("\n## CI-verified Phase 1 import — run " + run_id + "\n\n- ZIP validation and source integration passed.\n- Source verifier and Python tests passed.\n- Gradle wrapper generated and checksum-pinned.\n- Android unit tests, lint and debug APK assembly passed.\n- Physical Redmi Note 12 Pro 5G acceptance remains pending.\n- Workflow: " + run_url + "\n")
+          PY_STATE
+
+      - name: Create durable note for this source upload
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          if [[ ! "$MOSAIC_UPLOAD_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
+            echo "::error::Invalid upload commit SHA; refusing to create history note."
+            exit 1
+          fi
+          mkdir -p notes/imports
+          NOTE="notes/imports/${MOSAIC_UPLOAD_COMMIT}.md"
+          if [[ -e "$NOTE" ]]; then
+            echo "::error::An import note already exists for this upload commit. Preflight should have skipped it."
+            exit 1
+          fi
+          ARCHIVE_SHA="$(awk '{print $1}' "$RUNNER_TEMP/MOSAIC-Source-Archive-SHA256.txt")"
+          UPLOAD_DATE="$(git show -s --format=%cI "$MOSAIC_UPLOAD_COMMIT")"
+          PROJECT_ROOT="$(cat "$MOSAIC_STAGING_DIR/project-root.txt")"
+          FILE_COUNT="$(find . -type f ! -path './.git/*' ! -path './incoming/*' ! -path './**/build/*' ! -path './.gradle/*' | wc -l | tr -d ' ')"
+          cat > "$NOTE" <<NOTE_CONTENT
+          # MOSAIC source ZIP import
+
+          - Upload commit: \`$MOSAIC_UPLOAD_COMMIT\`
+          - Archive path: \`$MOSAIC_ARCHIVE_PATH\`
+          - Upload commit timestamp: $UPLOAD_DATE
+          - Archive SHA-256: \`$ARCHIVE_SHA\`
+          - Detected project root: \`$PROJECT_ROOT\`
+          - Integrated source files: $FILE_COUNT
+          - Workflow run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
+          - Branch: \`$GITHUB_REF_NAME\`
+
+          ## Required verification
+
+          - ZIP CRC/path/type/size/collision/secret checks: passed
+          - Source structure verifier: passed
+          - Python source tests: passed
+          - Android unit tests: passed
+          - Android lint: passed
+          - Debug APK assembly and file check: passed
+          - Physical Redmi Note 12 Pro 5G acceptance: not performed by CI; see device test checklist
+
+          ## Integration policy
+
+          The validated ZIP replaced the application source tree. Existing Git history, active workflows, incoming upload history and earlier notes were preserved. Build outputs, caches and local credentials were excluded. The upload archive remains available at its original Git commit; it is not copied into the integrated source tree.
+          NOTE_CONTENT
+          if [[ ! -s notes/README.md ]]; then
+            cat > notes/README.md <<'INDEX'
+          # MOSAIC engineering and import notes
+
+          Successful source ZIP imports are indexed here. Original source ZIP upload commits remain in Git history at `incoming/mosaic.zip`.
+          INDEX
+          fi
+          printf '\n- [%s](imports/%s.md) — uploaded %s; archive SHA-256 `%s`\n' \
+            "${MOSAIC_UPLOAD_COMMIT:0:12}" "$MOSAIC_UPLOAD_COMMIT" "$UPLOAD_DATE" "$ARCHIVE_SHA" >> notes/README.md
+          echo "Created notes/imports/$MOSAIC_UPLOAD_COMMIT.md" | tee -a "$MOSAIC_BUILD_LOG"
+
+      - name: Build integrated repository ZIP and checksums
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          DELIVERY="$RUNNER_TEMP/mosaic-delivery"
+          mkdir -p "$DELIVERY"
+          REPOSITORY_ZIP="$DELIVERY/MOSAIC-Integrated-Repository.zip"
+          rm -f "$REPOSITORY_ZIP"
+          zip -qr "$REPOSITORY_ZIP" . \
+            -x './.git/*' './incoming/*.zip' './.gradle/*' '*/.gradle/*' \
+               '*/build/*' './build/*' '*/__pycache__/*' './.idea/*' \
+               '*/.idea/*' '*/.kotlin/*' '*/.cxx/*' '*/.externalNativeBuild/*' \
+               './local.properties' './.env' './.env.*' '*.jks' '*.keystore' \
+               '*.p12' '*.pfx' '*.pem' '*.key' '*signing*.properties' \
+               '*credentials*.json' '*secret*.json' '*token*.json' \
+               'service-account*.json' '*/.DS_Store' '*/Thumbs.db' '*.tmp' '*.log'
+          sha256sum "$REPOSITORY_ZIP" > "$DELIVERY/MOSAIC-Integrated-Repository.zip.sha256.txt"
+          cp "$RUNNER_TEMP/MOSAIC-Source-Archive-SHA256.txt" "$DELIVERY/"
+          cp "$RUNNER_TEMP/MOSAIC-Project-Root-Detection.txt" "$DELIVERY/" 2>/dev/null || true
+          (cd "$DELIVERY" && sha256sum MOSAIC-debug.apk MOSAIC-Integrated-Repository.zip > SHA256SUMS.txt)
+          ls -lh "$DELIVERY" | tee -a "$MOSAIC_BUILD_LOG"
+
+      - name: Commit validated source and import note
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd "$GITHUB_WORKSPACE"
+          if [[ "$GITHUB_REF_TYPE" != "branch" ]]; then
+            echo "::error::Refusing to push from a non-branch ref."
+            exit 1
+          fi
+          git fetch --no-tags origin "$GITHUB_REF_NAME"
+          REMOTE_SHA="$(git rev-parse FETCH_HEAD)"
+          if [[ "$REMOTE_SHA" != "$GITHUB_SHA" ]]; then
+            echo "::error::The branch advanced during the build. No integration commit was pushed; rerun the latest upload after reconciling the branch."
+            exit 1
+          fi
+          git add -A
+          git reset --quiet -- incoming/mosaic.zip || true
+          python3 - <<'PY_SAFETY'
+          import re, subprocess, sys
+          raw = subprocess.check_output(["git", "diff", "--cached", "--name-only", "-z"])
+          paths = [p.decode("utf-8", "surrogateescape") for p in raw.split(b"\0") if p]
+          bad_name = re.compile(r"(^|/)(?:\.env(?:\..*)?|local\.properties|[^/]*\.jks|[^/]*\.keystore|[^/]*\.p12|[^/]*\.pfx|[^/]*\.pem|[^/]*\.key|id_rsa[^/]*|[^/]*(?:signing|credentials)[^/]*\.properties)$", re.I)
+          private_key = re.compile(rb"-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----")
+          for path in paths:
+              if bad_name.search(path):
+                  print(f"::error::Refusing to commit sensitive path: {path}", file=sys.stderr)
+                  raise SystemExit(1)
+              try:
+                  content = subprocess.check_output(["git", "show", f":{path}"])
+              except subprocess.CalledProcessError:
+                  continue
+              if private_key.search(content):
+                  print(f"::error::Refusing to commit private key material in {path}", file=sys.stderr)
+                  raise SystemExit(1)
+          print(f"Commit safety check passed for {len(paths)} staged paths.")
+          PY_SAFETY
+          if git diff --cached --quiet; then
+            echo "::error::No integration changes were staged; source note should make this commit unique."
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Integrate MOSAIC source ZIP (${MOSAIC_UPLOAD_COMMIT:0:12}) [skip ci]"
+          INTEGRATION_COMMIT="$(git rev-parse HEAD)"
+          git push origin "HEAD:${GITHUB_REF_NAME}"
+          printf 'Upload commit: %s\nIntegration commit: %s\nImport note: notes/imports/%s.md\n' \
+            "$MOSAIC_UPLOAD_COMMIT" "$INTEGRATION_COMMIT" "$MOSAIC_UPLOAD_COMMIT" \
+            > "$RUNNER_TEMP/mosaic-delivery/MOSAIC-Import-Commit.txt"
+          {
+            echo "## MOSAIC source ZIP integrated"
+            echo "- Upload commit: \`$MOSAIC_UPLOAD_COMMIT\`"
+            echo "- Integration commit: \`$INTEGRATION_COMMIT\`"
+            echo "- Note: \`notes/imports/$MOSAIC_UPLOAD_COMMIT.md\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload APK and integrated repository
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: MOSAIC-Android-debug-APK
+          path: |
+            ${{ runner.temp }}/mosaic-delivery/MOSAIC-debug.apk
+            ${{ runner.temp }}/mosaic-delivery/MOSAIC-debug.apk.sha256.txt
+            ${{ runner.temp }}/mosaic-delivery/SHA256SUMS.txt
+            ${{ runner.temp }}/mosaic-delivery/MOSAIC-Import-Commit.txt
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+      - name: Upload integrated repository ZIP
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: MOSAIC-Integrated-Repository
+          path: |
+            ${{ runner.temp }}/mosaic-delivery/MOSAIC-Integrated-Repository.zip
+            ${{ runner.temp }}/mosaic-delivery/MOSAIC-Integrated-Repository.zip.sha256.txt
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+      - name: Preserve build and import reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: MOSAIC-Build-Reports
+          path: |
+            ${{ runner.temp }}/MOSAIC-Build-Validation.log
+            ${{ runner.temp }}/MOSAIC-Project-Root-Detection.txt
+            ${{ runner.temp }}/MOSAIC-Source-Archive-SHA256.txt
+            ${{ runner.temp }}/mosaic-delivery/MOSAIC-Import-Commit.txt
+            ${{ runner.temp }}/mosaic-delivery/SHA256SUMS.txt
+            ${{ runner.temp }}/mosaic-zip-staging/MOSAIC-Project-Root-Detection.txt
+            ${{ github.workspace }}/notes/imports/*.md
+            ${{ github.workspace }}/**/build/reports/**
+            ${{ github.workspace }}/**/build/test-results/**
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Record failed import attempt
+        if: failure()
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP"
+          ARCHIVE_SHA="unknown"
+          if [[ -s "$RUNNER_TEMP/MOSAIC-Source-Archive-SHA256.txt" ]]; then
+            ARCHIVE_SHA="$(awk '{print $1}' "$RUNNER_TEMP/MOSAIC-Source-Archive-SHA256.txt")"
+          fi
+          cat > "$RUNNER_TEMP/MOSAIC-Import-Failure.md" <<NOTE
+          # MOSAIC source import failed
+
+          - Upload commit: ${MOSAIC_UPLOAD_COMMIT:-unresolved}
+          - Archive path: ${MOSAIC_ARCHIVE_PATH:-unresolved}
+          - Archive SHA-256: $ARCHIVE_SHA
+          - Branch: $GITHUB_REF_NAME
+          - Run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID
+
+          No verified integration commit is confirmed. Inspect the run log for ZIP validation, source verification, unit test, lint, APK, stale-branch or push failure. The original uploaded ZIP commit remains available for correction.
+          NOTE
+          cat "$RUNNER_TEMP/MOSAIC-Import-Failure.md" >> "$GITHUB_STEP_SUMMARY"
