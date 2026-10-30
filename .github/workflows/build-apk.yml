@@ -161,6 +161,8 @@ jobs:
         uses: android-actions/setup-android@v3
         with:
           accept-android-sdk-licenses: true
+          # The legacy "tools" SDK package no longer exists in Google's repository.
+          packages: platform-tools
 
       - name: Install pinned Android SDK packages
         shell: bash
