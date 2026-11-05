@@ -86,3 +86,7 @@ The first cross-app Ad Shield slice is implemented and CI-verified in [run 42051
 This is not universal ad removal. The current packet codec handles IPv4 UDP DNS; apps using DoH/custom resolvers can bypass it, and DNS filtering cannot reliably remove first-party same-domain or in-stream ads. IPv6 DNS coverage, real named-app compatibility, false-positive measurement and Redmi device acceptance remain open. Browser filtering and device-wide DNS filtering have separate scopes.
 
 Optional notification access enables discovery/control of supported external Android media sessions; it does not transfer audio into MOSAIC or force a provider to allow background playback. Native background playback from named third-party sources remains under development. See PRODUCT_SPEC.md, ARCHITECTURE.md, PROVIDER_CAPABILITY_MATRIX.md and DECISIONS.md.
+
+## Installing updates
+
+MOSAIC CI debug APKs now use one persistent development signing identity and increasing version codes. The first stable-key build may require one final migration uninstall if an earlier CI build is installed; after that, install future APKs directly over the existing app. Normal updates should preserve app data. This development signing identity is not a production release key.
