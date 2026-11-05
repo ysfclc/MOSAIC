@@ -5,7 +5,7 @@
 **Vision lock:** ADR-014 and ADR-015 in docs/DECISIONS.md  
 **Architecture:** native Android, Kotlin, Jetpack Compose, Media3  
 **Target device:** Redmi Note 12 Pro 5G  
-**Current phase:** Phase 1 playback foundation; Phase 2 cross-source playback is next.
+**Current phase:** Player control foundation verified; Ad Shield first implementation built and CI-verified; physical-device acceptance and native source playback remain open.
 
 ## Locked product vision
 
@@ -30,16 +30,18 @@ Respect platform, security and content-access boundaries. These boundaries do no
 - ExternalMediaSessionBridge is now polled at app level and surfaced in the primary Player, not Browser. Player cards show source app label/title/artist and expose play/pause, previous/next and seek only when the external session advertises those actions. Notification-listener access remains explicit; notification text is not read.
 - This is source-owned remote control, not native audio playback and not a way to force an app to continue when it disallows background playback. Real-app/Redmi verification remains pending.
 - Native background playback from YouTube, Spotify, Facebook, Instagram and other external sources is not yet demonstrated.
-- Device-wide VPN/DNS ad filtering is not implemented.
+- First device-wide DNS-only Ad Shield slice is implemented and CI-verified: explicit VPN consent, split-route IPv4 DNS interception, curated ad/tracker rules, editable hostname allowlist, persistent notification with Stop, conflict warning, status/error/blocked-domain display, and Private DNS preservation via Android's system resolver on Android 10+. Android 9 with Private DNS enabled fails closed.
+- Current filter only parses IPv4 UDP DNS. Apps using DoH/custom resolvers and same-domain or in-stream ads can bypass it; IPv6 DNS interception and named-app compatibility testing remain open.
 - Unified native queue for supported external media is not implemented.
 
 ## Toolchain and last known verification
 
 - Android Gradle Plugin: 9.1.1; Gradle: 9.3.1; Java: 17.
 - Android compile SDK: 37 (published package `platforms;android-37.2`); target SDK: 36; minimum SDK: 26; Build Tools: 36.0.0.
-- Last successful Player implementation build: [run 42034925797](https://github.com/ysfclc/MOSAIC/actions/runs/42034925797), commit `cc064cb1be7fd6b7d1d6b18a2a09f0d62af0b4a1`. Source verifier, Python contract tests, Android unit tests, lint and debug APK assembly all passed.
-- Direct edits to app/core/tools/docs/build configuration now trigger a separate build/test/lint/APK path. Manual workflow dispatch offers `direct` or `import`; the original ZIP importer remains intact.
-- Latest Player debug APK: 22,114,601 bytes; SHA-256 `74a55e78f58e9cded6f43c261676756b9014bd7e91c970be65e9d4b7703be152`.
+- Latest successful integrated build before Ad Shield: [run 42034925797](https://github.com/ysfclc/MOSAIC/actions/runs/42034925797), Player control foundation.
+- Latest Ad Shield build: [run 42051683244](https://github.com/ysfclc/MOSAIC/actions/runs/42051683244), commit `66ff12aa623be7f6e4873d4e37ca24ddfdb24e60`. `:core:media:testDebugUnitTest`, `:app:testDebugUnitTest`, `:app:lintDebug` and `:app:assembleDebug` all passed.
+- Ad Shield debug APK: 22,180,455 bytes; SHA-256 `a75d4d3b4bdc8c97436e12459833c361d5070a276ff89ed7e0d17d29c71471a3`. GitHub artifact ID `13425814399` (expires 2026-11-19).
+- Direct edits to app/core/tools/docs/build configuration trigger a separate build/test/lint/APK path. Manual workflow dispatch offers `direct` or `import`; the original ZIP importer remains intact.
 - No successful physical-device test is recorded. Do not claim screen-off, lock-screen, headset or Bluetooth acceptance on the Redmi.
 
 ## Product delivery sequence
@@ -52,9 +54,9 @@ Respect platform, security and content-access boundaries. These boundaries do no
 
 ## Immediate next engineering task
 
-**P3-008 — implement the device-wide DNS-only Ad Shield.** ADR-016 locks the architecture: an explicitly enabled Android VpnService routes only DNS queries to a local virtual resolver, filters known ad/tracker domains, and forwards allowed queries through a protected upstream socket. Do not tunnel ordinary app traffic. Add a persistent foreground notification, VPN-conflict warning, Private DNS coverage warning, blocked-domain counter and safe stop/revoke behavior. Unit-test the DNS packet codec before wiring the TUN service.
+**P3-008 — complete device acceptance for Ad Shield.** The first implementation is built and CI-verified, but it remains IN PROGRESS until the Redmi Note 12 Pro 5G checks pass: ordinary DNS resolution, known blocked domain, allowlist override, upstream timeout, unrelated app traffic, VPN stop/revoke recovery, foreground notification and lock-screen behavior. Then expand P3-013 to named-app playback/ads and DoH/Private DNS coverage.
 
-P3-007's Player controls are built and CI-verified; real-app/Redmi acceptance remains a separate pending device check.
+P3-007 Player controls and the first P3-008 Ad Shield slice are both CI-verified. Real-app and physical-device acceptance remain pending.
 
 ## Required handoff discipline
 

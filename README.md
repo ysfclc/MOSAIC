@@ -79,6 +79,10 @@ YouTube, Spotify, Facebook, Instagram and other sources are explicit targets for
 
 ## Ad Shield and Browser status
 
-The current Browser is an early supporting WebView with a conservative third-party host filter. It is not a full browser product and not the whole ad-blocking solution. The current policy contains blanket provider exemptions that must be replaced with tested source-aware rules. Device-wide Android VPN/DNS filtering is not yet implemented. DNS/host filtering cannot reliably remove first-party, same-domain or in-stream ads; MOSAIC must show measured coverage and known gaps rather than promise universal removal.
+The Browser is an early supporting WebView with a conservative third-party host filter, not a full browser product or the whole ad-blocking solution.
 
-Optional notification access currently enables discovery/control of supported external Android media sessions; this does not transfer audio into MOSAIC. Native background playback from the named third-party sources and cross-app Ad Shield remain unimplemented. See PRODUCT_SPEC.md, ARCHITECTURE.md, PROVIDER_CAPABILITY_MATRIX.md and DECISIONS.md.
+The first cross-app Ad Shield slice is implemented and CI-verified in [run 42051683244](https://github.com/ysfclc/MOSAIC/actions/runs/42051683244). It uses an explicitly user-enabled Android `VpnService` with split-route IPv4 UDP DNS interception, curated ad/tracker rules, an editable hostname allowlist, visible status/errors/blocked-domain count, a persistent notification with Stop, VPN-conflict handling and Private DNS-preserving resolution on Android 10+. Android 9 with Private DNS enabled fails closed. Ordinary app traffic is not routed through a full VPN tunnel.
+
+This is not universal ad removal. The current packet codec handles IPv4 UDP DNS; apps using DoH/custom resolvers can bypass it, and DNS filtering cannot reliably remove first-party same-domain or in-stream ads. IPv6 DNS coverage, real named-app compatibility, false-positive measurement and Redmi device acceptance remain open. Browser filtering and device-wide DNS filtering have separate scopes.
+
+Optional notification access enables discovery/control of supported external Android media sessions; it does not transfer audio into MOSAIC or force a provider to allow background playback. Native background playback from named third-party sources remains under development. See PRODUCT_SPEC.md, ARCHITECTURE.md, PROVIDER_CAPABILITY_MATRIX.md and DECISIONS.md.

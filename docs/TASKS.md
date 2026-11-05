@@ -51,12 +51,12 @@ Status values: DONE, IN PROGRESS, BLOCKED, TODO, PARKED.
 | P3-005 | Share-to-MOSAIC inbox (links, files and metadata) | IN PROGRESS | Android text/plain SEND target opens shared URL/text in Browser; file inbox and durable capture still pending |
 | P3-006 | MOSAIC-to-external share/open handoff | IN PROGRESS | Browser can share current page link; file/content handoff still pending |
 | P3-007 | Move external MediaSession controls into the primary Player | IN PROGRESS | Moved from Browser into Player; app labels, play/pause, previous/next and seek appear only when the source advertises support. CI build passed in run 42034925797; Redmi real-app verification remains pending. External control is not native stream playback |
-| P3-008 | Device-wide DNS-only VPN Ad Shield and user controls | IN PROGRESS | ADR-016 locks a split-route VpnService design with explicit consent, persistent status notification, conflict warning and safe stop/revoke |
+| P3-008 | Device-wide DNS-only VPN Ad Shield and user controls | IN PROGRESS | First implementation is CI-verified in run 42051683244: user-consented split-route IPv4 DNS VpnService, curated rules, editable allowlist, status/error/blocked counter, persistent Stop notification, VPN conflict handling and Android 9 Private DNS fail-closed behavior. Redmi acceptance still pending |
 | P3-009 | Cross-source background playback capability matrix | TODO | Investigate YouTube, Spotify, Facebook, Instagram, browser media, RSS, radio and direct URLs; record native/delegated paths and evidence |
 | P3-010 | Native playback adapters for accessible external media | TODO | Route supported browser/direct/RSS/radio media into the shared Media3 background player; no unsupported source claims |
 | P3-011 | Cross-source background playback acceptance | TODO | Test each source with screen off, app switching, lock screen, notification, Bluetooth/headset and queue/control behavior |
-| P3-012 | DNS packet parser and IPv4 UDP response codec | TODO | Unit-test question parsing, suffix rules, blocked responses and packet checksums before wiring the TUN service |
-| P3-013 | Ad Shield coverage and regression matrix | TODO | Test system DNS, allowlist behavior and named apps; record blocked domains, false positives, playback breakage and DoH/Private DNS gaps |
+| P3-012 | DNS packet parser and IPv4 UDP response codec | DONE | Unit tests cover IPv4 UDP DNS question parsing, malformed/non-DNS packets, exact suffix matching, allowlist overrides, NXDOMAIN response content and IPv4 header checksum; passed in run 42051683244 |
+| P3-013 | Ad Shield coverage and regression matrix | IN PROGRESS | Basic rule/allowlist unit tests exist; still test real DNS traffic, named apps, false positives, playback breakage, DoH, IPv6 and VPN stop/revoke on Redmi |
 | P3-014 | Source-specific YouTube/Spotify/social-media integration research | TODO | Compare official APIs/SDKs, source-owned background behavior, browser playback, Android MediaSession and accessible native routes; record evidence |
 | P3-015 | Source-aware filtering and provider compatibility rules | TODO | Replace blanket provider exemptions only with tested source-aware allow/block rules; never break media delivery blindly |
 | P3-016 | VPN conflict, Private DNS and service recovery handling | TODO | Detect an existing VPN and strict Private DNS, explain coverage limits, show persistent status/Stop action and restore normal networking on stop/revoke |
@@ -107,6 +107,6 @@ Current implementation is a foundation only: local audio plays through Media3; a
 
 - Direct-edit CI is now active and verified in run 42033924158. The ZIP importer remains a separate path with archive validation and safe extraction.
 - Keep the incoming ZIP importer and its path/secret checks; do not let it overwrite active workflows, notes or the handoff ledger.
-- Physical Redmi Note 12 Pro 5G acceptance remains pending.
-- Browser filtering and external-session controls are prototypes; native background playback from named external sources and cross-app Ad Shield are not yet delivered.
+- Physical Redmi Note 12 Pro 5G acceptance remains pending for Player and Ad Shield.
+- Browser filtering and external-session controls are prototypes; native background playback from named external sources remains unproven. The first cross-app DNS Ad Shield slice is implemented and CI-verified, but physical-device and named-app acceptance are still pending.
 - Do not claim device/source acceptance until the corresponding tests have actually passed.
