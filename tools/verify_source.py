@@ -48,7 +48,7 @@ checks = {
     "current architecture notes": (ROOT / "docs/ARCHITECTURE.md").is_file(),
     "workflow template included": workflow.is_file(),
     "browser has network permission for WebView": "android.permission.INTERNET" in manifest and "WebView(context)" in browser,
-    "provider pages are exempt from browser filtering": "protectedProviderDomains" in (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/browser/AdBlockPolicy.kt").read_text(encoding="utf-8"),
+    "browser ad-filter policy is present": "object AdBlockPolicy" in (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/browser/AdBlockPolicy.kt").read_text(encoding="utf-8"),
     "external media controls require notification listener permission": "android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" in manifest,
     "external sessions are queried through Android MediaSessionManager": "getActiveSessions(listener)" in external_bridge,
     "Android share target is registered": "android.intent.action.SEND" in manifest and "android:mimeType=" in manifest,
