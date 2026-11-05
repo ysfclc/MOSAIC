@@ -225,6 +225,9 @@ fun AdShieldScreen() {
                                 runCatching { InetAddress.getAllByName("example.com").firstOrNull()?.hostAddress }.getOrNull()
                             }
                             val probeHost = "mosaic-adshield-${System.currentTimeMillis()}.doubleclick.net"
+                            val shouldBeAllowlisted = AdShieldState.allowlist(context).any { rule ->
+                                probeHost == rule || probeHost.endsWith(".$rule")
+                            }
                             val blockedBefore = AdShieldState.blockedCount(context)
                             val blockedLookup = withContext(Dispatchers.IO) {
                                 runCatching { InetAddress.getAllByName(probeHost) }
@@ -237,11 +240,17 @@ fun AdShieldScreen() {
                                 true
                             } ?: false
                             val normalPassed = !ordinaryAddress.isNullOrBlank()
-                            val blockedPassed = intercepted && blockedLookup.isFailure
+                            val blockedPassed = if (shouldBeAllowlisted) !intercepted else intercepted && blockedLookup.isFailure
                             diagnostics = buildString {
                                 append(if (normalPassed) "PASS · normal DNS resolved" else "FAIL · normal DNS did not resolve")
                                 append("\n")
-                                append(if (blockedPassed) "PASS · blocked hostname intercepted" else "FAIL · blocked hostname interception not confirmed")
+                                append(
+                                    when {
+                                        !blockedPassed -> "FAIL · DNS rule behavior did not match the allowlist"
+                                        shouldBeAllowlisted -> "PASS · allowlist override respected"
+                                        else -> "PASS · blocked hostname intercepted"
+                                    },
+                                )
                                 if (normalPassed) append("\nResolved example.com to $ordinaryAddress")
                                 if (!blockedPassed) append("\nCheck that Ad Shield stayed active and DNS is not bypassing the VPN.")
                             }
