@@ -17,6 +17,15 @@ on:
       - "PROJECT_STATE.md"
       - ".github/workflows/build-apk.yml"
   workflow_dispatch:
+    inputs:
+      mode:
+        description: "Build the current repository or import the ZIP in incoming/"
+        required: true
+        type: choice
+        options:
+          - direct
+          - import
+        default: direct
 
 permissions:
   contents: write
@@ -27,7 +36,7 @@ concurrency:
 
 jobs:
   preflight:
-    name: Resolve upload revision and prevent duplicate imports
+    name: Resolve import or direct-build mode
     runs-on: ubuntu-latest
     outputs:
       mode: ${{ steps.resolve.outputs.mode }}
@@ -53,7 +62,7 @@ jobs:
 
           MODE="direct"
           ARCHIVE_PATH=""
-          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
+          if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" && "${{ inputs.mode }}" == "import" ]]; then
             if [[ -s "$GITHUB_WORKSPACE/incoming/mosaic.zip" ]]; then
               ARCHIVE_PATH="incoming/mosaic.zip"
             elif [[ -s "$GITHUB_WORKSPACE/incoming/MOSAIC-Phase-1-Repository.zip" ]]; then
