@@ -36,9 +36,9 @@ Respect platform, security and content-access boundaries. These boundaries do no
 
 - Android Gradle Plugin: 9.1.1; Gradle: 9.3.1; Java: 17.
 - Android compile SDK: 37 (published package `platforms;android-37.2`); target SDK: 36; minimum SDK: 26; Build Tools: 36.0.0.
-- Last known successful GitHub Actions build: run 41957296181. It verified the earlier integrated source snapshot with source checks, tests, lint and debug APK assembly.
-- Later source upload attempts failed before a successful integration/build; check GitHub Actions and notes/imports before treating any uploaded ZIP as integrated.
-- Direct edits to app/source/docs do not currently trigger the Android build. GOV-001 must add a direct-build path while preserving the ZIP importer.
+- Last successful direct-edit GitHub Actions verification: [run 42033924158](https://github.com/ysfclc/MOSAIC/actions/runs/42033924158), commit `5f006f5f2ff2536bbb3f41a06e534534d71da6ac`. Source verifier, Python contract tests, Android unit tests, lint and debug APK assembly all passed.
+- Direct edits to app/core/tools/docs/build configuration now trigger a separate build/test/lint/APK path. Manual workflow dispatch offers `direct` or `import`; the original ZIP importer remains intact.
+- Latest debug APK from the direct-build run: 22,114,601 bytes; SHA-256 `69cb441baf1a502c6dcbac5bbeba9fda06eb9604c5b319c514608159c7f62881`.
 - No successful physical-device test is recorded. Do not claim screen-off, lock-screen, headset or Bluetooth acceptance on the Redmi.
 
 ## Product delivery sequence
@@ -51,7 +51,9 @@ Respect platform, security and content-access boundaries. These boundaries do no
 
 ## Immediate next engineering task
 
-**GOV-001 — direct-edit CI.** The current workflow is ZIP-import-first. Add a normal build/test/lint/APK path for direct source and documentation changes while preserving existing ZIP validation, safe extraction, source integration and import-note behavior. Verify both paths independently. This is required so subsequent feature work can be built and checked after each small commit.
+**P3-007 — move external media-session controls into the primary Player.** The current opt-in external-session bridge is surfaced inside Browser, which is the wrong product location. Move discovery and control into Player so the user can control active sessions from YouTube, Spotify and other apps without opening a toy browser. Add previous/seek controls only where the external session advertises support, label source-owned playback clearly, and keep it distinct from MOSAIC-native queue playback. Then verify with real apps on the Redmi. This improves control; it does not claim to force a source app to continue when that app/platform disallows background playback.
+
+After P3-007, implement P3-008: the user-enabled device-wide VPN/DNS Ad Shield.
 
 ## Required handoff discipline
 
