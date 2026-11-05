@@ -9,13 +9,26 @@ class ProjectContractTests(unittest.TestCase):
         self.assertIn("one app-wide `PlaybackService`", text)
         self.assertIn("MediaSourceAdapter", text)
 
-    def test_phase_one_does_not_claim_provider_bypass(self):
-        text = (ROOT / "docs/DECISIONS.md").read_text(encoding="utf-8")
-        self.assertIn("no ad removal", text)
-        self.assertIn("paywall bypass", text)
+    def test_locked_product_vision_has_both_primary_pillars(self):
+        decisions = (ROOT / "docs/DECISIONS.md").read_text(encoding="utf-8")
+        spec = (ROOT / "docs/PRODUCT_SPEC.md").read_text(encoding="utf-8")
+        self.assertIn("cross-source background media playback/control", decisions)
+        self.assertIn("broad ad/tracker blocking across apps and websites", decisions)
+        for source in ("YouTube", "Spotify", "Facebook", "Instagram"):
+            self.assertIn(source, spec)
+        self.assertIn("no provider is automatically exempt", (ROOT / "docs/ARCHITECTURE.md").read_text(encoding="utf-8"))
 
     def test_workflow_is_present(self):
         self.assertTrue((ROOT / ".github/workflows/build-apk.yml").is_file())
+
+    def test_workflow_builds_direct_edits_and_preserves_zip_import(self):
+        workflow = (ROOT / ".github/workflows/build-apk.yml").read_text(encoding="utf-8")
+        self.assertIn('"app/**"', workflow)
+        self.assertIn('"core/**"', workflow)
+        self.assertIn('direct-build:', workflow)
+        self.assertIn("needs.preflight.outputs.mode == 'direct'", workflow)
+        self.assertIn("needs.preflight.outputs.mode == 'import'", workflow)
+        self.assertIn("Validate and safely extract source ZIP", workflow)
 
     def test_player_artwork_receives_revision_from_player_screen(self):
         source = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/MosaicApp.kt").read_text(encoding="utf-8")
