@@ -40,7 +40,9 @@ MOSAIC's primary problem is cross-source background media playback and broad ad 
 
 - Local media remains playable without an account or cloud.
 - The app itself does not insert advertisements.
-- Background playback is native for sources that permit it.
+- Background playback is a first-class goal across sources: use MOSAIC's native player where media is accessible, and source-owned continuation/control where it is not.
+- The app remains useful with the screen off, while switching apps, and through Android lock-screen/notification/headset controls.
+- Ad Shield aims to block known ad/tracker traffic in MOSAIC Browser and across other apps through an optional user-enabled local VPN/DNS filter.
 - The library is unified without destroying original folders.
 - Sources advertise capabilities honestly.
 - The user can export their metadata and choose backup destinations.
@@ -56,13 +58,14 @@ Phase 1 specifically serves the personal media owner and validates the playback 
 
 ## Product areas
 
-- Home: recent/continue state, library entry points and source health.
+- Home: current playback, source entry points, Ad Shield status and quick controls.
+- Player: the primary surface — current item, unified queue for MOSAIC-playable media, timeline, transport, speed, timer, metadata and playback ownership.
+- Sources: entry points and connection/status for local media, podcasts, radio, direct streams and named external providers.
+- Ad Shield: separate browser and device-wide controls, protection status, blocked-domain diagnostics, allowlists and VPN state.
 - Library: unified items, filters, collections, search and provenance.
-- Player: one queue, timeline, transport, speed, timer, metadata, playback route.
-- Browser: tabs, bookmarks, capture and permitted media handoff (later).
-- Inbox: share-target capture and processing queue (later).
+- Browser: a supporting source surface for web media and links, not a standalone browser-first product.
 - Intelligence: transcript, translation, summary and semantic search (later; local-first).
-- Settings: permissions, storage, source controls, backup, privacy and diagnostics.
+- Settings: permissions, storage, source controls, privacy and diagnostics.
 
 ## Phase 1 acceptance
 
