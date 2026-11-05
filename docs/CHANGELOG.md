@@ -67,3 +67,12 @@
 - Removed the external playback panel from Browser.
 - CI passed: [run 42034925797](https://github.com/ysfclc/MOSAIC/actions/runs/42034925797), including Android unit tests, lint and debug APK assembly. Real-app/Redmi acceptance remains pending.
 - Debug APK SHA-256: `74a55e78f58e9cded6f43c261676756b9014bd7e91c970be65e9d4b7703be152`.
+
+
+## 2026-11-05 — Ad Shield DNS-only VPN architecture locked
+
+- Added ADR-016 for a user-consented Android VpnService that routes only DNS traffic through a local virtual resolver; ordinary app traffic must not enter a full VPN tunnel.
+- Allowed DNS queries are forwarded through a socket protected from the VPN; blocked domains receive a local DNS failure response.
+- Required explicit VPN consent, one-VPN conflict warning, persistent foreground notification with Stop action, Private DNS/DoH coverage warnings, blocked-domain diagnostics and safe stop/revoke recovery.
+- DNS packet codec and coverage tests are tracked separately before the TUN service is wired.
+- No device-wide filter implementation is claimed yet.
