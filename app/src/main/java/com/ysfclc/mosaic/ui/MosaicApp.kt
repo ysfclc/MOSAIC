@@ -837,6 +837,56 @@ private fun ExternalPlaybackPanel(
 }
 
 @Composable
+private fun AdSkipPanel(
+    enabled: Boolean,
+    onEnable: () -> Unit,
+) {
+    Surface(
+        color = Color(0x661B2940),
+        shape = RoundedCornerShape(15.dp),
+        modifier = Modifier.fillMaxWidth(),
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            if (enabled) MosaicPalette.Cyan.copy(alpha = .22f) else Color.White.copy(alpha = .07f),
+        ),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(13.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(
+                    "VISIBLE AD SKIP",
+                    color = MosaicPalette.Cyan,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    letterSpacing = 1.2.sp,
+                )
+                Text(
+                    if (enabled) "Android helper is enabled" else "Optional Android accessibility helper",
+                    color = MosaicPalette.TextPrimary,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                Text(
+                    "For YouTube only: taps a visible button when its label explicitly says “Skip ad”. It cannot remove or mute an ad, and it cannot force background playback.",
+                    color = MosaicPalette.TextMuted,
+                    fontSize = 9.sp,
+                    lineHeight = 13.sp,
+                )
+            }
+            Spacer(Modifier.width(8.dp))
+            OutlinedButton(
+                onClick = onEnable,
+                shape = RoundedCornerShape(11.dp),
+            ) {
+                Text(if (enabled) "Settings" else "Enable", fontSize = 10.sp)
+            }
+        }
+    }
+}
+
+@Composable
 private fun ExternalSessionCard(session: ExternalMediaSession) {
     var seekingFraction by remember(session.packageName, session.title) { mutableStateOf<Float?>(null) }
     val duration = session.durationMs
