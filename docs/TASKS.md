@@ -55,10 +55,11 @@ Status values: DONE, IN PROGRESS, BLOCKED, TODO, PARKED.
 | P3-009 | Cross-source background playback capability matrix | TODO | Investigate YouTube, Spotify, Facebook, Instagram, browser media, RSS, radio and direct URLs; record native/delegated paths and evidence |
 | P3-010 | Native playback adapters for accessible external media | TODO | Route supported browser/direct/RSS/radio media into the shared Media3 background player; no unsupported source claims |
 | P3-011 | Cross-source background playback acceptance | TODO | Test each source with screen off, app switching, lock screen, notification, Bluetooth/headset and queue/control behavior |
-| P3-012 | Cross-app ad-blocking feasibility and prototype | TODO | Evaluate Android VPNService/local DNS filtering, per-app coverage, consent, conflicts, false positives and source compatibility |
-| P3-013 | Ad-blocking coverage and regression matrix | TODO | Test browser and device-wide filtering against named sources; record blocked ads, playback breakage and unavoidable first-party/in-stream cases |
+| P3-012 | DNS packet parser and IPv4 UDP response codec | TODO | Unit-test question parsing, suffix rules, blocked responses and packet checksums before wiring the TUN service |
+| P3-013 | Ad Shield coverage and regression matrix | TODO | Test system DNS, allowlist behavior and named apps; record blocked domains, false positives, playback breakage and DoH/Private DNS gaps |
 | P3-014 | Source-specific YouTube/Spotify/social-media integration research | TODO | Compare official APIs/SDKs, source-owned background behavior, browser playback, Android MediaSession and accessible native routes; record evidence |
 | P3-015 | Source-aware filtering and provider compatibility rules | TODO | Replace blanket provider exemptions only with tested source-aware allow/block rules; never break media delivery blindly |
+| P3-016 | VPN conflict, Private DNS and service recovery handling | TODO | Detect an existing VPN and strict Private DNS, explain coverage limits, show persistent status/Stop action and restore normal networking on stop/revoke |
 
 ## Phase 4 — Official platform integrations
 
