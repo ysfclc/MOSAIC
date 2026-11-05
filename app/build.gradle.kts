@@ -4,7 +4,6 @@ plugins {
 }
 
 val mosaicDebugKeystorePath = providers.environmentVariable("MOSAIC_DEBUG_KEYSTORE").orNull
-val mosaicDebugKeystorePassword = providers.environmentVariable("MOSAIC_DEBUG_KEYSTORE_PASSWORD").orNull
 val mosaicCiVersionCode = maxOf(2, providers.gradleProperty("mosaicVersionCode").orNull?.toIntOrNull() ?: 2)
 
 android {
@@ -21,12 +20,12 @@ android {
     }
 
     signingConfigs {
-        if (!mosaicDebugKeystorePath.isNullOrBlank() && !mosaicDebugKeystorePassword.isNullOrBlank()) {
+        if (!mosaicDebugKeystorePath.isNullOrBlank()) {
             create("stableDebug") {
                 storeFile = file(mosaicDebugKeystorePath)
-                storePassword = mosaicDebugKeystorePassword
-                keyAlias = "mosaic-debug"
-                keyPassword = mosaicDebugKeystorePassword
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
             }
         }
     }
