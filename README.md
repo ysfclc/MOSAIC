@@ -7,6 +7,10 @@
 
 MOSAIC is a local-first Android media environment. It brings playback, browsing, a unified library, source adapters, optional intelligence and automation into one coherent native application. It is not a streaming service and it does not bypass provider advertising, DRM, paywalls or access controls.
 
+## Why MOSAIC exists: capture, keep and move content
+
+MOSAIC began with a simple cross-app problem: when you find something useful in another app, you should be able to copy its URL/text or use Android Share to bring it into MOSAIC, keep it for later, and then copy, open or share it back out. This two-way copy/paste-and-share workflow is a core product requirement, not just a browser shortcut. The broader product unifies local media and legitimate external sources around that capture-and-continue flow. Paste is explicit and user-triggered; MOSAIC is not a background clipboard-history manager (that is a separate VaultOS project). See docs/PRODUCT_SPEC.md.
+
 ## Phase 1 shipped in this source snapshot
 
 - Native Kotlin + Jetpack Compose application shell with an animated dark visual system.
