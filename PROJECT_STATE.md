@@ -3,7 +3,7 @@
 **Project:** MOSAIC / Personal Media OS  
 **Repository:** ysfclc/MOSAIC  
 **Branch:** main  
-**Latest documentation commit:** `a89d8047369fa5b4664241ec660a8146ca31bff6` (2026-11-05; origin/copy-paste intent recorded directly in GitHub)  
+**Origin decision commit:** `a89d8047369fa5b4664241ec660a8146ca31bff6` (2026-11-05); subsequent handoff and task-ledger corrections are also committed on `main`. See the repository commit history for the current HEAD.  
 **Current phase:** 1 — Native foundation and local playback  
 **Architecture status:** LOCKED baseline; changes require an ADR in docs/DECISIONS.md  
 **Source snapshot:** 2026-11-05 — integrated browser/bridge snapshot; documentation handoff refreshed
