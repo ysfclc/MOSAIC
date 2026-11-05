@@ -105,6 +105,7 @@ import com.ysfclc.mosaic.core.design.MosaicPalette
 import com.ysfclc.mosaic.core.library.MediaStoreCatalog
 import com.ysfclc.mosaic.core.media.MediaItemRecord
 import com.ysfclc.mosaic.core.media.PlaybackConnection
+import com.ysfclc.mosaic.ui.browser.AdSkipAccessibilityStatus
 import com.ysfclc.mosaic.ui.browser.BrowserScreen
 import com.ysfclc.mosaic.ui.browser.ExternalMediaSession
 import com.ysfclc.mosaic.ui.browser.ExternalMediaSessionBridge
@@ -135,10 +136,12 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
     var pendingBrowserUrl by remember { mutableStateOf<String?>(null) }
     var externalSessions by remember { mutableStateOf(emptyList<ExternalMediaSession>()) }
     var notificationAccess by remember { mutableStateOf(ExternalMediaSessionBridge.hasNotificationAccess(context)) }
+    var adSkipEnabled by remember { mutableStateOf(AdSkipAccessibilityStatus.isEnabled(context)) }
 
     LaunchedEffect(context) {
         while (isActive) {
             notificationAccess = ExternalMediaSessionBridge.hasNotificationAccess(context)
+            adSkipEnabled = AdSkipAccessibilityStatus.isEnabled(context)
             externalSessions = if (notificationAccess) ExternalMediaSessionBridge.activeSessions(context) else emptyList()
             delay(2000)
         }
@@ -283,6 +286,8 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
                         externalSessions = externalSessions,
                         hasExternalSessionAccess = notificationAccess,
                         onEnableExternalSessionAccess = { context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
+                        adSkipEnabled = adSkipEnabled,
+                        onEnableAdSkip = { context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) },
                         onOpenLibrary = { destination = Destination.LIBRARY },
                     )
                     Destination.SHIELD -> com.ysfclc.mosaic.ui.adshield.AdShieldScreen()
@@ -668,6 +673,8 @@ private fun PlayerScreen(
     externalSessions: List<ExternalMediaSession>,
     hasExternalSessionAccess: Boolean,
     onEnableExternalSessionAccess: () -> Unit,
+    adSkipEnabled: Boolean,
+    onEnableAdSkip: () -> Unit,
     onOpenLibrary: () -> Unit,
 ) {
     val mediaItem = controller?.currentMediaItem
@@ -762,6 +769,8 @@ private fun PlayerScreen(
             sessions = externalSessions,
             onEnableAccess = onEnableExternalSessionAccess,
         )
+        Spacer(Modifier.height(14.dp))
+        AdSkipPanel(enabled = adSkipEnabled, onEnable = onEnableAdSkip)
     }
 }
 
