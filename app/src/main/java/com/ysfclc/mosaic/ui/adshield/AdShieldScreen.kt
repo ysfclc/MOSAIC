@@ -18,7 +18,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -27,8 +26,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -59,6 +58,9 @@ fun AdShieldScreen() {
     var running by remember { mutableStateOf(AdShieldState.isRunning(context)) }
     var blockedCount by remember { mutableIntStateOf(AdShieldState.blockedCount(context)) }
     var lastBlockedDomain by remember { mutableStateOf(AdShieldState.lastBlockedDomain(context)) }
+    var allowlist by remember { mutableStateOf(AdShieldState.allowlist(context)) }
+    var allowlistEntry by remember { mutableStateOf("") }
+    var allowlistMessage by remember { mutableStateOf("") }
     var error by remember { mutableStateOf(AdShieldState.lastError(context)) }
     var privateDnsCompatibilityWarning by remember { mutableStateOf(hasPrivateDnsCompatibilityWarning(context)) }
     var showVpnConflict by remember { mutableStateOf(false) }
@@ -69,7 +71,7 @@ fun AdShieldScreen() {
         if (result.resultCode == Activity.RESULT_OK) {
             AdShieldVpnService.start(context)
         } else {
-            error = "Android VPN permission was not granted."
+            AdShieldState.setError(context, "Android VPN permission was not granted.")
         }
     }
 
@@ -81,7 +83,7 @@ fun AdShieldScreen() {
             if (prepareIntent != null) vpnPermissionLauncher.launch(prepareIntent)
             else AdShieldVpnService.start(context)
         } else {
-            error = "Allow notifications so the active VPN filter remains visible and controllable."
+            AdShieldState.setError(context, "Allow notifications so the active VPN filter remains visible and controllable.")
         }
     }
 
@@ -91,12 +93,17 @@ fun AdShieldScreen() {
             blockedCount = AdShieldState.blockedCount(context)
             lastBlockedDomain = AdShieldState.lastBlockedDomain(context)
             error = AdShieldState.lastError(context)
+            allowlist = AdShieldState.allowlist(context)
             privateDnsCompatibilityWarning = hasPrivateDnsCompatibilityWarning(context)
             delay(1000)
         }
     }
 
     fun requestStart() {
+        if (privateDnsCompatibilityWarning) {
+            AdShieldState.setError(context, "Private DNS must be turned off on Android 9 to avoid downgrading DNS privacy.")
+            return
+        }
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
         ) {
@@ -192,6 +199,55 @@ fun AdShieldScreen() {
                 body = lastBlockedDomain,
                 accent = MosaicPalette.Cyan,
             )
+        }
+
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = MosaicPalette.Surface,
+            shape = RoundedCornerShape(14.dp),
+            border = BorderStroke(1.dp, MosaicPalette.Divider),
+        ) {
+            Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("ALLOWLIST", color = MosaicPalette.Cyan, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Text("If a site or app stops working, allow its hostname here. Subdomains are included.", color = MosaicPalette.TextSecondary, fontSize = 10.sp, lineHeight = 14.sp)
+                OutlinedTextField(
+                    value = allowlistEntry,
+                    onValueChange = { allowlistEntry = it },
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true,
+                    label = { Text("Hostname, e.g. example.com") },
+                )
+                Button(
+                    onClick = {
+                        val host = normalizeAllowlistDomain(allowlistEntry)
+                        if (host == null) {
+                            allowlistMessage = "Enter a hostname only, without a URL or path."
+                        } else {
+                            allowlist = allowlist + host
+                            AdShieldState.setAllowlist(context, allowlist)
+                            allowlistEntry = ""
+                            allowlistMessage = "Added $host"
+                        }
+                    },
+                    enabled = allowlistEntry.isNotBlank(),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text("Allow this domain", fontSize = 10.sp)
+                }
+                if (allowlistMessage.isNotBlank()) {
+                    Text(allowlistMessage, color = MosaicPalette.TextMuted, fontSize = 9.sp)
+                }
+                allowlist.sorted().forEach { domain ->
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(domain, color = MosaicPalette.TextPrimary, fontSize = 10.sp, modifier = Modifier.weight(1f))
+                        TextButton(onClick = {
+                            allowlist = allowlist - domain
+                            AdShieldState.setAllowlist(context, allowlist)
+                            allowlistMessage = "Removed $domain"
+                        }) { Text("Remove", fontSize = 9.sp) }
+                    }
+                }
+            }
         }
 
         if (error.isNotBlank()) {
@@ -294,4 +350,12 @@ private fun hasOtherVpn(context: Context): Boolean {
     return manager.allNetworks.any { network ->
         manager.getNetworkCapabilities(network)?.hasTransport(NetworkCapabilities.TRANSPORT_VPN) == true
     }
+}
+
+
+private fun normalizeAllowlistDomain(value: String): String? {
+    val host = value.trim().trimEnd('.').lowercase()
+    if (host.isBlank() || host.length > 253) return null
+    if (!host.contains('.') || host.any { it.isWhitespace() || it == '/' || it == ':' || it == '@' }) return null
+    return host
 }
