@@ -63,10 +63,10 @@ Status values: DONE, IN PROGRESS, BLOCKED, TODO, PARKED.
 
 | ID | Task | Status | Verification / note |
 |---|---|---|---|
-| P4-001 | YouTube official search/metadata and standard visible embedded playback | TODO | Preserve ads/player UI; no background player or audio extraction |
-| P4-002 | Spotify Android App Remote integration | TODO | Installed Spotify app + explicit authorization; provider owns audio/background |
+| P4-001 | YouTube source integration and background-playback/ad-filter feasibility | TODO | Research current APIs, browser/native paths, Android behavior and ad-filter compatibility; test rather than assume exclusions |
+| P4-002 | Spotify source integration and background-playback/ad-filter feasibility | TODO | Research official SDKs, browser/native paths, Android behavior and ad-filter compatibility; distinguish remote control from native audio playback |
 | P4-003 | Provider capability matrix and delegated-player UI | IN PROGRESS | Matrix documented; UI labels/implementation pending |
-| P4-004 | Provider policy and integration regression review | TODO | Re-check official policies before each release |
+| P4-004 | Source policy, technical feasibility and integration regression review | TODO | Re-check current platform/provider terms and Android capabilities without preemptively narrowing the product goal |
 
 ## Phase 5 — Local intelligence
 
