@@ -174,7 +174,9 @@ class AdShieldVpnService : VpnService() {
                     !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
             }
         }.getOrDefault(emptyList())
-        if (networks.isNotEmpty()) setUnderlyingNetworks(networks.toTypedArray())
+        // Clear stale routes as well as publishing the current set. A disconnected
+        // network must never remain selected as the VPN's underlying network.
+        setUnderlyingNetworks(networks.toTypedArray())
         return networks
     }
 
@@ -231,9 +233,13 @@ class AdShieldVpnService : VpnService() {
             val socket = runCatching { DatagramSocket() }.getOrNull() ?: continue
             try {
                 if (!protect(socket)) continue
-                runCatching { network.bindSocket(socket) }
+                // Binding failure is fatal for this resolver attempt: sending an
+                // unbound socket can route DNS back into this VPN and loop.
+                if (runCatching { network.bindSocket(socket) }.isFailure) continue
+                socket.connect(resolver, DNS_PORT)
                 socket.soTimeout = DNS_TIMEOUT_MS
-                socket.send(DatagramPacket(query, query.size, resolver, DNS_PORT))
+                // A connected UDP socket accepts replies only from this resolver.
+                socket.send(DatagramPacket(query, query.size))
 
                 val responseBuffer = ByteArray(MAX_DNS_RESPONSE_BYTES)
                 val responsePacket = DatagramPacket(responseBuffer, responseBuffer.size)
