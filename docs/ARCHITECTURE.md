@@ -1,24 +1,25 @@
 # MOSAIC architecture baseline
 
-**Status: LOCKED — baseline 1.0**  
-**Date:** 2026-10-30
+**Status: LOCKED — baseline 1.1 (cross-source playback + Ad Shield)**  
+**Original baseline:** 2026-10-30  
+**Vision lock:** 2026-11-05 · ADR-014/ADR-015
 
 ## 1. Architectural objective
 
-MOSAIC is a local-first, native Android media environment with one canonical media model and one app-owned playback state. Sources are replaceable adapters. The browser, local library, feeds, streams and provider integrations must not each invent their own player or canonical data model.
+MOSAIC is a local-first, native Android media player and ad-control hub. Its primary outcome is to play media from other sources in the background and block ads/trackers as broadly as technically possible across apps and websites. Sources are replaceable adapters; the browser is one optional source surface, not the product. The app maintains one canonical media model and one MOSAIC-owned playback state for media it can actually resolve and play. External app sessions remain separately owned but can be observed/controlled through supported Android mechanisms.
 
 ## 2. Layer map
 
 ```text
 ┌──────────────────────────────────────────────────────────────┐
 │                         Android UI                            │
-│  Home · Library · Player · Browser (later) · Capture (later)  │
+│  Home · Unified Player · Sources · Ad Shield · Library        │
 └──────────────────────────────┬───────────────────────────────┘
                                │ UI intents / observed state
 ┌──────────────────────────────▼───────────────────────────────┐
 │                           MEDIA CORE                          │
 │ Media identity · source registry · capabilities · queue      │
-│ playback state · provenance · permission boundaries          │
+│ playback state · source ownership · ad-filter policy          │
 └─────────────┬───────────────────┬───────────────────┬────────┘
               │                   │                   │
        ┌──────▼──────┐     ┌──────▼──────┐     ┌──────▼──────┐
@@ -34,7 +35,8 @@ MOSAIC is a local-first, native Android media environment with one canonical med
        └───────────────────────────────────────────────────────┘
 
 Optional upper layers, later phases:
-  Browser adapter → capture inbox → processing queue → local AI
+  Optional Browser surface → media handoff → shared player
+  Ad Shield → WebView filtering + optional local VPN/DNS filtering
   Backup/export → user-selected external destination
   Optional remote sync → explicit opt-in, never required for playback
 ```
@@ -58,7 +60,9 @@ New modules require an ADR and a meaningful ownership boundary. Do not split eve
 - Notification, lock-screen, headset and Bluetooth control state comes from the same session.
 - ExoPlayer uses automatic audio-focus handling, pause-on-noisy-route behavior and `C.WAKE_MODE_LOCAL` while a foreground media service owns playback; the `WAKE_LOCK` permission supports screen-off continuity.
 - Do not create a second ExoPlayer in a screen, source adapter or browser tab.
-- Any browser-to-native handoff resolves a permitted `MediaItem` and hands it to the existing queue/session.
+- Any source-to-native handoff resolves a technically accessible and permitted `MediaItem` and hands it to the existing queue/session.
+- External app sessions are not a second MOSAIC player: they remain source-owned. MOSAIC may expose an explicit external-session control surface when Android exposes supported commands.
+- MOSAIC must distinguish native playback, browser playback and source-owned playback. A play/pause remote is not evidence that MOSAIC has acquired the audio stream.
 
 Official implementation basis: AndroidX Media3 background playback guide — https://developer.android.com/media/media3/session/background-playback
 
@@ -122,14 +126,28 @@ Compose UI <────── observed state <───── domain state <─
 - Never store third-party credentials in source control or ZIP snapshots.
 - Treat page metadata, feeds, transcripts and imported text as untrusted data.
 
-## 10. Deliberate non-goals
+## 10. Product boundaries and prohibited shortcuts
 
-- Do not bypass provider ads, subscriptions, DRM, paywalls or authentication controls.
-- Do not use undocumented endpoints or scrape private APIs as a dependency.
-- Do not claim YouTube or Spotify content can be re-streamed through MOSAIC unless their official terms and APIs permit that exact capability.
+- Broad background playback from external sources and broad ad/tracker blocking are product goals, not non-goals. Do not remove named sources from scope by default.
+- Do not claim a source is supported until its actual foreground/background behavior, controls and filtering compatibility have been tested.
+- Do not treat external MediaSession control as native playback or as access to another app's audio bytes.
+- Do not use DRM circumvention, credential theft, private API scraping, TLS interception, or unauthorized access as implementation shortcuts.
+- Do not claim DNS/host filtering can remove first-party, same-domain or in-stream ads in every service. Measure and explain those limits.
 - Do not force a MOSAIC account, cloud backend or subscription for local playback.
 - Do not duplicate source files just to create a unified view.
+- The browser is a supporting source surface. A browser-only solution is not completion of MOSAIC.
 
-## 11. Architecture change policy
+## 11. Ad-control architecture
+
+Ad filtering is a separate capability from media playback and must be layered:
+
+1. **Browser layer:** request filtering for pages rendered inside MOSAIC, with user-visible status, per-site controls, allowlisting and diagnostics.
+2. **Device layer:** investigate and implement an explicitly user-enabled Android `VpnService` local DNS/host filter to block known ad/tracker domains across apps. It must explain VPN-slot conflicts, battery/network impact, app exclusions and how to disable it.
+3. **Rule engine:** source-aware block/allow rules with provenance, update mechanism, false-positive reporting and compatibility tests. No blanket provider exemption; no blind blocking of content/CDN hosts.
+4. **Known boundary:** ordinary DNS filtering cannot inspect encrypted page content or distinguish an ad from content delivered from the same host. No TLS interception or DRM manipulation is permitted as a workaround.
+
+The VPN layer is optional and user-controlled, not silently enabled. Browser and device-wide filtering have separate switches and diagnostics. Filtering must fail safely: network access remains available if the filter service stops, unless the user explicitly selects a stricter fail-closed mode in a future decision.
+
+## 12. Architecture change policy
 
 A change to a locked boundary requires an ADR in `docs/DECISIONS.md`, evidence, migration plan, test implications and rollback path. Feature additions that fit existing contracts do not require architecture reset. Preserve this file as the canonical baseline; update its revision history rather than creating competing blueprints.
