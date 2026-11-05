@@ -427,12 +427,21 @@ jobs:
           chmod +x ./gradlew
           ./gradlew --no-daemon --version 2>&1 | tee -a "$MOSAIC_BUILD_LOG"
 
+      - name: Prepare persistent MOSAIC development signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+          KEYSTORE="$RUNNER_TEMP/mosaic-debug.keystore"
+          base64 --decode "$GITHUB_WORKSPACE/tools/mosaic-debug-signing-key.b64" > "$KEYSTORE"
+          keytool -list -keystore "$KEYSTORE" -storepass android -alias androiddebugkey >/dev/null
+          echo "MOSAIC_DEBUG_KEYSTORE=$KEYSTORE" >> "$GITHUB_ENV"
+
       - name: Run Android unit tests, lint and debug APK build
         shell: bash
         run: |
           set -euo pipefail
           cd "$GITHUB_WORKSPACE"
-          ./gradlew --no-daemon --stacktrace \
+          ./gradlew --no-daemon --stacktrace -PmosaicVersionCode="$GITHUB_RUN_NUMBER" \
             :core:media:testDebugUnitTest \
             :app:testDebugUnitTest \
             :app:lintDebug \
@@ -445,6 +454,11 @@ jobs:
           APK="$GITHUB_WORKSPACE/app/build/outputs/apk/debug/app-debug.apk"
           if [[ ! -s "$APK" ]]; then
             echo "::error::Gradle reported success but app-debug.apk is missing."
+            exit 1
+          fi
+          CERT_SHA="$(apksigner verify --print-certs "$APK" | awk -F': ' '/Signer #1 certificate SHA-256 digest/ {gsub(/:/, "", $2); print tolower($2)}')"
+          if [[ "$CERT_SHA" != "700b857678b343aed93f7a7280e7d777df73c3f5f5e5024d94c119a4578079d0" ]]; then
+            echo "::error::APK was not signed with the persistent MOSAIC development certificate."
             exit 1
           fi
           mkdir -p "$RUNNER_TEMP/mosaic-delivery"
@@ -762,11 +776,20 @@ jobs:
           chmod +x ./gradlew
           ./gradlew --no-daemon --version
 
+      - name: Prepare persistent MOSAIC development signing key
+        shell: bash
+        run: |
+          set -euo pipefail
+          KEYSTORE="$RUNNER_TEMP/mosaic-debug.keystore"
+          base64 --decode "$GITHUB_WORKSPACE/tools/mosaic-debug-signing-key.b64" > "$KEYSTORE"
+          keytool -list -keystore "$KEYSTORE" -storepass android -alias androiddebugkey >/dev/null
+          echo "MOSAIC_DEBUG_KEYSTORE=$KEYSTORE" >> "$GITHUB_ENV"
+
       - name: Run Android unit tests, lint and debug APK build
         shell: bash
         run: |
           set -euo pipefail
-          ./gradlew --no-daemon --stacktrace :core:media:testDebugUnitTest :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+          ./gradlew --no-daemon --stacktrace -PmosaicVersionCode="$GITHUB_RUN_NUMBER" :core:media:testDebugUnitTest :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
 
       - name: Verify APK and calculate checksum
         shell: bash
@@ -774,6 +797,11 @@ jobs:
           set -euo pipefail
           APK="app/build/outputs/apk/debug/app-debug.apk"
           test -s "$APK"
+          CERT_SHA="$(apksigner verify --print-certs "$APK" | awk -F': ' '/Signer #1 certificate SHA-256 digest/ {gsub(/:/, "", $2); print tolower($2)}')"
+          if [[ "$CERT_SHA" != "700b857678b343aed93f7a7280e7d777df73c3f5f5e5024d94c119a4578079d0" ]]; then
+            echo "::error::APK was not signed with the persistent MOSAIC development certificate."
+            exit 1
+          fi
           mkdir -p "$RUNNER_TEMP/mosaic-direct-delivery"
           cp "$APK" "$RUNNER_TEMP/mosaic-direct-delivery/MOSAIC-debug.apk"
           sha256sum "$RUNNER_TEMP/mosaic-direct-delivery/MOSAIC-debug.apk" > "$RUNNER_TEMP/mosaic-direct-delivery/MOSAIC-debug.apk.sha256.txt"
