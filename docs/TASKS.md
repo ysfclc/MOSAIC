@@ -57,6 +57,7 @@ Status values: DONE, IN PROGRESS, BLOCKED, TODO, PARKED.
 | P3-011 | Cross-source background playback acceptance | TODO | Test each source with screen off, app switching, lock screen, notification, Bluetooth/headset and queue/control behavior |
 | P3-012 | DNS packet parser and IPv4 UDP response codec | DONE | Unit tests cover IPv4 UDP DNS question parsing, malformed/non-DNS packets, exact suffix matching, allowlist overrides, NXDOMAIN response content and IPv4 header checksum; passed in run 42051683244 |
 | P3-013 | Ad Shield coverage and regression matrix | IN PROGRESS | Basic rule/allowlist unit tests exist; still test real DNS traffic, named apps, false positives, playback breakage, DoH, IPv6 and VPN stop/revoke on Redmi |
+| P3-014 | Stable APK signing and upgrade-in-place delivery | IN PROGRESS | CI now uses a persistent development signing key and monotonically increasing versionCode; verify the next APK signature and confirm Android accepts it as an in-place update. One-time migration from earlier ephemeral debug signatures may require one uninstall. |
 | P3-014 | Source-specific YouTube/Spotify/social-media integration research | TODO | Compare official APIs/SDKs, source-owned background behavior, browser playback, Android MediaSession and accessible native routes; record evidence |
 | P3-015 | Source-aware filtering and provider compatibility rules | TODO | Replace blanket provider exemptions only with tested source-aware allow/block rules; never break media delivery blindly |
 | P3-016 | VPN conflict, Private DNS and service recovery handling | TODO | Detect an existing VPN and strict Private DNS, explain coverage limits, show persistent status/Stop action and restore normal networking on stop/revoke |
@@ -110,3 +111,4 @@ Current implementation is a foundation only: local audio plays through Media3; a
 - Physical Redmi Note 12 Pro 5G acceptance remains pending for Player and Ad Shield.
 - Browser filtering and external-session controls are prototypes; native background playback from named external sources remains unproven. The first cross-app DNS Ad Shield slice is implemented and CI-verified, but physical-device and named-app acceptance are still pending.
 - Do not claim device/source acceptance until the corresponding tests have actually passed.
+- CI APKs must use the persistent MOSAIC development signing certificate and a higher versionCode. Never ask the user to uninstall between ordinary updates. The old ephemeral-signature APK may require a one-time migration uninstall.
