@@ -8,11 +8,15 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.net.ConnectivityManager
+import android.net.DnsResolver
 import android.net.Network
 import android.net.NetworkCapabilities
 import android.net.VpnService
 import android.os.Build
+import android.os.CancellationSignal
 import android.os.ParcelFileDescriptor
+import android.provider.Settings
+import androidx.annotation.RequiresApi
 import com.ysfclc.mosaic.R
 import java.io.FileInputStream
 import java.io.FileOutputStream
@@ -20,6 +24,10 @@ import java.io.IOException
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
+import java.util.concurrent.CountDownLatch
+import java.util.concurrent.Executor
+import java.util.concurrent.TimeUnit
+import java.util.concurrent.atomic.AtomicReference
 
 class AdShieldVpnService : VpnService() {
     @Volatile private var isRunning = false
@@ -55,6 +63,11 @@ class AdShieldVpnService : VpnService() {
         if (isRunning) return
         if (VpnService.prepare(this) != null) {
             AdShieldState.setError(this, "Android VPN permission has not been granted.")
+            stopSelf()
+            return
+        }
+        if (Build.VERSION.SDK_INT == Build.VERSION_CODES.P && isPrivateDnsEnabled()) {
+            AdShieldState.setError(this, "Private DNS is enabled on Android 9. MOSAIC will not downgrade it to unencrypted DNS.")
             stopSelf()
             return
         }
@@ -138,27 +151,98 @@ class AdShieldVpnService : VpnService() {
     }
 
     private fun forwardDnsQuery(query: ByteArray): ByteArray? {
-        val resolvers = findUpstreamResolvers()
+        val networks = findUnderlyingNetworks()
+        if (networks.isEmpty()) {
+            AdShieldState.setError(this, "No active non-VPN network is available for DNS.")
+            return null
+        }
+        return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            forwardWithSystemResolver(networks.first(), query)
+        } else {
+            forwardWithProtectedUdp(networks.first(), query)
+        }
+    }
+
+    private fun findUnderlyingNetworks(): List<Network> {
+        val manager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val networks = runCatching {
+            manager.allNetworks.filter { network ->
+                val capabilities = manager.getNetworkCapabilities(network) ?: return@filter false
+                capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET) &&
+                    !capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN)
+            }
+        }.getOrDefault(emptyList())
+        if (networks.isNotEmpty()) setUnderlyingNetworks(networks.toTypedArray())
+        return networks
+    }
+
+    @RequiresApi(Build.VERSION_CODES.Q)
+    @Suppress("DEPRECATION")
+    private fun forwardWithSystemResolver(network: Network, query: ByteArray): ByteArray? {
+        val latch = CountDownLatch(1)
+        val response = AtomicReference<ByteArray?>()
+        val cancellation = CancellationSignal()
+        val callbackExecutor = Executor { command -> command.run() }
+        return try {
+            DnsResolver.getInstance().rawQuery(
+                network,
+                query,
+                DnsResolver.FLAG_NO_CACHE_LOOKUP or DnsResolver.FLAG_NO_CACHE_STORE,
+                callbackExecutor,
+                cancellation,
+                object : DnsResolver.Callback<ByteArray> {
+                    override fun onAnswer(answer: ByteArray, rcode: Int) {
+                        response.set(answer)
+                        latch.countDown()
+                    }
+
+                    override fun onError(error: DnsResolver.DnsException) {
+                        AdShieldState.setError(this@AdShieldVpnService, "System DNS error: ${error.message}")
+                        latch.countDown()
+                    }
+                },
+            )
+            if (!latch.await(DNS_TIMEOUT_MS.toLong(), TimeUnit.MILLISECONDS)) {
+                cancellation.cancel()
+                AdShieldState.setError(this, "System DNS timed out. Check the network or stop Ad Shield.")
+                null
+            } else {
+                response.get().also { answer ->
+                    if (answer != null) AdShieldState.setError(this, null)
+                }
+            }
+        } catch (error: Exception) {
+            AdShieldState.setError(this, "System DNS failed: ${error.message}")
+            null
+        }
+    }
+
+    private fun forwardWithProtectedUdp(network: Network, query: ByteArray): ByteArray? {
+        val manager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        val configured = manager.getLinkProperties(network)?.dnsServers.orEmpty().filter { it.address.size == 4 }
+        val resolvers = (configured + listOf(
+            InetAddress.getByName(CLOUDFLARE_DNS),
+            InetAddress.getByName(GOOGLE_DNS),
+        )).distinctBy { it.hostAddress }
+
         for (resolver in resolvers) {
             val socket = runCatching { DatagramSocket() }.getOrNull() ?: continue
             try {
                 if (!protect(socket)) continue
-                resolver.network?.let { network ->
-                    runCatching { network.bindSocket(socket) }
-                }
+                runCatching { network.bindSocket(socket) }
                 socket.soTimeout = DNS_TIMEOUT_MS
-                socket.send(DatagramPacket(query, query.size, resolver.address, DNS_PORT))
+                socket.send(DatagramPacket(query, query.size, resolver, DNS_PORT))
 
                 val responseBuffer = ByteArray(MAX_DNS_RESPONSE_BYTES)
                 val responsePacket = DatagramPacket(responseBuffer, responseBuffer.size)
                 socket.receive(responsePacket)
-                val response = responsePacket.data.copyOf(responsePacket.length)
-                if (response.size >= 12 && response[0] == query[0] && response[1] == query[1]) {
+                val answer = responsePacket.data.copyOf(responsePacket.length)
+                if (answer.size >= 12 && answer[0] == query[0] && answer[1] == query[1]) {
                     AdShieldState.setError(this, null)
-                    return response
+                    return answer
                 }
             } catch (_: Exception) {
-                // Try the next resolver; a failed upstream must not stop the local filter.
+                // Try the next resolver without interrupting the local packet loop.
             } finally {
                 socket.close()
             }
@@ -167,32 +251,10 @@ class AdShieldVpnService : VpnService() {
         return null
     }
 
-    private fun findUpstreamResolvers(): List<UpstreamResolver> {
-        val manager = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
-        val found = ArrayList<UpstreamResolver>()
-        runCatching {
-            manager.allNetworks.forEach { network ->
-                val capabilities = manager.getNetworkCapabilities(network) ?: return@forEach
-                if (!capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_INTERNET)) return@forEach
-                if (capabilities.hasTransport(NetworkCapabilities.TRANSPORT_VPN)) return@forEach
-                val properties = manager.getLinkProperties(network) ?: return@forEach
-                properties.dnsServers.forEach { address ->
-                    if (address.address.size == 4) found += UpstreamResolver(address, network)
-                }
-            }
-        }
-        val distinct = found.distinctBy { it.address.hostAddress }
-        val networks = distinct.mapNotNull { it.network }.distinct()
-        if (networks.isNotEmpty()) {
-            setUnderlyingNetworks(networks.toTypedArray())
-        }
-        if (distinct.isEmpty()) {
-            return listOf(
-                UpstreamResolver(InetAddress.getByName(CLOUDFLARE_DNS), null),
-                UpstreamResolver(InetAddress.getByName(GOOGLE_DNS), null),
-            )
-        }
-        return distinct
+    private fun isPrivateDnsEnabled(): Boolean {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return false
+        val mode = Settings.Global.getString(contentResolver, "private_dns_mode")
+        return !mode.isNullOrBlank() && mode != "off"
     }
 
     private fun startShieldNotification() {
@@ -236,8 +298,6 @@ class AdShieldVpnService : VpnService() {
         packetThread = null
         stopForeground(STOP_FOREGROUND_REMOVE)
     }
-
-    private data class UpstreamResolver(val address: InetAddress, val network: Network?)
 
     companion object {
         const val ACTION_START = "com.ysfclc.mosaic.adshield.START"
