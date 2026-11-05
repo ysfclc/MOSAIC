@@ -63,7 +63,7 @@ The CI workflow now decodes one persistent **development-only** signing key from
 
 ## Immediate next engineering task
 
-P3-008 now has an in-app DNS self-test for ordinary DNS resolution, blocked-host interception, and allowlist override. The Redmi acceptance procedure is documented in `docs/AD_SHIELD_DEVICE_ACCEPTANCE.md`. Neither has been physically run yet; device acceptance remains open.
+Prioritize P3-009 / P3-017: source-by-source YouTube and Spotify playback research, beginning with official/authorized routes, Android MediaSession behavior, browser playback and the exact ad-control boundary. Record which paths can place audio in MOSAIC's Media3 player versus leave it source-owned. Then implement the first proven route and test on the Redmi. P3-008 device acceptance remains open in parallel; its current implementation and DNS-routing hardening are CI-verified, but physical VPN/network recovery checks have not been run.
 
 The follow-up DNS-routing hardening passed [GitHub Actions run 42094128331](https://github.com/ysfclc/MOSAIC/actions/runs/42094128331) on commit `e0f51143c400556d697b9047502b59b2fe6a7de8`. Source verification, Python contract tests, Android unit tests, lint, APK assembly, APK checksum and persistent signing-certificate checks all passed. APK artifact ID: `13445249944`. Physical-device acceptance remains unperformed.
 
