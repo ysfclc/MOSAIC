@@ -83,6 +83,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -107,6 +108,7 @@ import com.ysfclc.mosaic.core.library.MediaStoreCatalog
 import com.ysfclc.mosaic.core.media.MediaItemRecord
 import com.ysfclc.mosaic.core.media.PlaybackConnection
 import com.ysfclc.mosaic.core.media.PlayableStreamAddress
+import com.ysfclc.mosaic.core.media.PodcastFeedLoader
 import com.ysfclc.mosaic.ui.browser.AdSkipAccessibilityStatus
 import com.ysfclc.mosaic.ui.browser.BrowserScreen
 import com.ysfclc.mosaic.ui.browser.ExternalMediaSession
@@ -139,6 +141,11 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
     var externalSessions by remember { mutableStateOf(emptyList<ExternalMediaSession>()) }
     var notificationAccess by remember { mutableStateOf(ExternalMediaSessionBridge.hasNotificationAccess(context)) }
     var adSkipEnabled by remember { mutableStateOf(AdSkipAccessibilityStatus.isEnabled(context)) }
+    var podcastEpisodes by remember { mutableStateOf(emptyList<MediaItemRecord>()) }
+    var podcastFeedTitle by remember { mutableStateOf<String?>(null) }
+    var podcastLoading by remember { mutableStateOf(false) }
+    var podcastError by remember { mutableStateOf<String?>(null) }
+    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(context) {
         while (isActive) {
@@ -301,6 +308,28 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
                                 playback.playUri(uri, title.ifBlank { "Internet radio" }, mimeType)
                                 true
                             }
+                        },
+                        podcastEpisodes = podcastEpisodes,
+                        podcastFeedTitle = podcastFeedTitle,
+                        podcastLoading = podcastLoading,
+                        podcastError = podcastError,
+                        onLoadPodcastFeed = { address ->
+                            podcastLoading = true
+                            podcastError = null
+                            coroutineScope.launch {
+                                runCatching { PodcastFeedLoader.load(address) }
+                                    .onSuccess { feed ->
+                                        podcastFeedTitle = feed.title
+                                        podcastEpisodes = feed.episodes
+                                        if (feed.episodes.isEmpty()) podcastError = "No playable HTTPS episodes were found in this feed."
+                                    }
+                                    .onFailure { error -> podcastError = error.message ?: "Could not load this podcast feed." }
+                                podcastLoading = false
+                            }
+                        },
+                        onPlayPodcastEpisode = { index ->
+                            playback.play(podcastEpisodes, index)
+                            destination = Destination.PLAYER
                         },
                         onOpenLibrary = { destination = Destination.LIBRARY },
                     )
@@ -690,6 +719,12 @@ private fun PlayerScreen(
     adSkipEnabled: Boolean,
     onEnableAdSkip: () -> Unit,
     onPlayStream: (String) -> Boolean,
+    podcastEpisodes: List<MediaItemRecord>,
+    podcastFeedTitle: String?,
+    podcastLoading: Boolean,
+    podcastError: String?,
+    onLoadPodcastFeed: (String) -> Unit,
+    onPlayPodcastEpisode: (Int) -> Unit,
     onOpenLibrary: () -> Unit,
 ) {
     val mediaItem = controller?.currentMediaItem
@@ -780,6 +815,15 @@ private fun PlayerScreen(
         }
         Spacer(Modifier.height(22.dp))
         StreamSourcePanel(onPlayStream = onPlayStream)
+        Spacer(Modifier.height(18.dp))
+        PodcastFeedPanel(
+            episodes = podcastEpisodes,
+            feedTitle = podcastFeedTitle,
+            loading = podcastLoading,
+            error = podcastError,
+            onLoadFeed = onLoadPodcastFeed,
+            onPlayEpisode = onPlayPodcastEpisode,
+        )
         Spacer(Modifier.height(22.dp))
         ExternalPlaybackPanel(
             hasAccess = hasExternalSessionAccess,
@@ -843,6 +887,83 @@ private fun StreamSourcePanel(
             Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
             Spacer(Modifier.width(7.dp))
             Text("Play in MOSAIC", fontSize = 11.sp)
+        }
+    }
+}
+
+@Composable
+private fun PodcastFeedPanel(
+    episodes: List<MediaItemRecord>,
+    feedTitle: String?,
+    loading: Boolean,
+    error: String?,
+    onLoadFeed: (String) -> Unit,
+    onPlayEpisode: (Int) -> Unit,
+) {
+    var feedAddress by remember { mutableStateOf("") }
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(9.dp),
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text("PODCAST FEEDS", color = MosaicPalette.Cyan, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
+            Text("Your episodes, in the MOSAIC queue", color = MosaicPalette.TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            Text(
+                "Load an RSS or Atom feed over HTTPS. Choose an episode and MOSAIC queues the remaining playable episodes behind it.",
+                color = MosaicPalette.TextMuted,
+                fontSize = 9.sp,
+                lineHeight = 13.sp,
+            )
+        }
+        OutlinedTextField(
+            value = feedAddress,
+            onValueChange = { feedAddress = it },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            label = { Text("Podcast RSS / Atom feed URL") },
+            placeholder = { Text("https://example.com/podcast.xml") },
+        )
+        Button(
+            onClick = { onLoadFeed(feedAddress) },
+            enabled = feedAddress.isNotBlank() && !loading,
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(13.dp),
+        ) {
+            Text(if (loading) "Loading feed…" else "Load episodes", fontSize = 11.sp)
+        }
+        if (error != null) {
+            Text(error, color = Color(0xFFFF9B9B), fontSize = 9.sp, lineHeight = 13.sp)
+        }
+        if (!feedTitle.isNullOrBlank() && episodes.isNotEmpty()) {
+            Text(
+                "$feedTitle · ${episodes.size} playable episodes",
+                color = MosaicPalette.Cyan,
+                fontSize = 9.sp,
+                fontWeight = FontWeight.SemiBold,
+            )
+            episodes.take(30).forEachIndexed { index, episode ->
+                Surface(
+                    onClick = { onPlayEpisode(index) },
+                    color = Color(0x661B2940),
+                    shape = RoundedCornerShape(12.dp),
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 11.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                            Text(episode.title, color = MosaicPalette.TextPrimary, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                            Text(episode.creator ?: feedTitle, color = MosaicPalette.TextMuted, fontSize = 8.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        }
+                        Icon(Icons.Default.PlayArrow, contentDescription = "Play episode and queue following episodes", tint = MosaicPalette.Cyan)
+                    }
+                }
+            }
+            if (episodes.size > 30) {
+                Text("Showing the first 30 episodes.", color = MosaicPalette.TextMuted, fontSize = 8.sp)
+            }
         }
     }
 }
