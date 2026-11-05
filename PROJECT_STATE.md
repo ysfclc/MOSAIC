@@ -62,6 +62,8 @@ The CI workflow now decodes one persistent **development-only** signing key from
 
 ## Immediate next engineering task
 
+P3-008 now has an in-app DNS self-test for ordinary DNS resolution, blocked-host interception, and allowlist override. The Redmi acceptance procedure is documented in `docs/AD_SHIELD_DEVICE_ACCEPTANCE.md`. Neither has been physically run yet; device acceptance remains open.
+
 **P3-008 — complete device acceptance for Ad Shield.** The first implementation is built and CI-verified, but it remains IN PROGRESS until the Redmi Note 12 Pro 5G checks pass: ordinary DNS resolution, known blocked domain, allowlist override, upstream timeout, unrelated app traffic, VPN stop/revoke recovery, foreground notification and lock-screen behavior. Then expand P3-013 to named-app playback/ads and DoH/Private DNS coverage.
 
 P3-007 Player controls and the first P3-008 Ad Shield slice are both CI-verified. Real-app and physical-device acceptance remain pending. P3-014 is CI-verified; the remaining update-path check is installing the stable-key APK over the current app after the one-time signature migration.
