@@ -34,11 +34,11 @@ This file is the canonical decision log. A decision marked **LOCKED** may only c
 - **Why:** user ownership, privacy and operating-cost constraints.
 - **Rejected:** mandatory remote processing or a cloud account to unlock local capabilities.
 
-## ADR-006 — Provider policy boundaries (LOCKED; SUPERSEDED IN SCOPE BY ADR-014)
+## ADR-006 — Provider integration boundaries (HISTORICAL; PARTLY SUPERSEDED BY ADR-014)
 
-- **Decision:** no ad removal, DRM circumvention, paywall bypass, private API scraping or unauthorized audio extraction. Integrate only capabilities that the provider permits.
-- **Why:** legal resilience, reliability and avoidance of fragile integrations.
-- **Trade-off:** certain third-party services cannot offer the same background or offline behavior as local/RSS media.
+- The original blanket restriction on ad/tracker filtering and resulting provider-wide scope restrictions are superseded by ADR-014/ADR-015. Ad/tracker filtering is a primary product goal and named sources remain in scope for technical investigation.
+- Respect platform and content-access requirements for every implementation. These requirements do not prohibit ordinary browser request filtering or user-enabled DNS/host filtering.
+- Re-evaluate each integration against current technical and platform requirements; do not turn an old provider-specific decision into a blanket product exclusion.
 
 ## ADR-007 — Modular Android Gradle project (LOCKED)
 
@@ -56,13 +56,12 @@ This file is the canonical decision log. A decision marked **LOCKED** may only c
 - **Decision:** Phase 1 delivers native local indexing and background playback, not full provider parity. Browser/RSS/radio/provider adapters/AI/sync stay in the locked roadmap and contracts.
 - **Why:** prove the highest-risk Android foundation before adding network and provider complexity.
 
-## ADR-010 — Ad control is scoped by source (LOCKED; SUPERSEDED IN SCOPE BY ADR-014)
+## ADR-010 — Browser-only ad control baseline (HISTORICAL; SUPERSEDED BY ADR-014/ADR-015)
 
 - Date: 2026-11-04.
-- Decision: MOSAIC owns an ad/tracker filter for ordinary web pages inside MOSAIC Browser. Filtering is conservative, user-toggleable, measurable and has provider/site exemptions. A later device-wide DNS/VPN mode is optional and separately consented.
-- Supersedes ADR-006 only for permitted third-party request filtering on ordinary web pages. ADR-006 remains fully in force for YouTube/Spotify player ads, DRM, paywalls, private APIs and protected audiovisual streams.
-- Why: the user requires meaningful ad control, but provider playback integrity and source ownership must remain intact.
-- Limit: host/request filtering cannot remove all ads, first-party ads or in-stream ads and must never be marketed as universal ad removal.
+- This was an interim implementation decision that limited filtering to ordinary pages inside MOSAIC Browser and used provider/site exemptions.
+- ADR-014/ADR-015 supersede that scope: Ad Shield is a primary product pillar, device-wide local VPN/DNS filtering must be investigated, and there is no blanket provider exemption.
+- The technical warning remains valid: host/request filtering cannot remove every first-party, same-domain or in-stream ad. Measure compatibility and do not market unverified universal coverage.
 
 ## ADR-011 — Two-way media bridge with explicit playback ownership (LOCKED)
 
@@ -72,13 +71,13 @@ This file is the canonical decision log. A decision marked **LOCKED** may only c
 - Why: "vice versa" means media and control must move in both directions, not just import URLs into MOSAIC.
 - Limit: no raw protected-stream interception, audio extraction, private API scraping or promise of one gapless queue across unrelated provider players.
 
-## ADR-012 — YouTube and Spotify integration capability split (HISTORICAL; SUPERSEDED BY ADR-014)
+## ADR-012 — YouTube and Spotify integration baseline (HISTORICAL; SUPERSEDED BY ADR-014/ADR-015)
 
 - Date: 2026-11-04.
-- YouTube: use permitted official metadata/search and standard visible embedded playback. Preserve provider ads/player UI. No background player, ad blocking, audio/video separation or offline copy.
-- Spotify: use the official Android App Remote SDK, subject to current availability and terms, to connect to the installed Spotify app after user authorization. Display permitted player state and send supported commands. Spotify owns audio streaming and background lifecycle.
-- Android external sessions: discover/control other active media sessions only through Android's supported access path and an explicit user-enabled NotificationListenerService; never silently request notification access.
-- Why: this is the maximum honest integration surface supported by current provider and Android APIs. Re-evaluate against provider policy before release.
+- This recorded an initial conservative approach: visible YouTube playback with provider ads intact and Spotify App Remote/Android MediaSession control while the source app owned playback.
+- It is not the final product boundary. ADR-014/ADR-015 require continued investigation of background playback and ad filtering for both providers, plus Facebook, Instagram and other sources.
+- The distinction between an external app's own media session and MOSAIC-native playback remains valid. Notification access must remain explicit and user-enabled.
+- Any specific API/SDK integration must be checked against its current documentation and platform requirements before implementation.
 
 ### Official references reviewed 2026-11-04
 
