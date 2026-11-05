@@ -43,12 +43,13 @@ Respect platform, security and content-access boundaries. These boundaries do no
 - This slice passed source verification, Python contract tests, Android unit tests, lint, APK assembly, checksum and stable signing in [GitHub Actions run 42110725075](https://github.com/ysfclc/MOSAIC/actions/runs/42110725075), commit `010c85899bdcfe3669a44ce4c27e7d78e844f046`. It is not device-accepted. Test on Redmi with YouTube foreground, ad-skip UI variants, false-positive cases, app switching and screen-off behavior. The feature may do nothing when YouTube changes labels or renders controls inaccessible to Android accessibility.
 - The broader Ad Shield remains a separate local VPN/DNS capability; it can block separable host-based ad/tracker requests but cannot reliably remove same-host or in-stream ads.
 
-## Native HTTPS stream playback slice (new)
+## Native HTTPS stream, radio and podcast playback slice (new)
 
 - Added a Player URL entry that sends validated HTTPS audio URLs to the app-owned Media3 `MediaSessionService`; this is genuine MOSAIC-owned playback, not a remote control of another app.
 - Added the Media3 HLS extension so HTTPS HLS radio streams (`.m3u8`) can be handled by ExoPlayer alongside supported progressive audio formats.
 - Added a pure-JVM URL validator and tests: accepts HTTPS URLs, rejects HTTP/cleartext, non-network schemes, missing hosts and embedded credentials. HTTP-only radio stations are deliberately not enabled because no scoped cleartext policy has been designed.
-- This slice does not yet parse RSS feeds or create multi-episode podcast queues. Build/device verification is pending; after CI, test at least one HTTPS MP3/AAC stream and one HLS radio URL, then screen-off, lock-screen, notification and Bluetooth controls on the Redmi.
+- Added bounded HTTPS feed loading and a secure RSS 2.0 / Atom parser. DOCTYPE and external entities are disabled, feed size is capped at 2 MB, only HTTPS enclosures are admitted, and selecting an episode places the feed's playable episodes into the shared Media3 queue.
+- Added parser tests for RSS, Atom, relative enclosure URLs, insecure media links, oversized feeds and XXE payloads. CI/device verification is pending; after CI, test at least one HTTPS MP3/AAC stream, one HLS radio URL and one real podcast feed, then screen-off, lock-screen, notification and Bluetooth controls on the Redmi.
 
 ## APK installation and update compatibility
 
@@ -78,7 +79,7 @@ The CI workflow now decodes one persistent **development-only** signing key from
 
 ## Immediate next engineering task
 
-Continue P3-010 with RSS podcast feed parsing and episode queue insertion into the existing Media3 session. The HTTPS direct-stream/HLS entry is now implemented but awaiting CI and device acceptance. P3-018 native external session controls/ad-skip helper passed CI run 42110725075 but still needs real YouTube/Spotify tests on the Redmi. P3-008 Ad Shield physical acceptance also remains open.
+P3-010 now includes direct HTTPS streams, HLS radio and RSS/Atom podcast queueing; this combined slice is awaiting CI and Redmi device acceptance. Next priority after CI: validate real station/feed URLs and continue P3-008 Ad Shield and P3-018 YouTube/Spotify acceptance on-device. P3-018 native external session controls/ad-skip helper passed CI run 42110725075 but still needs real YouTube/Spotify tests on the Redmi. P3-008 Ad Shield physical acceptance also remains open.
 
 The follow-up DNS-routing hardening passed [GitHub Actions run 42094128331](https://github.com/ysfclc/MOSAIC/actions/runs/42094128331) on commit `e0f51143c400556d697b9047502b59b2fe6a7de8`. Source verification, Python contract tests, Android unit tests, lint, APK assembly, APK checksum and persistent signing-certificate checks all passed. APK artifact ID: `13445249944`. Physical-device acceptance remains unperformed.
 
