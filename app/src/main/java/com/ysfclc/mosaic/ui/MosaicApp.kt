@@ -971,6 +971,7 @@ private fun BottomNavigation(selected: Destination, onSelect: (Destination) -> U
             Triple(Destination.HOME, Icons.Default.Home, "Home"),
             Triple(Destination.LIBRARY, Icons.Default.LibraryMusic, "Library"),
             Triple(Destination.PLAYER, Icons.Default.Waves, "Player"),
+            Triple(Destination.SHIELD, Icons.Default.Security, "Shield"),
             Triple(Destination.BROWSER, Icons.Default.Language, "Browser"),
         )
         destinations.forEach { (destination, icon, label) ->
