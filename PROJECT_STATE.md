@@ -2,10 +2,11 @@
 
 **Project:** MOSAIC / Personal Media OS  
 **Repository:** ysfclc/MOSAIC  
-**Branch:** main (source ZIP fetched from the repository; no GitHub commit made by this task)  
+**Branch:** main  
+**Latest documentation commit:** `a89d8047369fa5b4664241ec660a8146ca31bff6` (2026-11-05; origin/copy-paste intent recorded directly in GitHub)  
 **Current phase:** 1 — Native foundation and local playback  
 **Architecture status:** LOCKED baseline; changes require an ADR in docs/DECISIONS.md  
-**Source snapshot:** 2026-11-04 — corrected Phase 1 build handoff
+**Source snapshot:** 2026-11-05 — integrated browser/bridge snapshot; documentation handoff refreshed
 
 ## Product contract
 
@@ -40,9 +41,9 @@ Important boundary: explicit user-invoked paste only. Do not add background clip
 
 ## Remaining acceptance gates
 
-- P1-010: run the repository ZIP-import workflow end-to-end on GitHub.
-- P1-011: generate and commit the Gradle wrapper and pinned wrapper checksum through the first successful import workflow.
-- P1-012: local Android build is verified; GitHub Actions import/build result is still pending.
+- P1-010, P1-011 and P1-012: DONE for the integrated source snapshot; successful GitHub Actions run 41957296181 performed import, wrapper/checksum bootstrap, source verification, tests, lint and APK build.
+- Latest upload commit `0b65d868444010a74041b395931da37e4530c14f` did not import: run 41962171501 failed in preflight because the push event did not resolve a changed archive path. The ZIP at incoming/mosaic.zip is therefore not integrated; do not treat that upload as current source.
+- Direct documentation commits made 2026-11-05 are on main. Current workflow triggers only for the two incoming ZIP paths or manual dispatch; ordinary direct source/documentation edits do not trigger this build workflow. Add a safe direct-edit CI path without breaking ZIP import (tracked as GOV-001).
 - P1-013 and P1-014: physical Redmi Note 12 Pro 5G acceptance remains pending (screen-off playback, notification, lock screen, headset/Bluetooth, audio focus, app startup, permissions, SAF, and local indexing).
 - Phase 2 must remain parked until Phase 1 device acceptance is completed.
 
@@ -52,9 +53,9 @@ See notes/builds/2026-11-04-vercel-build.md for sandbox/toolchain details, Gradl
 
 ## Handoff integrity
 
-- Source was fetched from incoming/MOSAIC-Phase-1-Repository.zip at GitHub blob e45cd6b123cca7b8376364518907fbbd3d43a0d8.
-- The corrected source ZIP preserves the app source, project documentation, and GitHub workflow. Generated build caches and build outputs are excluded from the source ZIP; the APK is handed off separately.
-- This task did not push or commit changes to GitHub. Upload the resulting full-source ZIP as incoming/mosaic.zip to invoke the repository's canonical importer.
+- The integrated source snapshot is on main and was verified by GitHub Actions run 41957296181.
+- The 2026-11-05 origin/copy-paste documentation updates were committed directly to main across PRODUCT_SPEC.md, TASKS.md, PROJECT_STATE.md, README.md and DECISIONS.md (ADR-013). No application source code was changed in that documentation pass.
+- The newer incoming ZIP commit `0b65d868` remains unprocessed due to the preflight failure; preserve it for a separately tracked workflow repair/import task.
 - No claim of physical-device validation is made.
 
 ## Browser and cross-source requirements update — 2026-11-04
