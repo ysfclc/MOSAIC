@@ -4,6 +4,23 @@
 
 A native, local-first personal media environment that lets a person collect, organize and play content from multiple legitimate sources through one consistent interface, then optionally turn that content into searchable personal knowledge.
 
+## Origin and founding problem — preserve this intent
+
+MOSAIC began as a practical answer to fragmented personal media and the friction of moving something useful between apps. The user wanted a simple, repeatable way to take something encountered elsewhere — especially a copied URL, text snippet or media reference — bring it into MOSAIC, keep it for later, and then open, play, organize or share it from the place that made sense. The reverse direction matters too: content or references held in MOSAIC must be easy to copy, open or share back out to another app. This is a two-way movement of user-selected content and context, not a one-way browser bookmark feature.
+
+The founding interaction must be obvious and low-friction:
+
+1. **Copy → paste into MOSAIC:** the user copies a link or text in another app, opens MOSAIC and explicitly pastes it into a capture/paste entry point. MOSAIC identifies what was pasted, previews it, and lets the user save or act on it. The initial supported payloads are plain text and URLs; media files and richer metadata use Android's document/open/share mechanisms.
+2. **Share → MOSAIC:** when the source app offers Android Share, the user can send a URL, text or supported file to MOSAIC. It enters the same capture flow as paste, rather than creating a disconnected feature.
+3. **MOSAIC → other apps:** the user can copy a saved value, open its link in a compatible app, or share supported content/files outward using Android intents and appropriate URI grants.
+4. **Keep it for later:** captured items should ultimately persist in a user-controlled inbox/library with source provenance, capture time, status and a clear next action. A URL pasted into the app is not yet a durable, searchable media library; that persistence work remains tracked in the roadmap.
+
+The product grew from this capture-and-continue problem into a broader personal media environment: local media, podcasts, streams, browser-discovered content and permitted provider integrations should be collected and experienced through one coherent native app. The app is not intended to replace every provider or to pretend protected streams can be imported. It should preserve the user's ability to move references and user-owned files between apps while respecting source ownership and capability limits.
+
+**Important distinction:** MOSAIC's paste/capture flow is a user-invoked content workflow. It is not VaultOS's separate device-wide clipboard-history/automatic clipboard-capture product. Do not silently turn MOSAIC into a clipboard manager or add background clipboard polling. Read clipboard content only in response to an explicit user action (for example, tapping Paste), subject to Android's clipboard privacy behavior. Android share/open intents remain first-class alternatives.
+
+This founding use case is product-critical and must remain visible in Home/Browser/Inbox design, acceptance tests and future session handoffs. Do not demote it to a minor browser shortcut.
+
 ## Primary job to be done
 
 “When I find something worth listening to or watching, I want to keep it accessible, continue it in the context I prefer, and organize it without being forced into a particular provider's app, account or subscription for capabilities I can own locally.”
