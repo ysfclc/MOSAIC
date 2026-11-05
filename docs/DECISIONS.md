@@ -86,3 +86,13 @@ This file is the canonical decision log. A decision marked **LOCKED** may only c
 - Spotify Android SDK (Beta): https://developer.spotify.com/documentation/android
 - Spotify Android App Remote getting started: https://developer.spotify.com/documentation/android/tutorials/getting-started
 - Android MediaSessionManager: https://developer.android.com/reference/android/media/session/MediaSessionManager
+
+
+## ADR-013 — Explicit copy/paste capture is a founding product workflow (LOCKED)
+
+- **Date:** 2026-11-05
+- **Decision:** MOSAIC must support two-way user-selected content movement: copy plain text/URLs in another app and explicitly paste into MOSAIC; Android Share/Open intents provide equivalent inbound paths; captured content can subsequently be copied, opened or shared back out.
+- **Why:** MOSAIC originated to reduce the friction of moving useful media references and content between apps, keeping them for later and continuing in the user's chosen context. This capture-and-continue workflow is core product purpose, not an optional browser convenience.
+- **Implementation boundary:** paste is invoked by a deliberate user action. Do not poll the clipboard in the background or implement clipboard history/automatic clipboard capture; that is a separate VaultOS product concern. Android clipboard privacy behavior and URI grants must be respected.
+- **Acceptance:** copied URL/text can be pasted, previewed, saved durably, retrieved after process death, then copied/opened/shared outward. Android Share must converge on the same inbox model. File capture is handled through supported Android intents/document access and must not imply arbitrary provider-stream extraction.
+- **Tracking:** P3-009, P3-010 and P3-011 in TASKS.md.
