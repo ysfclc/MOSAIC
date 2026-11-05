@@ -45,11 +45,11 @@ This file is the canonical decision log. A decision marked **LOCKED** may only c
 - **Decision:** start with `:app`, `:core:media`, `:core:library`, `:core:design`. New Gradle modules need a real ownership boundary and an ADR.
 - **Why:** stable separation without over-fragmenting features.
 
-## ADR-008 — Pinned CI toolchain and ZIP-based integration (LOCKED)
+## ADR-008 — Reproducible direct builds and safe ZIP imports (LOCKED)
 
-- **Decision:** CI pins Java 17, Gradle 9.3.1, AGP 9.1.1 and SDK package versions. One full-source ZIP is uploaded at `incoming/mosaic.zip`; the workflow validates, bootstraps a pinned Gradle Wrapper on the first successful import, builds and commits an upload note.
-- **Why:** reproduce the Memo handoff method while protecting active workflows and source history.
-- **Trade-off:** the remote repo must be created and the workflow installed once manually; subsequent source updates are ZIP-driven.
+- **Decision:** CI pins Java 17, Gradle 9.3.1, AGP 9.1.1 and Android SDK package versions. Direct app/core/tooling/documentation changes trigger a normal source-verification, test, lint and debug-APK build without mutating the repository. A separate ZIP-import path remains available at `incoming/mosaic.zip` and the legacy named archive path; it validates the archive, safely extracts it, preserves active workflows/history, verifies/builds, and commits an import note.
+- **Why:** enable small direct GitHub edits with immediate verification while retaining the full-source ZIP handoff method.
+- **Trade-off:** direct builds produce artifacts but do not commit generated build outputs; ZIP imports remain a separate, explicit integration operation.
 
 ## ADR-009 — Phase One scope boundary (LOCKED)
 
