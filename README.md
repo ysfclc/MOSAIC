@@ -75,12 +75,12 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/DECISIONS.md`](docs/D
 
 Every successful ZIP import creates an immutable upload record under `notes/imports/<upload-commit-sha>.md`.
 
-## Provider boundaries
+## Provider and platform boundaries
 
-MOSAIC can provide an uninterrupted native experience for local files and sources whose technical and legal terms permit it. Third-party services control their own ads, subscriptions, DRM and playback rules. YouTube/Spotify integration must use supported interfaces and must not promise ad removal or unauthorized background extraction.
+YouTube, Spotify, Facebook, Instagram and other sources are explicit targets for source-by-source background playback and ad-filtering investigation. Do not mark a capability supported until tested, but do not blanket-exempt a provider or remove it from the roadmap. Distinguish MOSAIC-owned playback from external-app sessions and controls. Respect platform and content-access boundaries.
 
-## Browser preview and provider limitations
+## Ad Shield and Browser status
 
-The Browser destination is an early implementation. Its request filter blocks a conservative set of third-party ad/tracker hosts on ordinary pages and displays a blocked-request counter. It does not remove all ads, first-party ads, in-stream ads or provider-served advertisements. YouTube and Spotify pages/assets are deliberately exempt.
+The current Browser is an early supporting WebView with a conservative third-party host filter. It is not a full browser product and not the whole ad-blocking solution. The current policy contains blanket provider exemptions that must be replaced with tested source-aware rules. Device-wide Android VPN/DNS filtering is not yet implemented. DNS/host filtering cannot reliably remove first-party, same-domain or in-stream ads; MOSAIC must show measured coverage and known gaps rather than promise universal removal.
 
-Shared text/URLs can already enter through Android's share sheet and open in Browser; Browser links can be shared out. Full file inbox and file handoff remain planned. Optional notification access enables authorized external media-session control. Official YouTube playback must retain its standard player and ads and cannot be backgrounded through the YouTube API. Spotify can be controlled through its official Android App Remote integration when available and authorized; Spotify remains responsible for its own audio stream and background playback. See PRODUCT_SPEC.md, DECISIONS.md and PHASES.md.
+Optional notification access currently enables discovery/control of supported external Android media sessions; this does not transfer audio into MOSAIC. Native background playback from the named third-party sources and cross-app Ad Shield remain unimplemented. See PRODUCT_SPEC.md, ARCHITECTURE.md, PROVIDER_CAPABILITY_MATRIX.md and DECISIONS.md.
