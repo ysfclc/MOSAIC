@@ -50,7 +50,7 @@ Status values: DONE, IN PROGRESS, BLOCKED, TODO, PARKED.
 | P3-004 | Browser media detection and native background-playback handoff | TODO | Investigate accessible media and route supported sources into shared Media3 player |
 | P3-005 | Share-to-MOSAIC inbox (links, files and metadata) | IN PROGRESS | Android text/plain SEND target opens shared URL/text in Browser; file inbox and durable capture still pending |
 | P3-006 | MOSAIC-to-external share/open handoff | IN PROGRESS | Browser can share current page link; file/content handoff still pending |
-| P3-007 | External active MediaSession discovery and remote controls | IN PROGRESS | Opt-in notification access and basic play/pause/next controls added; device/source verification pending; not native stream playback |
+| P3-007 | Move external MediaSession controls into the primary Player | IN PROGRESS | Existing opt-in bridge is surfaced in Browser; move to Player, add previous/seek/source labels where supported, and verify on device; external control is not native stream playback |
 | P3-008 | Device-wide local VPN/DNS ad and tracker filter | TODO | First-class Ad Shield pillar; Android VPNService, DNS/host rules, consent, VPN conflicts, recovery and same-domain limits |
 | P3-009 | Cross-source background playback capability matrix | TODO | Investigate YouTube, Spotify, Facebook, Instagram, browser media, RSS, radio and direct URLs; record native/delegated paths and evidence |
 | P3-010 | Native playback adapters for accessible external media | TODO | Route supported browser/direct/RSS/radio media into the shared Media3 background player; no unsupported source claims |
@@ -93,7 +93,7 @@ Status values: DONE, IN PROGRESS, BLOCKED, TODO, PARKED.
 
 | ID | Task | Status | Verification / note |
 |---|---|---|---|
-| GOV-001 | Add direct-edit CI trigger for source/documentation changes while preserving ZIP importer | IN PROGRESS | Direct-build job and path filters committed; awaiting successful end-to-end GitHub Actions verification |
+| GOV-001 | Add direct-edit CI trigger for source/documentation changes while preserving ZIP importer | DONE | Direct source/doc pushes run source verification, Python tests, Android unit tests, lint and debug APK build; ZIP import path remains separate. Verified run 42033924158 |
 | GOV-002 | Reconcile latest unprocessed incoming ZIP | TODO | Run 41962171501 failed in preflight; inspect archive and safely integrate only after workflow path resolution is repaired |
 
 ## Locked product vision — ADR-014 and ADR-015
@@ -104,7 +104,7 @@ Current implementation is a foundation only: local audio plays through Media3; a
 
 ## Current blockers
 
-- The current workflow is ZIP-import-first and does not run the normal Android verification suite for direct app/source/documentation edits. GOV-001 must add a direct-build path while preserving safe ZIP import.
+- Direct-edit CI is now active and verified in run 42033924158. The ZIP importer remains a separate path with archive validation and safe extraction.
 - Keep the incoming ZIP importer and its path/secret checks; do not let it overwrite active workflows, notes or the handoff ledger.
 - Physical Redmi Note 12 Pro 5G acceptance remains pending.
 - Browser filtering and external-session controls are prototypes; native background playback from named external sources and cross-app Ad Shield are not yet delivered.
