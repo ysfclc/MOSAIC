@@ -51,13 +51,14 @@ Status values: DONE, IN PROGRESS, BLOCKED, TODO, PARKED.
 | P3-005 | Share-to-MOSAIC inbox (links, files and metadata) | IN PROGRESS | Android text/plain SEND target opens shared URL/text in Browser; file inbox and durable capture still pending |
 | P3-006 | MOSAIC-to-external share/open handoff | IN PROGRESS | Browser can share current page link; file/content handoff still pending |
 | P3-007 | External active MediaSession discovery and remote controls | IN PROGRESS | Opt-in notification access and basic play/pause/next controls added; device/source verification pending; not native stream playback |
-| P3-008 | Optional device-wide local VPN/DNS ad and tracker filter | TODO | Investigate Android VPNService, per-app coverage, explicit consent, VPN conflicts and same-domain limitations |
+| P3-008 | Device-wide local VPN/DNS ad and tracker filter | TODO | First-class Ad Shield pillar; Android VPNService, DNS/host rules, consent, VPN conflicts, recovery and same-domain limits |
 | P3-009 | Cross-source background playback capability matrix | TODO | Investigate YouTube, Spotify, Facebook, Instagram, browser media, RSS, radio and direct URLs; record native/delegated paths and evidence |
 | P3-010 | Native playback adapters for accessible external media | TODO | Route supported browser/direct/RSS/radio media into the shared Media3 background player; no unsupported source claims |
 | P3-011 | Cross-source background playback acceptance | TODO | Test each source with screen off, app switching, lock screen, notification, Bluetooth/headset and queue/control behavior |
 | P3-012 | Cross-app ad-blocking feasibility and prototype | TODO | Evaluate Android VPNService/local DNS filtering, per-app coverage, consent, conflicts, false positives and source compatibility |
 | P3-013 | Ad-blocking coverage and regression matrix | TODO | Test browser and device-wide filtering against named sources; record blocked ads, playback breakage and unavoidable first-party/in-stream cases |
-| P3-014 | Source-specific YouTube/Spotify/social-media integration research | TODO | Compare official APIs/SDKs, browser playback, Android MediaSession and technically viable background paths; record current policy/technical evidence |
+| P3-014 | Source-specific YouTube/Spotify/social-media integration research | TODO | Compare official APIs/SDKs, source-owned background behavior, browser playback, Android MediaSession and accessible native routes; record evidence |
+| P3-015 | Source-aware filtering and provider compatibility rules | TODO | Replace blanket provider exemptions only with tested source-aware allow/block rules; never break media delivery blindly |
 
 ## Phase 4 — Official platform integrations
 
@@ -95,16 +96,16 @@ Status values: DONE, IN PROGRESS, BLOCKED, TODO, PARKED.
 | GOV-001 | Add direct-edit CI trigger for source/documentation changes while preserving ZIP importer | TODO | Current workflow only watches incoming ZIP paths or manual dispatch; direct GitHub edits need build/test/lint/APK verification |
 | GOV-002 | Reconcile latest unprocessed incoming ZIP | TODO | Run 41962171501 failed in preflight; inspect archive and safely integrate only after workflow path resolution is repaired |
 
-## Product-critical vision — cross-source background playback and ad blocking
+## Locked product vision — ADR-014 and ADR-015
 
-MOSAIC's founding purpose is to play media from other sources in the background and block ads as broadly as technically possible. This includes investigating YouTube, Spotify, Facebook, Instagram and other services. Do not replace this vision with clipboard capture, a bookmark inbox, or a browser-only filter. Sharing links/files is supporting functionality.
+MOSAIC has two primary pillars: **cross-source background media playback/control** and **broad ad/tracker blocking across apps and websites**. Requested sources include YouTube, Spotify, Facebook, Instagram and other apps/sites, plus podcasts, radio, direct streams and local media. The browser is one supporting route, not the product. Copy/paste and clipboard history are not the founding purpose.
 
-Current implementation is partial: native local audio playback exists; browser request filtering is conservative and limited to MOSAIC Browser; external Android MediaSession discovery/control exists but does not transfer audio into MOSAIC. Cross-source native background playback and device-wide ad filtering are not yet complete.
+Current implementation is a foundation only: local audio plays through Media3; a basic browser host filter exists; external Android MediaSession discovery/control exists but does not transfer audio into MOSAIC. Native background playback from the named third-party sources and cross-app ad filtering are not yet delivered.
 
 ## Current blockers
 
-- Yesterday's source upload was not integrated: upload commit `d054c992b2c4d6b6eeceae2626db5f772eed9ebf` triggered run 41926489353. ZIP validation/extraction and staging passed, but source verification failed because the active workflow requested Android SDK 36 while the verifier expected the published 37.2 package. Gradle build, APK build and integration commit were skipped.
-- Direct edits to source/docs do not currently trigger the Android build; GOV-001 tracks a safe direct-edit CI path. The ZIP import workflow must remain supported.
+- The current workflow is ZIP-import-first and does not run the normal Android verification suite for direct app/source/documentation edits. GOV-001 must add a direct-build path while preserving safe ZIP import.
+- Keep the incoming ZIP importer and its path/secret checks; do not let it overwrite active workflows, notes or the handoff ledger.
 - Physical Redmi Note 12 Pro 5G acceptance remains pending.
-- Browser ad filtering and external-session controls are prototypes; broad device-wide ad blocking and cross-source background playback have not been accepted.
-- Do not claim Phase 1 release acceptance or cross-source feature completion until the corresponding device/source acceptance tests pass.
+- Browser filtering and external-session controls are prototypes; native background playback from named external sources and cross-app Ad Shield are not yet delivered.
+- Do not claim device/source acceptance until the corresponding tests have actually passed.
