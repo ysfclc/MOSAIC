@@ -3,7 +3,7 @@
 **Phase 1 · Native foundation and local playback**  
 **Repository:** ysfclc/MOSAIC  
 **Package:** `com.ysfclc.mosaic`  
-**Status:** Phase 1 sandbox build verified; GitHub import and physical-device acceptance remain pending.
+**Status:** Integrated source snapshot passed GitHub Actions run 41957296181; physical-device acceptance remains pending. A newer incoming ZIP was not imported (run 41962171501 failed preflight); see PROJECT_STATE.md.
 
 MOSAIC is a local-first Android media environment. It brings playback, browsing, a unified library, source adapters, optional intelligence and automation into one coherent native application. It is not a streaming service and it does not bypass provider advertising, DRM, paywalls or access controls.
 
@@ -39,7 +39,7 @@ AGP 9 provides built-in Kotlin support. The project intentionally does **not** a
 
 ### Build in Android Studio
 
-The initial source ZIP intentionally omits generated wrapper binaries. Perform the first GitHub Actions import described in `README-FIRST-SETUP.md`; that workflow generates the Gradle 9.3.1 wrapper, pins the official distribution SHA-256, verifies it, and commits the wrapper. Then open the integrated repository in an Android Studio release compatible with AGP 9.1.1, install Android SDK package `platforms;android-37.2` (the published API 37 platform) and Build Tools 36.0.0, sync and run the `app` configuration.
+The initial source ZIP intentionally omits generated wrapper binaries. The Gradle 9.3.1 wrapper and official distribution SHA-256 are already present in this integrated repository snapshot. Then open the integrated repository in an Android Studio release compatible with AGP 9.1.1, install Android SDK package `platforms;android-37.2` (the published API 37 platform) and Build Tools 36.0.0, sync and run the `app` configuration.
 
 ### Build in CI
 
