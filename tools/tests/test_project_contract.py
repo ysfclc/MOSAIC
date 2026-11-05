@@ -72,7 +72,7 @@ class ProjectContractTests(unittest.TestCase):
         config = (ROOT / "app/src/main/res/xml/ad_skip_accessibility_service.xml").read_text(encoding="utf-8")
         app = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/MosaicApp.kt").read_text(encoding="utf-8")
         self.assertIn("BIND_ACCESSIBILITY_SERVICE", manifest)
-        self.assertIn("android:packageNames=\\"com.google.android.youtube\\"", config)
+        self.assertIn('android:packageNames="com.google.android.youtube"', config)
         self.assertIn("AD_SKIP_LABELS", service)
         self.assertIn('"skip ad"', service)
         self.assertIn("performAction(AccessibilityNodeInfo.ACTION_CLICK)", service)
