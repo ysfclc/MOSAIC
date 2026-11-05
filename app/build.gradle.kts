@@ -32,7 +32,7 @@ android {
 
     buildTypes {
         getByName("debug") {
-            if (!mosaicDebugKeystorePath.isNullOrBlank() && !mosaicDebugKeystorePassword.isNullOrBlank()) {
+            if (!mosaicDebugKeystorePath.isNullOrBlank()) {
                 signingConfig = signingConfigs.getByName("stableDebug")
             }
         }
