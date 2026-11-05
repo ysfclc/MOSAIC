@@ -56,6 +56,16 @@ class ProjectContractTests(unittest.TestCase):
         self.assertIn("enabled_notification_listeners", bridge)
         self.assertIn("getActiveSessions(listener)", bridge)
 
+    def test_external_sessions_are_controlled_from_primary_player(self):
+        app = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/MosaicApp.kt").read_text(encoding="utf-8")
+        browser = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/browser/BrowserScreen.kt").read_text(encoding="utf-8")
+        bridge = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/browser/ExternalMediaSessionBridge.kt").read_text(encoding="utf-8")
+        self.assertIn("ExternalPlaybackPanel", app)
+        self.assertIn("PLAYING IN OTHER APPS", app)
+        self.assertNotIn("ExternalMediaPanel", browser)
+        self.assertIn("ACTION_SKIP_TO_PREVIOUS", bridge)
+        self.assertIn("ACTION_SEEK_TO", bridge)
+
     def test_android_text_share_opens_in_mosaic_browser(self):
         manifest = (ROOT / "app/src/main/AndroidManifest.xml").read_text(encoding="utf-8")
         activity = (ROOT / "app/src/main/java/com/ysfclc/mosaic/MainActivity.kt").read_text(encoding="utf-8")
