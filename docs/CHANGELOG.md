@@ -56,3 +56,14 @@
 - Debug APK SHA-256: `69cb441baf1a502c6dcbac5bbeba9fda06eb9604c5b319c514608159c7f62881`.
 - No playback or ad-blocking application feature was marked complete by this documentation/CI work. Physical Redmi device acceptance remains pending.
 - Next: move external MediaSession controls from Browser into the primary Player (P3-007), then build the cross-app VPN/DNS Ad Shield (P3-008).
+
+
+## 2026-11-05 — External media controls moved into Player
+
+- Moved external Android MediaSession discovery out of Browser and into app-level state.
+- Added a primary Player section for media playing in other apps, with source app label, title, artist and live playing/paused state.
+- Added previous/next and seek controls only when the source session advertises those actions; play/pause remains capability-gated.
+- Kept source ownership explicit: these commands control the original app and do not transfer audio into MOSAIC or override its background-playback restrictions.
+- Removed the external playback panel from Browser.
+- CI passed: [run 42034925797](https://github.com/ysfclc/MOSAIC/actions/runs/42034925797), including Android unit tests, lint and debug APK assembly. Real-app/Redmi acceptance remains pending.
+- Debug APK SHA-256: `74a55e78f58e9cded6f43c261676756b9014bd7e91c970be65e9d4b7703be152`.
