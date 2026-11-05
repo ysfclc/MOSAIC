@@ -52,9 +52,9 @@ Respect platform, security and content-access boundaries. These boundaries do no
 
 ## Immediate next engineering task
 
-**P3-007 — real-device acceptance of external media controls.** The Player now lists active external Android media sessions and exposes source-advertised play/pause, previous/next and seek actions. Verify this with YouTube, Spotify and other installed media apps on the Redmi, including screen-off and app-switch behavior. This is an external control surface, not native stream playback and not a promise to override source-app background restrictions.
+**P3-008 — implement the device-wide DNS-only Ad Shield.** ADR-016 locks the architecture: an explicitly enabled Android VpnService routes only DNS queries to a local virtual resolver, filters known ad/tracker domains, and forwards allowed queries through a protected upstream socket. Do not tunnel ordinary app traffic. Add a persistent foreground notification, VPN-conflict warning, Private DNS coverage warning, blocked-domain counter and safe stop/revoke behavior. Unit-test the DNS packet codec before wiring the TUN service.
 
-Then implement **P3-008 — device-wide VPN/DNS Ad Shield** as the next code feature.
+P3-007's Player controls are built and CI-verified; real-app/Redmi acceptance remains a separate pending device check.
 
 ## Required handoff discipline
 
