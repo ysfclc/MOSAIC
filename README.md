@@ -1,4 +1,4 @@
-# MOSAIC — Personal Media OS
+# MOSAIC — Media Player & Ad Shield
 
 **Phase 1 · Native foundation and local playback**  
 **Repository:** ysfclc/MOSAIC  
