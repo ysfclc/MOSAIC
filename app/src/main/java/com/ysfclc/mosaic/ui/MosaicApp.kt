@@ -690,11 +690,11 @@ private fun PlayerScreen(
             }
             Spacer(Modifier.weight(1f))
             Surface(color = MosaicPalette.SurfaceGlass, shape = CircleShape) {
-                Text("LOCAL ENGINE", color = MosaicPalette.Violet, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = .8.sp, modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp))
+                Text("MOSAIC PLAYER", color = MosaicPalette.Violet, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = .8.sp, modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp))
             }
         }
         Spacer(Modifier.height(18.dp))
-        Box(Modifier.fillMaxWidth().weight(1f, fill = false).aspectRatio(1f).padding(horizontal = 13.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.fillMaxWidth().aspectRatio(1f).padding(horizontal = 13.dp), contentAlignment = Alignment.Center) {
             PlayerArtwork(isPlaying = isPlaying, revision = revision)
         }
         Spacer(Modifier.height(17.dp))
