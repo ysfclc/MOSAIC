@@ -1,0 +1,6 @@
+MOSAIC ZIP import validation: PASS
+Archive bytes: 78635
+Entries validated: 51
+Extracted entries: 51
+Detected project root: .
+Active .github workflows, .git, incoming ZIP history and prior notes are preserved by the importer.
