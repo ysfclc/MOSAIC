@@ -63,6 +63,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.SkipNext
+import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.SkipPrevious
 import androidx.compose.material.icons.filled.Waves
 import androidx.compose.material3.Button
@@ -971,7 +972,7 @@ private fun BottomNavigation(selected: Destination, onSelect: (Destination) -> U
             Triple(Destination.HOME, Icons.Default.Home, "Home"),
             Triple(Destination.LIBRARY, Icons.Default.LibraryMusic, "Library"),
             Triple(Destination.PLAYER, Icons.Default.Waves, "Player"),
-            Triple(Destination.SHIELD, Icons.Default.Security, "Shield"),
+            Triple(Destination.SHIELD, Icons.Default.Shield, "Shield"),
             Triple(Destination.BROWSER, Icons.Default.Language, "Browser"),
         )
         destinations.forEach { (destination, icon, label) ->
