@@ -284,6 +284,7 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
                         onEnableExternalSessionAccess = { context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
                         onOpenLibrary = { destination = Destination.LIBRARY },
                     )
+                    Destination.SHIELD -> com.ysfclc.mosaic.ui.adshield.AdShieldScreen()
                     Destination.BROWSER -> BrowserScreen(initialUrl = pendingBrowserUrl, onInitialUrlConsumed = { pendingBrowserUrl = null })
                 }
             }
