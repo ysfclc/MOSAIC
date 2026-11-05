@@ -37,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -49,7 +50,12 @@ import androidx.core.content.ContextCompat
 import com.ysfclc.mosaic.adshield.AdShieldState
 import com.ysfclc.mosaic.adshield.AdShieldVpnService
 import com.ysfclc.mosaic.core.design.MosaicPalette
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
+import java.net.InetAddress
 import kotlinx.coroutines.isActive
 
 @Composable
@@ -64,6 +70,9 @@ fun AdShieldScreen() {
     var error by remember { mutableStateOf(AdShieldState.lastError(context)) }
     var privateDnsCompatibilityWarning by remember { mutableStateOf(hasPrivateDnsCompatibilityWarning(context)) }
     var showVpnConflict by remember { mutableStateOf(false) }
+    var diagnosticsRunning by remember { mutableStateOf(false) }
+    var diagnostics by remember { mutableStateOf("Run this check while protection is active.") }
+    val scope = rememberCoroutineScope()
 
     val vpnPermissionLauncher = rememberLauncherForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
@@ -191,6 +200,61 @@ fun AdShieldScreen() {
                 value = "DNS ONLY",
                 modifier = Modifier.weight(1f),
             )
+        }
+
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            color = MosaicPalette.Surface,
+            shape = RoundedCornerShape(14.dp),
+            border = BorderStroke(1.dp, MosaicPalette.Divider),
+        ) {
+            Column(Modifier.padding(13.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("QUICK SELF-TEST", color = MosaicPalette.Cyan, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp)
+                Text(
+                    "Checks that ordinary DNS still resolves and that a unique test hostname under a blocked ad domain is intercepted by MOSAIC.",
+                    color = MosaicPalette.TextSecondary,
+                    fontSize = 10.sp,
+                    lineHeight = 14.sp,
+                )
+                Button(
+                    onClick = {
+                        scope.launch {
+                            diagnosticsRunning = true
+                            diagnostics = "Checking normal DNS and the blocked-domain probe…"
+                            val ordinaryAddress = withContext(Dispatchers.IO) {
+                                runCatching { InetAddress.getAllByName("example.com").firstOrNull()?.hostAddress }.getOrNull()
+                            }
+                            val probeHost = "mosaic-adshield-${System.currentTimeMillis()}.doubleclick.net"
+                            val blockedBefore = AdShieldState.blockedCount(context)
+                            val blockedLookup = withContext(Dispatchers.IO) {
+                                runCatching { InetAddress.getAllByName(probeHost) }
+                            }
+                            val intercepted = withTimeoutOrNull(4_000) {
+                                while (
+                                    AdShieldState.blockedCount(context) <= blockedBefore ||
+                                    AdShieldState.lastBlockedDomain(context) != probeHost
+                                ) delay(100)
+                                true
+                            } ?: false
+                            val normalPassed = !ordinaryAddress.isNullOrBlank()
+                            val blockedPassed = intercepted && blockedLookup.isFailure
+                            diagnostics = buildString {
+                                append(if (normalPassed) "PASS · normal DNS resolved" else "FAIL · normal DNS did not resolve")
+                                append("\n")
+                                append(if (blockedPassed) "PASS · blocked hostname intercepted" else "FAIL · blocked hostname interception not confirmed")
+                                if (normalPassed) append("\nResolved example.com to $ordinaryAddress")
+                                if (!blockedPassed) append("\nCheck that Ad Shield stayed active and DNS is not bypassing the VPN.")
+                            }
+                            diagnosticsRunning = false
+                        }
+                    },
+                    enabled = running && !diagnosticsRunning,
+                    modifier = Modifier.fillMaxWidth(),
+                ) {
+                    Text(if (diagnosticsRunning) "Testing…" else "Run DNS self-test", fontSize = 10.sp)
+                }
+                Text(diagnostics, color = MosaicPalette.TextSecondary, fontSize = 10.sp, lineHeight = 15.sp)
+            }
         }
 
         if (lastBlockedDomain.isNotBlank()) {
