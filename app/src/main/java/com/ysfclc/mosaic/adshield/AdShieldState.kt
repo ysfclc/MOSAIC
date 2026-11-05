@@ -29,6 +29,13 @@ internal object AdShieldState {
     fun allowlist(context: Context): Set<String> =
         preferences(context).getStringSet(KEY_ALLOWLIST, emptySet())?.toSet().orEmpty()
 
+    fun setAllowlist(context: Context, domains: Set<String>) {
+        val normalized = domains.map { it.trim().trimEnd('.').lowercase() }
+            .filter { it.isNotBlank() && it.length <= 253 && !it.any(Char::isWhitespace) }
+            .toSet()
+        preferences(context).edit().putStringSet(KEY_ALLOWLIST, normalized).apply()
+    }
+
     fun recordBlocked(context: Context, domain: String) {
         val prefs = preferences(context)
         prefs.edit()
