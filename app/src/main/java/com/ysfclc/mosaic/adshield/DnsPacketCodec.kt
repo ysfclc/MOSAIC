@@ -45,7 +45,8 @@ internal object DnsPacketCodec {
     }
 
     fun parseQuestion(dns: ByteArray): DnsQuestion? {
-        if (dns.size < DNS_HEADER || u16(dns, 4) < 1) return null
+        if (dns.size < DNS_HEADER || u16(dns, 4) != 1) return null
+        if (u16(dns, 2) and 0x8000 != 0) return null
         val labels = ArrayList<String>()
         var offset = DNS_HEADER
         while (offset < dns.size) {
