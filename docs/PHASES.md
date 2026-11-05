@@ -18,27 +18,31 @@ Exit gate:
 - [ ] Open Document playback works without broad library permission.
 - [ ] No critical crash or data-loss issue.
 
-## Phase 2 — Durable library and source foundations
+## Phase 2 — Cross-source background playback and source foundations
 
 - Room schema and migrations for media identity, locations, collections, history and bookmarks.
 - Incremental MediaStore sync and change observation; duplicate identity rules.
 - Search/filter/sort and user collections.
 - RSS podcast adapter with feed validation, episode metadata and playback position.
 - Internet radio adapter with format/capability detection and reconnect behavior.
+- Direct media URL resolver and browser-to-native handoff for accessible media.
+- Source-by-source investigation and device tests for YouTube, Spotify, Facebook, Instagram and other requested apps: source-owned background continuation, exposed MediaSession controls, browser playback and supported native routes.
+- A visible distinction between MOSAIC playback and external-app playback.
 - Download queue for sources whose terms permit offline copies.
 - Sleep timer, playback speed and queue persistence.
 - Native video surface, orientation handling and picture-in-picture (tracked as P2-011).
 - Accessibility/reduced-motion pass and robust empty/error/loading states.
 
-Exit gate: library survives process death/reboot; RSS and open radio work; no duplicate binary copies; playback history and resume are correct.
+Exit gate: local playback remains stable; RSS and open radio work; at least one accessible external media route is played through the shared Media3 service; every named provider has a documented test result and ownership label; no duplicate binary copies.
 
-## Phase 3 — Browser, ad control and two-way media bridge
+## Phase 3 — Broad ad blocking and source handoff
 
-- Browser engine boundary; WebView baseline with replaceable implementation.
-- Tabs, session persistence, downloads and bookmarks.
-- MOSAIC Browser ad/tracker request filtering for ordinary pages; user toggle, visible blocked count, per-site exemptions and allowlist.
-- Provider player pages/assets are exempt from MOSAIC filtering; no provider ad/DRM circumvention.
-- Optional local DNS/VPN filtering is a separately gated feature, not implied by browser filtering.
+- Ad Shield is a first-class product surface with separate Browser and Device-wide controls.
+- Implement a user-enabled Android VpnService local DNS/host filter for known ad/tracker domains across apps; explicit consent, persistent foreground notification, VPN conflict handling, safe stop/recovery and diagnostics are required.
+- Build source-aware rule lists, allowlist/blocklist controls, rule provenance, blocked-domain counters and false-positive reporting.
+- Do not blanket-exempt YouTube, Spotify, Facebook, Instagram or any other provider. Test rules against content delivery and preserve per-domain/per-app allowlisting.
+- Keep the MOSAIC Browser request filter as a supporting layer, not the whole ad-blocking product.
+- Browser engine boundary, tabs/session persistence and downloads are secondary to playback and Ad Shield.
 - Share-to-MOSAIC capture inbox and outbound share/open intents.
 - Page/media detection only for accessible, permitted content.
 - Browser playback controls and native-player handoff only when the source and terms allow it.
@@ -46,19 +50,19 @@ Exit gate: library survives process death/reboot; RSS and open radio work; no du
 - Clear native/browser/provider player ownership; never instantiate a second hidden player for the same stream.
 - Site capability reporting, graceful fallback and normal web playback if handoff is unavailable.
 
-Exit gate: ordinary-site filtering passes a site matrix; provider exemptions are verified; inbound/outbound handoff is tested; browser remains usable; no deceptive claim of universal ad removal or provider background playback.
+Exit gate: DNS/VPN filtering passes cross-app allow/block and recovery tests; no accidental traffic blackhole; app compatibility and false positives are recorded; Browser filtering passes a separate site matrix; limitations are visible and no universal-blocking claim is made without evidence.
 
 ## Phase 4 — Official platform integrations
 
-- YouTube official APIs and embedded player for permitted search/metadata/visible playback.
-- YouTube playback retains provider ads and standard controls; no background player, audio extraction or offline copy.
-- Spotify Android App Remote for user-authorized metadata and remote playback commands to the installed Spotify app.
-- Spotify remains the audio owner and handles its own background playback, audio focus and system integration.
+- Source-specific integration work for YouTube, Spotify, Facebook, Instagram and other high-priority providers based on the Phase 2 capability research.
+- Evaluate official APIs/SDKs, source-owned Android background behavior, browser playback and accessible native media routes.
+- Use Android MediaSession/official remote controls where exposed and user-authorized; clearly label external ownership.
+- Do not claim a provider's audio is in MOSAIC's native player unless the shared Media3 service actually plays it.
 - Authentication flows are explicit and source-scoped.
 - Every integration has a documented capability matrix and policy review date.
-- Unsupported native background, audio extraction, ad removal or offline functionality remains unsupported.
+- Unsupported capabilities remain explicitly labelled unavailable; the product goal remains in scope for continued technical investigation.
 
-Exit gate: each adapter passes provider policy review, account/availability tests and reports limitations to the user.
+Exit gate: each named provider has a tested integration route or a documented, evidence-backed technical/platform limitation and a concrete next research item.
 
 ## Phase 5 — Local media intelligence
 
@@ -84,4 +88,4 @@ Exit gate: export/restore works, backup integrity is verified, sync is optional,
 
 ## Phase sequencing rule
 
-Do not start Phase 2 while a Phase 1 exit item remains failed or unverified. New ideas enter `docs/TASKS.md` under Backlog; they do not silently expand the active phase.
+Keep Phase 1 device acceptance visible, but do not let an unperformed physical-device test prevent independent engineering work that can be built and CI-verified. A phase is not called accepted until its full exit gate passes. New ideas enter `docs/TASKS.md`; they do not silently expand the active phase.
