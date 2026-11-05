@@ -118,7 +118,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 private enum class Destination(val title: String) {
-    HOME("Home"), LIBRARY("Library"), PLAYER("Player"), BROWSER("Browser")
+    HOME("Home"), LIBRARY("Library"), PLAYER("Player"), SHIELD("Shield"), BROWSER("Browser")
 }
 
 @OptIn(ExperimentalAnimationApi::class)
