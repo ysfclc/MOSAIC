@@ -65,6 +65,23 @@ internal object DnsPacketCodec {
         return DnsQuestion(domain, offset + 4)
     }
 
+    fun isMatchingResponse(query: ByteArray, response: ByteArray): Boolean {
+        if (query.size < DNS_HEADER || response.size < DNS_HEADER) return false
+        if (query[0] != response[0] || query[1] != response[1]) return false
+
+        val queryFlags = u16(query, 2)
+        val responseFlags = u16(response, 2)
+        if (responseFlags and 0x8000 == 0) return false
+        if ((queryFlags xor responseFlags) and 0x7800 != 0) return false
+        if (u16(query, 4) != u16(response, 4)) return false
+
+        val question = parseQuestion(query) ?: return false
+        val questionLength = question.questionEndOffset - DNS_HEADER
+        if (response.size < DNS_HEADER + questionLength) return false
+        return query.copyOfRange(DNS_HEADER, question.questionEndOffset)
+            .contentEquals(response.copyOfRange(DNS_HEADER, DNS_HEADER + questionLength))
+    }
+
     fun buildNxDomainResponse(query: ByteArray): ByteArray? = buildErrorResponse(query, 3)
 
     fun buildServFailResponse(query: ByteArray): ByteArray? = buildErrorResponse(query, 2)
