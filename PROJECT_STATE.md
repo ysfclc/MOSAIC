@@ -32,6 +32,7 @@ Respect platform, security and content-access boundaries. These boundaries do no
 - Native background playback from YouTube, Spotify, Facebook, Instagram and other external sources is not yet demonstrated.
 - First device-wide DNS-only Ad Shield slice is implemented and CI-verified: explicit VPN consent, split-route IPv4 DNS interception, curated ad/tracker rules, editable hostname allowlist, persistent notification with Stop, conflict warning, status/error/blocked-domain display, and Private DNS preservation via Android's system resolver on Android 10+. Android 9 with Private DNS enabled fails closed.
 - Current filter only parses IPv4 UDP DNS. Apps using DoH/custom resolvers and same-domain or in-stream ads can bypass it; IPv6 DNS interception and named-app compatibility testing remain open.
+- Follow-up Ad Shield hardening: upstream UDP sockets now fail over if binding to the selected underlying network fails, are connected to the selected resolver to reject replies from other endpoints, and the VPN's underlying-network list is refreshed even when it becomes empty. The new source-verifier checks are awaiting CI confirmation.
 - Unified native queue for supported external media is not implemented.
 
 ## APK installation and update compatibility
