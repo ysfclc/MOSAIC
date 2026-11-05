@@ -142,11 +142,11 @@ Compose UI <────── observed state <───── domain state <─
 Ad filtering is a separate capability from media playback and must be layered:
 
 1. **Browser layer:** request filtering for pages rendered inside MOSAIC, with user-visible status, per-site controls, allowlisting and diagnostics.
-2. **Device layer:** investigate and implement an explicitly user-enabled Android `VpnService` local DNS/host filter to block known ad/tracker domains across apps. It must explain VPN-slot conflicts, battery/network impact, app exclusions and how to disable it.
+2. **Device layer:** implement an explicitly user-enabled Android `VpnService` DNS-only local filter. Route only the virtual DNS endpoint (and explicitly supported DNS resolver destinations) through TUN; do not add a default route or tunnel ordinary app traffic. Forward allowed queries through an upstream socket protected with `VpnService.protect()`.
 3. **Rule engine:** source-aware block/allow rules with provenance, update mechanism, false-positive reporting and compatibility tests. No blanket provider exemption; no blind blocking of content/CDN hosts.
-4. **Known boundary:** ordinary DNS filtering cannot inspect encrypted page content or distinguish an ad from content delivered from the same host. No TLS interception or DRM manipulation is permitted as a workaround.
+4. **Known boundary:** ordinary DNS filtering cannot inspect encrypted page content or distinguish an ad from content delivered from the same host. Apps using DoH, strict Private DNS or unhandled hard-coded resolvers may bypass the filter. No TLS interception or payload inspection is permitted as a workaround.
 
-The VPN layer is optional and user-controlled, not silently enabled. Browser and device-wide filtering have separate switches and diagnostics. Filtering must fail safely: network access remains available if the filter service stops, unless the user explicitly selects a stricter fail-closed mode in a future decision.
+The VPN layer is optional and user-controlled, not silently enabled. Show a persistent foreground notification with a Stop action, warn before replacing another active VPN, detect Private DNS limitations, and expose running/error/blocked-domain status. Browser and device-wide filtering have separate switches and diagnostics. If the VPN service stops or is revoked, close TUN and restore ordinary system networking. See ADR-016 and the official Android VpnService documentation.
 
 ## 12. Architecture change policy
 
