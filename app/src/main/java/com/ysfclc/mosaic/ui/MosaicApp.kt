@@ -341,7 +341,7 @@ private fun MosaicHeader(phaseLabel: String) {
         Spacer(Modifier.width(10.dp))
         Column(verticalArrangement = Arrangement.spacedBy((-2).dp)) {
             Text("MOSAIC", color = MosaicPalette.TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Black, letterSpacing = 2.4.sp)
-            Text("PERSONAL MEDIA OS", color = MosaicPalette.TextMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.55.sp)
+            Text("MEDIA PLAYER · AD SHIELD", color = MosaicPalette.TextMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.25.sp)
         }
         Spacer(Modifier.weight(1f))
         Surface(
@@ -407,7 +407,7 @@ private fun HomeScreen(
             Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                 SourceStatusCard("Device library", "Read-only indexing · originals stay in place", "READY", MosaicPalette.Cyan)
                 SourceStatusCard("Background player", "Media session · system controls · queue", "READY", MosaicPalette.Violet)
-                SourceStatusCard("Browser · RSS · intelligence", "Next phases · adapter contracts are reserved", "PLANNED", MosaicPalette.TextMuted)
+                SourceStatusCard("Ad Shield", "Cross-app DNS protection · source-aware rules", "BUILDING", MosaicPalette.Cyan)
             }
         }
         item {
