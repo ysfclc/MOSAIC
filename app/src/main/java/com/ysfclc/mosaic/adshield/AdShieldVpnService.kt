@@ -189,7 +189,7 @@ class AdShieldVpnService : VpnService() {
             DnsResolver.getInstance().rawQuery(
                 network,
                 query,
-                DnsResolver.FLAG_NO_CACHE_LOOKUP or DnsResolver.FLAG_NO_CACHE_STORE,
+                DnsResolver.FLAG_NO_CACHE_LOOKUP,
                 callbackExecutor,
                 cancellation,
                 object : DnsResolver.Callback<ByteArray> {
