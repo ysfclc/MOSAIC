@@ -85,14 +85,21 @@ Status values: DONE, IN PROGRESS, BLOCKED, TODO, PARKED.
 | P6-004 | Optional cross-device sync / self-host feasibility | TODO |
 | P6-005 | Android Auto, casting and adapter SDK assessments | TODO |
 
+## Repository maintenance and session continuity
+
+| ID | Task | Status | Verification / note |
+|---|---|---|---|
+| GOV-001 | Add direct-edit CI trigger for source/documentation changes while preserving ZIP importer | TODO | Current workflow only watches incoming ZIP paths or manual dispatch; direct GitHub edits need build/test/lint/APK verification |
+| GOV-002 | Reconcile latest unprocessed incoming ZIP | TODO | Run 41962171501 failed in preflight; inspect archive and safely integrate only after workflow path resolution is repaired |
+
 ## Founding product requirement — copy/paste and two-way capture
 
 MOSAIC originated from the need to move useful content between apps without losing it: copy a URL/text or share content into MOSAIC, keep it for later, and then copy/open/share it back out. This is a core product workflow, not merely a browser convenience. See the Origin and founding problem section in PRODUCT_SPEC.md. Paste must be explicit and user-initiated; do not implement background clipboard monitoring or conflate MOSAIC with VaultOS.
 
 ## Current blockers
 
-- Canonical GitHub ZIP-import workflow has not yet been run end-to-end; use incoming/mosaic.zip.
-- Gradle Wrapper generation/checksum bootstrap remains pending the first successful import.
+- Latest incoming ZIP commit `0b65d868` was not imported: run 41962171501 failed in preflight before extraction. GOV-002 tracks recovery.
+- Direct edits to source/docs do not currently trigger the Android build; GOV-001 tracks a safe direct-edit CI path. The ZIP import workflow must remain supported.
 - Physical Redmi Note 12 Pro 5G acceptance remains pending.
 - The browser preview and external-session controls are implementation previews; live site compatibility and device behaviour are not yet accepted.
 - Do not claim Phase 1 release acceptance or begin a Phase 2 release until the Phase 1 device gate passes. Provider integrations remain gated by their official capabilities and policies.
