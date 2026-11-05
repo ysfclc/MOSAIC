@@ -113,3 +113,22 @@ This decision is withdrawn in full. It incorrectly described copy/paste and cont
 - **Sequencing:** establish reliable local playback, then source adapters and external-session continuity; implement the cross-app Ad Shield with an opt-in VPN filter; integrate named providers source by source; verify on the Redmi Note 12 Pro 5G.
 - **Acceptance:** user can play a supported source through MOSAIC with screen off and system controls; source-owned sessions are visibly distinguished; Ad Shield can block known ad/tracker domains in other apps with user consent and can be stopped/recovered without breaking networking.
 
+
+
+## ADR-016 — Device-wide Ad Shield uses a DNS-only local VPN (LOCKED)
+
+- **Date:** 2026-11-05
+- **Decision:** the first cross-app Ad Shield implementation uses Android `VpnService` as a user-consented local DNS filter, not a full traffic tunnel. Route the local virtual DNS endpoint (and only explicitly supported DNS resolver destinations) through the TUN interface; do not add a default route for all app traffic.
+- **Packet path:** Android's resolver sends DNS queries to MOSAIC's virtual DNS address. MOSAIC parses the DNS question, applies source-aware block/allow rules, returns a local blocked response when matched, or forwards the query to an upstream resolver through a socket protected with `VpnService.protect()`. The upstream socket must never loop back into the TUN interface.
+- **Safety:** non-DNS app traffic must bypass the TUN interface unchanged. The filter must fail safely on stop/revoke, restoring normal system networking. If an upstream query fails, return a bounded DNS failure and surface the service error; do not silently blackhole unrelated network traffic.
+- **User control:** explicit Android VPN consent, clear one-VPN-at-a-time conflict warning, persistent foreground notification with Stop action, visible running state and blocked-domain counter. Never start automatically without the user's explicit action.
+- **Coverage:** system DNS is the initial coverage path. Apps using their own encrypted DNS/DoH, strict Private DNS or unhandled hard-coded resolvers may bypass the filter. Show this limitation; do not claim universal coverage.
+- **Rules:** start with a small curated list of known ad/tracker domains and an allowlist. Never block whole provider/content domains blindly. Record the matched domain and rule source; keep rules replaceable.
+- **Not in scope for this first slice:** TLS interception, payload inspection, full-tunnel packet forwarding, root requirements or automatic changes to Android Private DNS settings.
+- **Acceptance:** verify system DNS passes ordinary queries, known ad/tracker queries are blocked, allowlisted queries pass, upstream timeout produces a visible error, unrelated app traffic remains functional, VPN stop/revoke restores connectivity, and the foreground notification/lock-screen lifecycle works on the Redmi Note 12 Pro 5G.
+
+**Android references:**
+- VpnService API: https://developer.android.com/reference/android/net/VpnService
+- VpnService.Builder API: https://developer.android.com/reference/android/net/VpnService.Builder
+- Android VPN guide: https://developer.android.com/develop/connectivity/vpn
+- Foreground service types: https://developer.android.com/about/versions/14/changes/fgs-types-required
