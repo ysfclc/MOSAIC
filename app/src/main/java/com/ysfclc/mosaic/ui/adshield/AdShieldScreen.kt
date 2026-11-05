@@ -60,7 +60,7 @@ fun AdShieldScreen() {
     var blockedCount by remember { mutableIntStateOf(AdShieldState.blockedCount(context)) }
     var lastBlockedDomain by remember { mutableStateOf(AdShieldState.lastBlockedDomain(context)) }
     var error by remember { mutableStateOf(AdShieldState.lastError(context)) }
-    var strictPrivateDns by remember { mutableStateOf(hasStrictPrivateDns(context)) }
+    var privateDnsCompatibilityWarning by remember { mutableStateOf(hasPrivateDnsCompatibilityWarning(context)) }
     var showVpnConflict by remember { mutableStateOf(false) }
 
     val vpnPermissionLauncher = rememberLauncherForActivityResult(
@@ -91,7 +91,7 @@ fun AdShieldScreen() {
             blockedCount = AdShieldState.blockedCount(context)
             lastBlockedDomain = AdShieldState.lastBlockedDomain(context)
             error = AdShieldState.lastError(context)
-            strictPrivateDns = hasStrictPrivateDns(context)
+            privateDnsCompatibilityWarning = hasPrivateDnsCompatibilityWarning(context)
             delay(1000)
         }
     }
@@ -202,10 +202,10 @@ fun AdShieldScreen() {
             )
         }
 
-        if (strictPrivateDns) {
+        if (privateDnsCompatibilityWarning) {
             InfoCard(
-                title = "Private DNS may bypass filtering",
-                body = "Android is configured with a strict Private DNS provider. Some apps may send encrypted DNS outside this local filter.",
+                title = "Private DNS is enabled on Android 9",
+                body = "This Android version does not expose the system DNS resolver needed to preserve Private DNS. MOSAIC will not downgrade your DNS privacy; turn Private DNS off before enabling this filter.",
                 accent = Color(0xFFFFB45B),
             )
         }
@@ -283,9 +283,9 @@ private fun InfoCard(title: String, body: String, accent: Color) {
     }
 }
 
-private fun hasStrictPrivateDns(context: Context): Boolean {
-    if (Build.VERSION.SDK_INT < 28) return false
-    return Settings.Global.getString(context.contentResolver, "private_dns_mode") == "hostname"
+private fun hasPrivateDnsCompatibilityWarning(context: Context): Boolean {
+    if (Build.VERSION.SDK_INT != 28) return false
+    return Settings.Global.getString(context.contentResolver, "private_dns_mode") != "off"
 }
 
 private fun hasOtherVpn(context: Context): Boolean {
