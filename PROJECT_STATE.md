@@ -27,8 +27,9 @@ Respect platform, security and content-access boundaries. These boundaries do no
 - Provider-neutral MediaSourceAdapter and explicit capability model.
 - Basic WebView browser with conservative third-party host filter; not a complete browser or the core product.
 - AdBlockPolicy currently has blanket YouTube/Google-video and Spotify-domain exemptions. This is legacy behavior to replace with tested source-aware rules; do not blindly remove exemptions until rules are tested against media delivery.
-- ExternalMediaSessionBridge supports opt-in Android notification access, external session metadata and basic play/pause/next commands. It does not transfer audio bytes into MOSAIC.
-- Native background playback from YouTube, Spotify, Facebook, Instagram and other external sources is not implemented or verified.
+- ExternalMediaSessionBridge is now polled at app level and surfaced in the primary Player, not Browser. Player cards show source app label/title/artist and expose play/pause, previous/next and seek only when the external session advertises those actions. Notification-listener access remains explicit; notification text is not read.
+- This is source-owned remote control, not native audio playback and not a way to force an app to continue when it disallows background playback. Real-app/Redmi verification remains pending.
+- Native background playback from YouTube, Spotify, Facebook, Instagram and other external sources is not yet demonstrated.
 - Device-wide VPN/DNS ad filtering is not implemented.
 - Unified native queue for supported external media is not implemented.
 
@@ -51,9 +52,9 @@ Respect platform, security and content-access boundaries. These boundaries do no
 
 ## Immediate next engineering task
 
-**P3-007 — move external media-session controls into the primary Player.** The current opt-in external-session bridge is surfaced inside Browser, which is the wrong product location. Move discovery and control into Player so the user can control active sessions from YouTube, Spotify and other apps without opening a toy browser. Add previous/seek controls only where the external session advertises support, label source-owned playback clearly, and keep it distinct from MOSAIC-native queue playback. Then verify with real apps on the Redmi. This improves control; it does not claim to force a source app to continue when that app/platform disallows background playback.
+**P3-007 — real-device acceptance of external media controls.** The Player now lists active external Android media sessions and exposes source-advertised play/pause, previous/next and seek actions. Verify this with YouTube, Spotify and other installed media apps on the Redmi, including screen-off and app-switch behavior. This is an external control surface, not native stream playback and not a promise to override source-app background restrictions.
 
-After P3-007, implement P3-008: the user-enabled device-wide VPN/DNS Ad Shield.
+Then implement **P3-008 — device-wide VPN/DNS Ad Shield** as the next code feature.
 
 ## Required handoff discipline
 
