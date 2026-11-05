@@ -16,7 +16,7 @@ class ProjectContractTests(unittest.TestCase):
         self.assertIn("broad ad/tracker blocking across apps and websites", decisions)
         for source in ("YouTube", "Spotify", "Facebook", "Instagram"):
             self.assertIn(source, spec)
-        self.assertIn("no provider is automatically exempt", (ROOT / "docs/ARCHITECTURE.md").read_text(encoding="utf-8").lower())
+        self.assertIn("no blanket provider exemption", (ROOT / "docs/ARCHITECTURE.md").read_text(encoding="utf-8").lower())
 
     def test_workflow_is_present(self):
         self.assertTrue((ROOT / ".github/workflows/build-apk.yml").is_file())
