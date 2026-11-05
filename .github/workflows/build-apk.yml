@@ -456,7 +456,9 @@ jobs:
             echo "::error::Gradle reported success but app-debug.apk is missing."
             exit 1
           fi
-          CERT_SHA="$(apksigner verify --print-certs "$APK" | awk -F': ' '/Signer #1 certificate SHA-256 digest/ {gsub(/:/, "", $2); print tolower($2)}')"
+          APKSIGNER="$ANDROID_HOME/build-tools/36.0.0/apksigner"
+          test -x "$APKSIGNER"
+          CERT_SHA="$("$APKSIGNER" verify --print-certs "$APK" | awk -F': ' '/Signer #1 certificate SHA-256 digest/ {gsub(/:/, "", $2); print tolower($2)}')"
           if [[ "$CERT_SHA" != "700b857678b343aed93f7a7280e7d777df73c3f5f5e5024d94c119a4578079d0" ]]; then
             echo "::error::APK was not signed with the persistent MOSAIC development certificate."
             exit 1
@@ -797,7 +799,9 @@ jobs:
           set -euo pipefail
           APK="app/build/outputs/apk/debug/app-debug.apk"
           test -s "$APK"
-          CERT_SHA="$(apksigner verify --print-certs "$APK" | awk -F': ' '/Signer #1 certificate SHA-256 digest/ {gsub(/:/, "", $2); print tolower($2)}')"
+          APKSIGNER="$ANDROID_HOME/build-tools/36.0.0/apksigner"
+          test -x "$APKSIGNER"
+          CERT_SHA="$("$APKSIGNER" verify --print-certs "$APK" | awk -F': ' '/Signer #1 certificate SHA-256 digest/ {gsub(/:/, "", $2); print tolower($2)}')"
           if [[ "$CERT_SHA" != "700b857678b343aed93f7a7280e7d777df73c3f5f5e5024d94c119a4578079d0" ]]; then
             echo "::error::APK was not signed with the persistent MOSAIC development certificate."
             exit 1
