@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="ad_skip_accessibility_description">MOSAIC looks only for visible, explicitly labelled YouTube ad-skip buttons and taps them. It does not read messages, passwords or notification content.</string>
+</resources>
