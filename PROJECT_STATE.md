@@ -35,6 +35,14 @@ Respect platform, security and content-access boundaries. These boundaries do no
 - Follow-up Ad Shield hardening: upstream UDP sockets now fail over if binding to the selected underlying network fails, are connected to the selected resolver to reject replies from other endpoints, and the VPN's underlying-network list is refreshed even when it becomes empty. Upstream DNS responses are checked for transaction ID, response flag, opcode, question count and exact question bytes before forwarding. Regression tests and source-verifier checks passed in [GitHub Actions run 42094128331](https://github.com/ysfclc/MOSAIC/actions/runs/42094128331), commit `e0f51143c400556d697b9047502b59b2fe6a7de8`. The run passed source verification, Python contract tests, Android unit tests, lint, APK assembly, checksum and persistent signer verification. APK artifact ID: `13445249944`. Physical-device acceptance remains open.
 - Unified native queue for supported external media is not implemented.
 
+## Android-native cross-app control implementation (new)
+
+- The primary Player already uses Android `MediaSessionManager` plus explicit Notification Listener access to discover external sessions and send only the transport actions each source advertises. This is the no-provider-API route for Spotify, YouTube and other apps that expose a session; the source app still owns the stream.
+- Added `AdSkipAccessibilityService`, an opt-in Android AccessibilityService restricted by its service configuration to the YouTube package. It searches visible UI nodes for exact ad-specific labels in English, Polish and Turkish and clicks the nearest clickable ancestor. Generic “Skip” labels are deliberately excluded to avoid skipping tracks or videos. It does not extract audio, mute/strip ad media, or force YouTube background continuation.
+- Added a Player panel that links to Android Accessibility settings and reports whether the helper is enabled. Notification Listener access and Accessibility access remain separate, explicit user grants.
+- This slice is **not yet CI-verified or device-accepted**. Next: run source verification, unit tests, lint and APK build; then test on Redmi with YouTube foreground, ad-skip UI variants, false-positive cases, app switching and screen-off behavior. The feature may do nothing when YouTube changes labels or renders controls inaccessible to Android accessibility.
+- The broader Ad Shield remains a separate local VPN/DNS capability; it can block separable host-based ad/tracker requests but cannot reliably remove same-host or in-stream ads.
+
 ## APK installation and update compatibility
 
 The earlier CI workflow assembled debug APKs using each hosted runner's temporary Android debug keystore. The signing certificate therefore changed between builds, so Android rejected subsequent APKs as updates. This was a delivery-pipeline defect, not intended app behavior.
