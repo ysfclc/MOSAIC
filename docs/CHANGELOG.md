@@ -44,3 +44,15 @@
 - Android unit tests, lint and debug APK assembly passed.
 - Physical Redmi Note 12 Pro 5G acceptance remains pending.
 - Workflow: https://github.com/ysfclc/MOSAIC/actions/runs/41957296181
+
+
+## 2026-11-05 — Product vision lock and direct-edit CI
+
+- Locked MOSAIC's two primary pillars: cross-source background playback/control and broad ad/tracker blocking across apps and websites (ADR-014/ADR-015).
+- Corrected the architecture, provider capability matrix, adapter contract, phase plan, README and session handoff. Fully withdrew ADR-013's incorrect copy/paste founding-purpose claim.
+- Removed provider-wide ad-filter exemptions as a required architectural/test invariant; current app code still contains legacy exemptions pending source-aware replacement and compatibility tests.
+- Added a direct repository build path for app/core/tools/docs/build changes while retaining the separate validated ZIP importer.
+- Verified direct CI in [run 42033924158](https://github.com/ysfclc/MOSAIC/actions/runs/42033924158): source verifier, Python contract tests, Android unit tests, lint and debug APK assembly passed.
+- Debug APK SHA-256: `69cb441baf1a502c6dcbac5bbeba9fda06eb9604c5b319c514608159c7f62881`.
+- No playback or ad-blocking application feature was marked complete by this documentation/CI work. Physical Redmi device acceptance remains pending.
+- Next: move external MediaSession controls from Browser into the primary Player (P3-007), then build the cross-app VPN/DNS Ad Shield (P3-008).
