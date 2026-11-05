@@ -11,6 +11,12 @@
 
 One native Android experience over multiple legitimate media sources. Local-first, provider-independent, no mandatory account, no mandatory subscription for core local playback, and no ads inserted by MOSAIC. Provider restrictions remain provider-controlled; no DRM/paywall/ad circumvention or unauthorized stream extraction.
 
+## Founding purpose — copy/paste capture and two-way movement
+
+MOSAIC started to solve the friction of moving useful content between apps. The user must be able to copy a URL or text in another app, explicitly paste it into MOSAIC, preview/save it for later, and then copy/open/share it back out. Android Share is an equivalent inbound route and must converge on the same capture flow. This is a core product requirement, not just a Browser shortcut. The eventual durable inbox must preserve source, capture time, type and status. See PRODUCT_SPEC.md and P3-009–P3-011 in TASKS.md.
+
+Important boundary: explicit user-invoked paste only. Do not add background clipboard polling/history; that belongs to the separate VaultOS problem space.
+
 ## Current implementation
 
 - Multi-module Android project: :app, :core:media, :core:library, :core:design.
@@ -75,5 +81,5 @@ Current browser preview build:
 - Latest verification: app unit tests 5/5 pass; Python contract tests 10/10 pass; :app:lintDebug and :app:assembleDebug pass. Lint warnings remain, including JavaScript-enabled WebView review and existing project warnings.
 
 Latest Browser/bridge build record: notes/builds/2026-11-04-browser-preview-build.md.
-- Inbound share preview: Android text/plain ACTION_SEND opens the shared URL/text directly in MOSAIC Browser; durable inbox and file-share handling remain pending.
+- Inbound share preview: Android text/plain ACTION_SEND opens the shared URL/text directly in MOSAIC Browser; durable inbox and file-share handling remain pending. This is only a partial implementation of the founding copy/paste-and-keep workflow: an explicit paste UI, durable unified inbox and outbound round-trip acceptance are still TODO.
 - Latest inbound share path verified at compile time: Android SEND text/plain -> MainActivity -> MosaicApp -> BrowserScreen initial URL/search. Device-level share-sheet testing remains pending.
