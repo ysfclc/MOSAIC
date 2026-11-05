@@ -89,4 +89,4 @@ Optional notification access enables discovery/control of supported external And
 
 ## Installing updates
 
-MOSAIC CI debug APKs now use one persistent development signing identity and increasing version codes. The first stable-key build may require one final migration uninstall if an earlier CI build is installed; after that, install future APKs directly over the existing app. Normal updates should preserve app data. This development signing identity is not a production release key.
+MOSAIC CI debug APKs now use one persistent development signing identity and increasing version codes. The stable signing pipeline passed in [run 42055276990](https://github.com/ysfclc/MOSAIC/actions/runs/42055276990). The first stable-key build may require one final migration uninstall if an earlier CI build is installed; after that, install future APKs directly over the existing app. Normal updates should preserve app data. This development signing identity is not a production release key.
