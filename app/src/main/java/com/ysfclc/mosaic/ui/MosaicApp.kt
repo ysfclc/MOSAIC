@@ -71,6 +71,7 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Slider
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -105,6 +106,7 @@ import com.ysfclc.mosaic.core.design.MosaicPalette
 import com.ysfclc.mosaic.core.library.MediaStoreCatalog
 import com.ysfclc.mosaic.core.media.MediaItemRecord
 import com.ysfclc.mosaic.core.media.PlaybackConnection
+import com.ysfclc.mosaic.core.media.PlayableStreamAddress
 import com.ysfclc.mosaic.ui.browser.AdSkipAccessibilityStatus
 import com.ysfclc.mosaic.ui.browser.BrowserScreen
 import com.ysfclc.mosaic.ui.browser.ExternalMediaSession
@@ -288,6 +290,18 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
                         onEnableExternalSessionAccess = { context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
                         adSkipEnabled = adSkipEnabled,
                         onEnableAdSkip = { context.startActivity(Intent(Settings.ACTION_ACCESSIBILITY_SETTINGS)) },
+                        onPlayStream = { rawAddress ->
+                            val address = PlayableStreamAddress.normalize(rawAddress)
+                            if (address == null) {
+                                false
+                            } else {
+                                val uri = Uri.parse(address)
+                                val title = uri.lastPathSegment?.substringBefore('?')?.takeIf { it.isNotBlank() } ?: uri.host.orEmpty()
+                                val mimeType = if (uri.path.orEmpty().endsWith(".m3u8", ignoreCase = true)) "application/x-mpegURL" else null
+                                playback.playUri(uri, title.ifBlank { "Internet radio" }, mimeType)
+                                true
+                            }
+                        },
                         onOpenLibrary = { destination = Destination.LIBRARY },
                     )
                     Destination.SHIELD -> com.ysfclc.mosaic.ui.adshield.AdShieldScreen()
@@ -675,6 +689,7 @@ private fun PlayerScreen(
     onEnableExternalSessionAccess: () -> Unit,
     adSkipEnabled: Boolean,
     onEnableAdSkip: () -> Unit,
+    onPlayStream: (String) -> Boolean,
     onOpenLibrary: () -> Unit,
 ) {
     val mediaItem = controller?.currentMediaItem
@@ -764,6 +779,8 @@ private fun PlayerScreen(
             }
         }
         Spacer(Modifier.height(22.dp))
+        StreamSourcePanel(onPlayStream = onPlayStream)
+        Spacer(Modifier.height(22.dp))
         ExternalPlaybackPanel(
             hasAccess = hasExternalSessionAccess,
             sessions = externalSessions,
@@ -771,6 +788,62 @@ private fun PlayerScreen(
         )
         Spacer(Modifier.height(14.dp))
         AdSkipPanel(enabled = adSkipEnabled, onEnable = onEnableAdSkip)
+    }
+}
+
+@Composable
+private fun StreamSourcePanel(
+    onPlayStream: (String) -> Boolean,
+) {
+    var address by remember { mutableStateOf("") }
+    var error by remember { mutableStateOf<String?>(null) }
+
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(9.dp),
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text("PLAY FROM A LINK", color = MosaicPalette.Cyan, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
+            Text("Bring a stream into MOSAIC", color = MosaicPalette.TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            Text(
+                "HTTPS audio streams and HLS radio (.m3u8) play in MOSAIC's own background session. HTTP-only stations are not enabled yet.",
+                color = MosaicPalette.TextMuted,
+                fontSize = 9.sp,
+                lineHeight = 13.sp,
+            )
+        }
+        OutlinedTextField(
+            value = address,
+            onValueChange = {
+                address = it
+                error = null
+            },
+            modifier = Modifier.fillMaxWidth(),
+            singleLine = true,
+            label = { Text("HTTPS audio or radio URL") },
+            placeholder = { Text("https://station.example/live.m3u8") },
+        )
+        if (error != null) {
+            Text(error.orEmpty(), color = Color(0xFFFF9B9B), fontSize = 9.sp)
+        }
+        Button(
+            onClick = {
+                if (address.isBlank()) {
+                    error = "Enter an HTTPS stream URL."
+                } else if (onPlayStream(address)) {
+                    error = null
+                } else {
+                    error = "This link is not a valid HTTPS stream address."
+                }
+            },
+            enabled = address.isNotBlank(),
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(13.dp),
+        ) {
+            Icon(Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(7.dp))
+            Text("Play in MOSAIC", fontSize = 11.sp)
+        }
     }
 }
 
