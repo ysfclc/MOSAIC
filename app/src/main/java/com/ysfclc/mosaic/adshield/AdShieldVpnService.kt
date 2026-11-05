@@ -124,6 +124,7 @@ class AdShieldVpnService : VpnService() {
 
                 val dnsResponse = if (AdShieldRules.isBlocked(question.domain, AdShieldState.allowlist(this))) {
                     AdShieldState.recordBlocked(this, question.domain)
+                    AdShieldState.setError(this, null)
                     DnsPacketCodec.buildNxDomainResponse(query.dnsMessage)
                 } else {
                     forwardDnsQuery(query.dnsMessage)
@@ -254,7 +255,7 @@ class AdShieldVpnService : VpnService() {
     private fun isPrivateDnsEnabled(): Boolean {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.P) return false
         val mode = Settings.Global.getString(contentResolver, "private_dns_mode")
-        return !mode.isNullOrBlank() && mode != "off"
+        return mode != "off"
     }
 
     private fun startShieldNotification() {
