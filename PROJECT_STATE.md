@@ -5,7 +5,7 @@
 **Vision lock:** ADR-014 and ADR-015 in docs/DECISIONS.md  
 **Architecture:** native Android, Kotlin, Jetpack Compose, Media3  
 **Target device:** Redmi Note 12 Pro 5G  
-**Current phase:** Player control foundation verified; Ad Shield first implementation built and CI-verified; physical-device acceptance and native source playback remain open.
+**Current phase:** Android-native external session controls and visible YouTube ad-skip helper CI-verified; HTTPS direct/HLS stream entry implemented with CI verification pending; physical-device acceptance and RSS feed playback remain open.
 
 ## Locked product vision
 
@@ -40,8 +40,15 @@ Respect platform, security and content-access boundaries. These boundaries do no
 - The primary Player already uses Android `MediaSessionManager` plus explicit Notification Listener access to discover external sessions and send only the transport actions each source advertises. This is the no-provider-API route for Spotify, YouTube and other apps that expose a session; the source app still owns the stream.
 - Added `AdSkipAccessibilityService`, an opt-in Android AccessibilityService restricted by its service configuration to the YouTube package. It searches visible UI nodes for exact ad-specific labels in English, Polish and Turkish and clicks the nearest clickable ancestor. Generic “Skip” labels are deliberately excluded to avoid skipping tracks or videos. It does not extract audio, mute/strip ad media, or force YouTube background continuation.
 - Added a Player panel that links to Android Accessibility settings and reports whether the helper is enabled. Notification Listener access and Accessibility access remain separate, explicit user grants.
-- This slice is **not yet CI-verified or device-accepted**. Next: run source verification, unit tests, lint and APK build; then test on Redmi with YouTube foreground, ad-skip UI variants, false-positive cases, app switching and screen-off behavior. The feature may do nothing when YouTube changes labels or renders controls inaccessible to Android accessibility.
+- This slice passed source verification, Python contract tests, Android unit tests, lint, APK assembly, checksum and stable signing in [GitHub Actions run 42110725075](https://github.com/ysfclc/MOSAIC/actions/runs/42110725075), commit `010c85899bdcfe3669a44ce4c27e7d78e844f046`. It is not device-accepted. Test on Redmi with YouTube foreground, ad-skip UI variants, false-positive cases, app switching and screen-off behavior. The feature may do nothing when YouTube changes labels or renders controls inaccessible to Android accessibility.
 - The broader Ad Shield remains a separate local VPN/DNS capability; it can block separable host-based ad/tracker requests but cannot reliably remove same-host or in-stream ads.
+
+## Native HTTPS stream playback slice (new)
+
+- Added a Player URL entry that sends validated HTTPS audio URLs to the app-owned Media3 `MediaSessionService`; this is genuine MOSAIC-owned playback, not a remote control of another app.
+- Added the Media3 HLS extension so HTTPS HLS radio streams (`.m3u8`) can be handled by ExoPlayer alongside supported progressive audio formats.
+- Added a pure-JVM URL validator and tests: accepts HTTPS URLs, rejects HTTP/cleartext, non-network schemes, missing hosts and embedded credentials. HTTP-only radio stations are deliberately not enabled because no scoped cleartext policy has been designed.
+- This slice does not yet parse RSS feeds or create multi-episode podcast queues. Build/device verification is pending; after CI, test at least one HTTPS MP3/AAC stream and one HLS radio URL, then screen-off, lock-screen, notification and Bluetooth controls on the Redmi.
 
 ## APK installation and update compatibility
 
@@ -71,7 +78,7 @@ The CI workflow now decodes one persistent **development-only** signing key from
 
 ## Immediate next engineering task
 
-P3-009 / P3-017 research now records the official YouTube and Spotify constraints in `docs/PROVIDER_CAPABILITY_MATRIX.md`. Spotify's Android App Remote is a credible delegated-control integration: Spotify retains the audio stream and OS background service. YouTube's official policy prohibits API-based background continuation and ad restriction; its mobile-app background-play help identifies Premium as the supported route. Next implementation priority: integrate Spotify App Remote with clear external-ownership labels, improve YouTube's exposed Android MediaSession controls, and implement MOSAIC-native direct URL / RSS / radio adapters for genuinely native Media3 playback. P3-008 device acceptance remains open in parallel; physical VPN/network recovery checks have not been run.
+Continue P3-010 with RSS podcast feed parsing and episode queue insertion into the existing Media3 session. The HTTPS direct-stream/HLS entry is now implemented but awaiting CI and device acceptance. P3-018 native external session controls/ad-skip helper passed CI run 42110725075 but still needs real YouTube/Spotify tests on the Redmi. P3-008 Ad Shield physical acceptance also remains open.
 
 The follow-up DNS-routing hardening passed [GitHub Actions run 42094128331](https://github.com/ysfclc/MOSAIC/actions/runs/42094128331) on commit `e0f51143c400556d697b9047502b59b2fe6a7de8`. Source verification, Python contract tests, Android unit tests, lint, APK assembly, APK checksum and persistent signing-certificate checks all passed. APK artifact ID: `13445249944`. Physical-device acceptance remains unperformed.
 
