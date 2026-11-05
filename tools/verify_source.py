@@ -35,6 +35,8 @@ service = (ROOT / "core/media/src/main/java/com/ysfclc/mosaic/core/media/Playbac
 contract = (ROOT / "core/media/src/main/java/com/ysfclc/mosaic/core/media/MediaSource.kt").read_text(encoding="utf-8")
 browser = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/browser/BrowserScreen.kt").read_text(encoding="utf-8")
 external_bridge = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/browser/ExternalMediaSessionBridge.kt").read_text(encoding="utf-8")
+ad_skip_service = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/browser/AdSkipAccessibilityService.kt").read_text(encoding="utf-8")
+ad_skip_config = (ROOT / "app/src/main/res/xml/ad_skip_accessibility_service.xml").read_text(encoding="utf-8")
 ad_shield_service = (ROOT / "app/src/main/java/com/ysfclc/mosaic/adshield/AdShieldVpnService.kt").read_text(encoding="utf-8")
 workflow = ROOT / ".github/workflows/build-apk.yml"
 checks = {
@@ -55,6 +57,10 @@ checks = {
     "browser ad-filter policy is present": "object AdBlockPolicy" in (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/browser/AdBlockPolicy.kt").read_text(encoding="utf-8"),
     "external media controls require notification listener permission": "android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" in manifest,
     "external sessions are queried through Android MediaSessionManager": "getActiveSessions(listener)" in external_bridge,
+    "native ad-skip service is registered with explicit opt-in permission": "AdSkipAccessibilityService" in manifest and "BIND_ACCESSIBILITY_SERVICE" in manifest,
+    "native ad-skip service is limited to YouTube UI": 'android:packageNames="com.google.android.youtube"' in ad_skip_config,
+    "native ad-skip only clicks exact visible ad labels": "AD_SKIP_LABELS" in ad_skip_service and "performAction(AccessibilityNodeInfo.ACTION_CLICK)" in ad_skip_service and '"skip ad"' in ad_skip_service,
+    "native ad-skip control is surfaced in Player": "AdSkipPanel" in (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/MosaicApp.kt").read_text(encoding="utf-8"),
     "Android share target is registered": "android.intent.action.SEND" in manifest and "android:mimeType=" in manifest,
     "Ad Shield fails over safely when underlying-network socket binding fails": "runCatching { network.bindSocket(socket) }.isFailure" in ad_shield_service,
     "Ad Shield pins upstream UDP replies to the selected resolver": "socket.connect(resolver, DNS_PORT)" in ad_shield_service,
