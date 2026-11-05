@@ -3,6 +3,10 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
+val mosaicDebugKeystorePath = providers.environmentVariable("MOSAIC_DEBUG_KEYSTORE").orNull
+val mosaicDebugKeystorePassword = providers.environmentVariable("MOSAIC_DEBUG_KEYSTORE_PASSWORD").orNull
+val mosaicCiVersionCode = maxOf(2, providers.gradleProperty("mosaicVersionCode").orNull?.toIntOrNull() ?: 2)
+
 android {
     namespace = "com.ysfclc.mosaic"
     compileSdk = 37
@@ -11,9 +15,28 @@ android {
         applicationId = "com.ysfclc.mosaic"
         minSdk = 26
         targetSdk = 36
-        versionCode = 2
+        versionCode = mosaicCiVersionCode
         versionName = "0.2.0-browser-preview"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        if (!mosaicDebugKeystorePath.isNullOrBlank() && !mosaicDebugKeystorePassword.isNullOrBlank()) {
+            create("stableDebug") {
+                storeFile = file(mosaicDebugKeystorePath)
+                storePassword = mosaicDebugKeystorePassword
+                keyAlias = "mosaic-debug"
+                keyPassword = mosaicDebugKeystorePassword
+            }
+        }
+    }
+
+    buildTypes {
+        getByName("debug") {
+            if (!mosaicDebugKeystorePath.isNullOrBlank() && !mosaicDebugKeystorePassword.isNullOrBlank()) {
+                signingConfig = signingConfigs.getByName("stableDebug")
+            }
+        }
     }
 
     buildFeatures {
