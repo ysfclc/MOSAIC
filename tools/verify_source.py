@@ -35,6 +35,7 @@ service = (ROOT / "core/media/src/main/java/com/ysfclc/mosaic/core/media/Playbac
 contract = (ROOT / "core/media/src/main/java/com/ysfclc/mosaic/core/media/MediaSource.kt").read_text(encoding="utf-8")
 browser = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/browser/BrowserScreen.kt").read_text(encoding="utf-8")
 external_bridge = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/browser/ExternalMediaSessionBridge.kt").read_text(encoding="utf-8")
+ad_shield_service = (ROOT / "app/src/main/java/com/ysfclc/mosaic/adshield/AdShieldVpnService.kt").read_text(encoding="utf-8")
 workflow = ROOT / ".github/workflows/build-apk.yml"
 checks = {
     "media playback foreground permission": "FOREGROUND_SERVICE_MEDIA_PLAYBACK" in manifest,
@@ -55,6 +56,9 @@ checks = {
     "external media controls require notification listener permission": "android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" in manifest,
     "external sessions are queried through Android MediaSessionManager": "getActiveSessions(listener)" in external_bridge,
     "Android share target is registered": "android.intent.action.SEND" in manifest and "android:mimeType=" in manifest,
+    "Ad Shield fails over safely when underlying-network socket binding fails": "runCatching { network.bindSocket(socket) }.isFailure" in ad_shield_service,
+    "Ad Shield pins upstream UDP replies to the selected resolver": "socket.connect(resolver, DNS_PORT)" in ad_shield_service,
+    "Ad Shield refreshes underlying network selection including disconnects": "setUnderlyingNetworks(networks.toTypedArray())" in ad_shield_service,
     "shared URLs are forwarded into the Browser": "initialSharedText" in (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/MosaicApp.kt").read_text(encoding="utf-8") and "onInitialUrlConsumed" in browser,
     "Phase 1 picker is audio-only until video UI exists": 'documentLauncher.launch(arrayOf("audio/*"))' in (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/MosaicApp.kt").read_text(encoding="utf-8"),
 }
