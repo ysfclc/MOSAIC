@@ -40,13 +40,14 @@ class ProjectContractTests(unittest.TestCase):
         self.assertIn("\"platforms;android-37.2\"", workflow)
         self.assertNotIn("\"platforms;android-37\"", workflow)
 
-    def test_browser_declares_network_permission_and_provider_exemptions(self):
+    def test_browser_declares_network_permission_and_filter_policy(self):
         manifest = (ROOT / "app/src/main/AndroidManifest.xml").read_text(encoding="utf-8")
         browser = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/browser/BrowserScreen.kt").read_text(encoding="utf-8")
         policy = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/browser/AdBlockPolicy.kt").read_text(encoding="utf-8")
         self.assertIn("android.permission.INTERNET", manifest)
         self.assertIn("WebView(context)", browser)
-        self.assertIn("protectedProviderDomains", policy)
+        self.assertIn("object AdBlockPolicy", policy)
+        self.assertIn("shouldBlock", policy)
 
     def test_external_media_controls_require_explicit_notification_access(self):
         manifest = (ROOT / "app/src/main/AndroidManifest.xml").read_text(encoding="utf-8")
