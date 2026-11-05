@@ -72,12 +72,6 @@ class AdShieldVpnService : VpnService() {
             return
         }
 
-        runCatching { startShieldNotification() }.onFailure {
-            AdShieldState.setError(this, "Could not start the Ad Shield notification: ${it.message}")
-            stopSelf()
-            return
-        }
-
         val descriptor = runCatching {
             Builder()
                 .setSession("MOSAIC Ad Shield")
@@ -102,6 +96,13 @@ class AdShieldVpnService : VpnService() {
         }
 
         tunnel = descriptor
+        runCatching { startShieldNotification() }.onFailure {
+            AdShieldState.setError(this, "Could not start the Ad Shield notification: ${it.message}")
+            runCatching { descriptor.close() }
+            tunnel = null
+            stopSelf()
+            return
+        }
         isRunning = true
         AdShieldState.resetSession(this)
         AdShieldState.setRunning(this, true)
