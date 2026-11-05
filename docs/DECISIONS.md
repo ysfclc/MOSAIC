@@ -34,7 +34,7 @@ This file is the canonical decision log. A decision marked **LOCKED** may only c
 - **Why:** user ownership, privacy and operating-cost constraints.
 - **Rejected:** mandatory remote processing or a cloud account to unlock local capabilities.
 
-## ADR-006 — Provider policy boundaries (LOCKED)
+## ADR-006 — Provider policy boundaries (LOCKED; SUPERSEDED IN SCOPE BY ADR-014)
 
 - **Decision:** no ad removal, DRM circumvention, paywall bypass, private API scraping or unauthorized audio extraction. Integrate only capabilities that the provider permits.
 - **Why:** legal resilience, reliability and avoidance of fragile integrations.
@@ -56,7 +56,7 @@ This file is the canonical decision log. A decision marked **LOCKED** may only c
 - **Decision:** Phase 1 delivers native local indexing and background playback, not full provider parity. Browser/RSS/radio/provider adapters/AI/sync stay in the locked roadmap and contracts.
 - **Why:** prove the highest-risk Android foundation before adding network and provider complexity.
 
-## ADR-010 — Ad control is scoped by source (LOCKED)
+## ADR-010 — Ad control is scoped by source (LOCKED; SUPERSEDED IN SCOPE BY ADR-014)
 
 - Date: 2026-11-04.
 - Decision: MOSAIC owns an ad/tracker filter for ordinary web pages inside MOSAIC Browser. Filtering is conservative, user-toggleable, measurable and has provider/site exemptions. A later device-wide DNS/VPN mode is optional and separately consented.
@@ -72,7 +72,7 @@ This file is the canonical decision log. A decision marked **LOCKED** may only c
 - Why: "vice versa" means media and control must move in both directions, not just import URLs into MOSAIC.
 - Limit: no raw protected-stream interception, audio extraction, private API scraping or promise of one gapless queue across unrelated provider players.
 
-## ADR-012 — YouTube and Spotify integration capability split (LOCKED)
+## ADR-012 — YouTube and Spotify integration capability split (HISTORICAL; SUPERSEDED BY ADR-014)
 
 - Date: 2026-11-04.
 - YouTube: use permitted official metadata/search and standard visible embedded playback. Preserve provider ads/player UI. No background player, ad blocking, audio/video separation or offline copy.
@@ -88,7 +88,7 @@ This file is the canonical decision log. A decision marked **LOCKED** may only c
 - Android MediaSessionManager: https://developer.android.com/reference/android/media/session/MediaSessionManager
 
 
-## ADR-013 — Explicit copy/paste capture is a founding product workflow (LOCKED)
+## ADR-013 — Explicit copy/paste capture is a founding product workflow (RETRACTED — INCORRECT ORIGIN)
 
 - **Date:** 2026-11-05
 - **Decision:** MOSAIC must support two-way user-selected content movement: copy plain text/URLs in another app and explicitly paste into MOSAIC; Android Share/Open intents provide equivalent inbound paths; captured content can subsequently be copied, opened or shared back out.
