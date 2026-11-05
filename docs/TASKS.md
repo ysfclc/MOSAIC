@@ -93,7 +93,7 @@ Status values: DONE, IN PROGRESS, BLOCKED, TODO, PARKED.
 
 | ID | Task | Status | Verification / note |
 |---|---|---|---|
-| GOV-001 | Add direct-edit CI trigger for source/documentation changes while preserving ZIP importer | TODO | Current workflow only watches incoming ZIP paths or manual dispatch; direct GitHub edits need build/test/lint/APK verification |
+| GOV-001 | Add direct-edit CI trigger for source/documentation changes while preserving ZIP importer | IN PROGRESS | Direct-build job and path filters committed; awaiting successful end-to-end GitHub Actions verification |
 | GOV-002 | Reconcile latest unprocessed incoming ZIP | TODO | Run 41962171501 failed in preflight; inspect archive and safely integrate only after workflow path resolution is repaired |
 
 ## Locked product vision — ADR-014 and ADR-015
