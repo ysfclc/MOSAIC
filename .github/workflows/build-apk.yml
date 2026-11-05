@@ -729,10 +729,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          sdkmanager --install \\
-            "platform-tools" \\
-            "platforms;android-37.2" \\
-            "build-tools;36.0.0"
+          sdkmanager --install "platform-tools" "platforms;android-37.2" "build-tools;36.0.0"
 
       - name: Set up pinned Gradle 9.3.1
         uses: gradle/actions/setup-gradle@v6
@@ -760,11 +757,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ./gradlew --no-daemon --stacktrace \\
-            :core:media:testDebugUnitTest \\
-            :app:testDebugUnitTest \\
-            :app:lintDebug \\
-            :app:assembleDebug
+          ./gradlew --no-daemon --stacktrace :core:media:testDebugUnitTest :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
 
       - name: Verify APK and calculate checksum
         shell: bash
