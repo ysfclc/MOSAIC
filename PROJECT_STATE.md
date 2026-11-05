@@ -37,9 +37,9 @@ Respect platform, security and content-access boundaries. These boundaries do no
 
 - Android Gradle Plugin: 9.1.1; Gradle: 9.3.1; Java: 17.
 - Android compile SDK: 37 (published package `platforms;android-37.2`); target SDK: 36; minimum SDK: 26; Build Tools: 36.0.0.
-- Last successful direct-edit GitHub Actions verification: [run 42033924158](https://github.com/ysfclc/MOSAIC/actions/runs/42033924158), commit `5f006f5f2ff2536bbb3f41a06e534534d71da6ac`. Source verifier, Python contract tests, Android unit tests, lint and debug APK assembly all passed.
+- Last successful Player implementation build: [run 42034925797](https://github.com/ysfclc/MOSAIC/actions/runs/42034925797), commit `cc064cb1be7fd6b7d1d6b18a2a09f0d62af0b4a1`. Source verifier, Python contract tests, Android unit tests, lint and debug APK assembly all passed.
 - Direct edits to app/core/tools/docs/build configuration now trigger a separate build/test/lint/APK path. Manual workflow dispatch offers `direct` or `import`; the original ZIP importer remains intact.
-- Latest debug APK from the direct-build run: 22,114,601 bytes; SHA-256 `69cb441baf1a502c6dcbac5bbeba9fda06eb9604c5b319c514608159c7f62881`.
+- Latest Player debug APK: 22,114,601 bytes; SHA-256 `74a55e78f58e9cded6f43c261676756b9014bd7e91c970be65e9d4b7703be152`.
 - No successful physical-device test is recorded. Do not claim screen-off, lock-screen, headset or Bluetooth acceptance on the Redmi.
 
 ## Product delivery sequence
