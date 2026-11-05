@@ -10,13 +10,15 @@
 
 ## Product contract
 
-One native Android experience over multiple legitimate media sources. Local-first, provider-independent, no mandatory account, no mandatory subscription for core local playback, and no ads inserted by MOSAIC. Provider restrictions remain provider-controlled; no DRM/paywall/ad circumvention or unauthorized stream extraction.
+One native Android media hub whose primary goal is background playback from as many external sources as technically feasible and ad/tracker blocking across as many apps and surfaces as technically feasible. The user explicitly wants to cover YouTube, Spotify, Facebook, Instagram and other sources. The product must investigate source-specific paths rather than preemptively exempting major services. This is the target vision, not a claim that every source or ad is already supported.
 
-## Founding purpose — copy/paste capture and two-way movement
+## Founding purpose — background playback from other sources + ad blocking
 
-MOSAIC started to solve the friction of moving useful content between apps. The user must be able to copy a URL or text in another app, explicitly paste it into MOSAIC, preview/save it for later, and then copy/open/share it back out. Android Share is an equivalent inbound route and must converge on the same capture flow. This is a core product requirement, not just a Browser shortcut. The eventual durable inbox must preserve source, capture time, type and status. See PRODUCT_SPEC.md and P3-009–P3-011 in TASKS.md.
+The actual MOSAIC vision is to play media from other sources in the background and block ads wherever technically possible. The user specifically named YouTube, Spotify, Facebook, Instagram and "whatever" else. MOSAIC should unify source discovery/playback/control, keep media playing when the user leaves the app or turns off the screen, and pursue broad ad/tracker blocking inside the browser and across other apps where Android permits it.
 
-Important boundary: explicit user-invoked paste only. Do not add background clipboard polling/history; that belongs to the separate VaultOS problem space.
+Do not describe MOSAIC as a clipboard/copy-paste product. Copy/paste and share intents may be supporting conveniences, not the founding problem. The earlier ADR-013 and copy/paste-origin documentation were incorrect and are superseded/retracted by ADR-014.
+
+The product goal is broad; implementation claims must remain evidence-based. For each source, investigate native Media3 playback, browser playback, official SDK/API options, Android MediaSession control and other viable routes. Clearly distinguish MOSAIC playing the audio itself from remotely controlling another app. For ad blocking, investigate both browser filtering and optional device-wide VPN/DNS filtering; document source compatibility, first-party/in-stream limitations and false positives rather than blanket-exempting named providers.
 
 ## Current implementation
 
@@ -54,20 +56,19 @@ See notes/builds/2026-11-04-vercel-build.md for sandbox/toolchain details, Gradl
 ## Handoff integrity
 
 - The integrated source snapshot is on main and was verified by GitHub Actions run 41957296181.
-- The 2026-11-05 origin/copy-paste documentation updates were committed directly to main across PRODUCT_SPEC.md, TASKS.md, PROJECT_STATE.md, README.md and DECISIONS.md (ADR-013). No application source code was changed in that documentation pass.
+- The 2026-11-05 correction records the actual cross-source background playback and broad ad-blocking vision in PRODUCT_SPEC.md, TASKS.md, PROJECT_STATE.md, README.md and DECISIONS.md (ADR-014). Earlier copy/paste-origin notes are explicitly retracted. No application source code was changed in this documentation correction.
 - The newer incoming ZIP commit `0b65d868` remains unprocessed due to the preflight failure; preserve it for a separately tracked workflow repair/import task.
 - No claim of physical-device validation is made.
 
-## Browser and cross-source requirements update — 2026-11-04
+## Browser, ad filtering and cross-source playback status — 2026-11-05
 
-The original product scope is explicitly recorded in PRODUCT_SPEC.md and ADR-010 through ADR-012:
-- MOSAIC Browser has a first implementation with request-level ad/tracker filtering for a conservative list of third-party domains.
-- YouTube and Spotify pages/assets are exempt from the browser filter.
-- The Browser is a first-party WebView screen with URL/search, back/forward/refresh, provider shortcuts and visible filter status.
-- No universal/system-wide ad blocking is claimed. Device-wide DNS/VPN filtering is parked as an optional, separately consented task.
-- Two-way media bridge is specified: inbound share/capture and authorized external session control; outbound share/open handoff and MOSAIC's own Android MediaSession.
-- YouTube official playback remains visible and provider-owned; no ad removal, background player, audio extraction or offline copy.
-- Spotify integration is planned through the official Android App Remote SDK, with Spotify retaining playback and background ownership.
+The actual product goal is broad background playback from other sources and broad ad blocking. ADR-014 supersedes the earlier blanket provider exemptions and the incorrect copy/paste-origin decision.
+- MOSAIC Browser currently has a basic WebView with a conservative third-party request/host filter. It is not a universal ad blocker.
+- Current AdBlockPolicy explicitly exempts YouTube/Google video and Spotify-related domains. This is existing code behavior, not a user-approved final product requirement; revisit it as part of source-by-source ad-filter research and compatibility testing.
+- ExternalMediaSessionBridge discovers external Android MediaSessions after explicit notification-access opt-in and exposes play/pause/next where supported. This is remote control, not audio transfer or native playback inside MOSAIC.
+- MOSAIC's own Media3 PlaybackService supports its local/accessible media sources in the background. Broad native background playback from YouTube, Spotify, Facebook, Instagram and other external sources has not been implemented or accepted.
+- Device-wide VPN/DNS ad filtering is not implemented. It must be investigated, not described as complete or permanently parked.
+- Yesterday's ZIP import run 41926489353 passed ZIP validation/extraction and source integration into the runner workspace, then failed source verification: active workflow SDK package list uses android-36 while the source verifier expects android-37.2. Build/test/APK and repository integration steps were skipped. No feature changes from that ZIP are confirmed on main.
 
 Current browser preview build:
 - Version: 0.2.0-browser-preview (versionCode 2).
