@@ -48,8 +48,6 @@ import com.ysfclc.mosaic.core.design.MosaicPalette
 import java.io.ByteArrayInputStream
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 
 
 @Composable
@@ -63,23 +61,12 @@ fun BrowserScreen(initialUrl: String? = null, onInitialUrlConsumed: () -> Unit =
     var canGoBack by remember { mutableStateOf(false) }
     var shieldEnabled by remember { mutableStateOf(true) }
     var loadError by remember { mutableStateOf<String?>(null) }
-    var externalSessions by remember { mutableStateOf(emptyList<ExternalMediaSession>()) }
-    var notificationAccess by remember { mutableStateOf(ExternalMediaSessionBridge.hasNotificationAccess(context)) }
 
     val shieldRef = remember { AtomicBoolean(true) }
     val topHostRef = remember { AtomicReference("") }
     val mainHandler = remember { Handler(Looper.getMainLooper()) }
     val currentShieldEnabled by rememberUpdatedState(shieldEnabled)
     SideEffect { shieldRef.set(currentShieldEnabled) }
-
-    LaunchedEffect(Unit) {
-        while (isActive) {
-            notificationAccess = ExternalMediaSessionBridge.hasNotificationAccess(context)
-            externalSessions = if (notificationAccess) ExternalMediaSessionBridge.activeSessions(context) else emptyList()
-            delay(2000)
-        }
-    }
-
 
     val webView = remember(context) {
         WebView(context).apply {
@@ -239,13 +226,6 @@ fun BrowserScreen(initialUrl: String? = null, onInitialUrlConsumed: () -> Unit =
             }
             if (loadError != null) Text("Load error", color = Color(0xFFFF9C9C), fontSize = 9.sp)
         }
-        ExternalMediaPanel(
-            hasAccess = notificationAccess,
-            sessions = externalSessions,
-            onEnableAccess = {
-                context.startActivity(Intent("android.settings.ACTION_NOTIFICATION_LISTENER_SETTINGS"))
-            },
-        )
         Text(
             "Provider pages (including YouTube and Spotify) are deliberately exempt. This shield is not a universal or system-wide ad blocker.",
             color = MosaicPalette.TextMuted,
@@ -255,49 +235,3 @@ fun BrowserScreen(initialUrl: String? = null, onInitialUrlConsumed: () -> Unit =
     }
 }
 
-
-@Composable
-private fun ExternalMediaPanel(
-    hasAccess: Boolean,
-    sessions: List<ExternalMediaSession>,
-    onEnableAccess: () -> Unit,
-) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = Color(0x661B2940),
-        shape = RoundedCornerShape(13.dp),
-    ) {
-        Column(modifier = Modifier.padding(horizontal = 11.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text("EXTERNAL PLAYBACK", color = MosaicPalette.TextPrimary, fontSize = 9.sp, letterSpacing = 1.sp)
-                    Text(
-                        if (!hasAccess) "Optional Android media-session access is off"
-                        else if (sessions.isEmpty()) "No external media session detected"
-                        else sessions.size.toString() + " external media session(s) detected",
-                        color = MosaicPalette.TextMuted,
-                        fontSize = 9.sp,
-                    )
-                }
-                if (!hasAccess) TextButton(onClick = onEnableAccess) { Text("Enable access") }
-            }
-            sessions.take(2).forEach { session ->
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(session.title, color = MosaicPalette.TextPrimary, fontSize = 10.sp, maxLines = 1)
-                        Text(
-                            listOf(session.artist, session.packageName).filter { it.isNotBlank() }.joinToString(" · "),
-                            color = MosaicPalette.TextMuted,
-                            fontSize = 8.sp,
-                            maxLines = 1,
-                        )
-                    }
-                    TextButton(onClick = session::togglePlayback, enabled = session.canPlayPause) {
-                        Text(if (session.isPlaying) "Pause" else "Play")
-                    }
-                    TextButton(onClick = session::skipNext, enabled = session.canSkipNext) { Text("Next") }
-                }
-            }
-        }
-    }
-}
