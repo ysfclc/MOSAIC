@@ -88,22 +88,29 @@ This file is the canonical decision log. A decision marked **LOCKED** may only c
 - Android MediaSessionManager: https://developer.android.com/reference/android/media/session/MediaSessionManager
 
 
-## ADR-013 — Explicit copy/paste capture is a founding product workflow (RETRACTED — INCORRECT ORIGIN)
+## ADR-013 — Explicit copy/paste capture is a founding product workflow (RETRACTED)
 
-- **Date:** 2026-11-05
-- **Decision:** MOSAIC must support two-way user-selected content movement: copy plain text/URLs in another app and explicitly paste into MOSAIC; Android Share/Open intents provide equivalent inbound paths; captured content can subsequently be copied, opened or shared back out.
-- **Why:** MOSAIC originated to reduce the friction of moving useful media references and content between apps, keeping them for later and continuing in the user's chosen context. This capture-and-continue workflow is core product purpose, not an optional browser convenience.
-- **Implementation boundary:** paste is invoked by a deliberate user action. Do not poll the clipboard in the background or implement clipboard history/automatic clipboard capture; that is a separate VaultOS product concern. Android clipboard privacy behavior and URI grants must be respected.
-- **Acceptance:** copied URL/text can be pasted, previewed, saved durably, retrieved after process death, then copied/opened/shared outward. Android Share must converge on the same inbox model. File capture is handled through supported Android intents/document access and must not imply arbitrary provider-stream extraction.
-- **Tracking:** P3-009, P3-010 and P3-011 in TASKS.md.
-
+This decision is withdrawn in full. It incorrectly described copy/paste and content capture as MOSAIC's founding problem. Those features may exist as supporting conveniences, but they are not the product origin, primary workflow or reason this app was started. Do not use ADR-013 to define scope or prioritize work.
 
 ## ADR-014 — Cross-source background playback and broad ad blocking are the product vision (LOCKED)
 
 - **Date:** 2026-11-05
 - **Decision:** MOSAIC's primary product goal is to play media from as many external sources as technically feasible in the background and block ads/trackers across as many surfaces and apps as technically feasible. Named sources to investigate include YouTube, Spotify, Facebook and Instagram, alongside browser media, local files, direct URLs, podcasts and radio.
-- **Supersedes:** ADR-006, ADR-010 and ADR-012 wherever they impose a blanket restriction or provider exemption that narrows this product goal. ADR-013 is retracted as an incorrect statement of the founding purpose; copy/paste is not MOSAIC's origin or primary product requirement. ADR-011 remains useful as an implementation distinction between native playback and delegated external control, but it must not be used to stop source-by-source investigation.
-- **Implementation approach:** investigate each source through accessible media streams, browser playback, official SDK/API integrations, Android MediaSession controls and other technically/policy-viable paths. Prefer MOSAIC's shared Media3 player when a source can actually be played there. Distinguish native playback from remote control of another app.
-- **Ad control:** implement and test browser filtering and investigate optional user-consented Android VPNService/local DNS filtering across apps. Do not blanket-exempt named providers. Track coverage, false positives, playback breakage and first-party/in-stream limitations.
+- **Supersedes:** ADR-006, ADR-010 and ADR-012 wherever they impose blanket provider exclusions, prohibit ad/tracker filtering as a product objective, or prematurely rule out background-playback investigations. ADR-013 is withdrawn in full. ADR-011 remains useful only for distinguishing MOSAIC-owned playback from source-owned external sessions; it does not narrow the source list or stop investigation.
+- **Implementation approach:** investigate each source through accessible media streams, browser playback, official SDK/API integrations, source-owned background continuation, Android MediaSession controls and other technically/platform-viable paths. Prefer MOSAIC's shared Media3 player when a source can actually be played there. Distinguish native playback from remote control of another app.
+- **Ad control:** implement browser filtering and a separately user-enabled Android VPNService/local DNS/host filter for known ad/tracker domains across apps. Do not blanket-exempt named providers. Use source-aware rules and allowlists; track coverage, false positives, playback breakage and first-party/in-stream limitations.
 - **Engineering honesty:** this ADR records the user's goal, not a claim that every provider can currently be integrated or every ad can be removed. Each source needs current technical, Android and policy research plus real-device acceptance. Do not use DRM circumvention, credential theft, private API scraping or TLS interception as shortcuts.
 - **Acceptance:** a source matrix demonstrates foreground/background behavior, screen-off continuity, lock-screen/Bluetooth controls, native vs delegated ownership, queue support and ad-filter coverage for each tested source. A separate filter matrix demonstrates browser and device-wide behavior, including compatibility and known gaps.
+
+
+## ADR-015 — Playback and Ad Shield are the two primary product pillars (LOCKED)
+
+- **Date:** 2026-11-05
+- **Decision:** MOSAIC is built around two equally central capabilities: (1) cross-source background media playback/control and (2) broad ad/tracker blocking across apps and websites. Neither may be demoted to a minor browser feature or replaced by clipboard capture, bookmarks or local-file-only playback.
+- **Playback model:** use one MOSAIC-owned Media3 session for media that MOSAIC can actually resolve and play. Where another app owns playback, provide a clearly labelled external-session experience using Android-exposed metadata/commands. Research every requested source for alternate supported playback routes. Never represent external remote control as native audio playback.
+- **Ad Shield model:** separate browser request filtering from an optional, explicit-consent Android local VPN/DNS/host filter for cross-app coverage. Rules are source-aware, measurable and user-controllable. Do not blanket-exempt providers. Avoid blocking media/CDN hosts without compatibility tests.
+- **Product surface:** Home should foreground current/available playback and Ad Shield status. The Player is the primary experience; Browser is a supporting source surface. A browser-only app is not MOSAIC.
+- **Safety and integrity:** no DRM circumvention, credential theft, private API scraping, TLS interception or unauthorized access. DNS filtering has known same-host/in-stream limits; expose measured coverage and gaps rather than promising impossible universal removal.
+- **Sequencing:** establish reliable local playback, then source adapters and external-session continuity; implement the cross-app Ad Shield with an opt-in VPN filter; integrate named providers source by source; verify on the Redmi Note 12 Pro 5G.
+- **Acceptance:** user can play a supported source through MOSAIC with screen off and system controls; source-owned sessions are visibly distinguished; Ad Shield can block known ad/tracker domains in other apps with user consent and can be stopped/recovered without breaking networking.
+
