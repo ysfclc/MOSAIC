@@ -2,24 +2,35 @@
 
 ## Product statement
 
-A native, local-first personal media environment that lets a person collect, organize and play content from multiple legitimate sources through one consistent interface, then optionally turn that content into searchable personal knowledge.
+A native Android media player and ad-control hub whose central goal is to play media from as many sources as possible in the background, while blocking ads and trackers across as many apps and surfaces as Android and each source technically allow. Local media, browser media, streams, podcasts, radio and third-party services should feel like one coherent media experience; source-specific limitations must be investigated and tested, not assumed away or used to quietly narrow the vision.
 
-## Origin and founding problem — preserve this intent
+## Origin and founding problem — cross-source background playback and ad blocking
 
-MOSAIC began as a practical answer to fragmented personal media and the friction of moving something useful between apps. The user wanted a simple, repeatable way to take something encountered elsewhere — especially a copied URL, text snippet or media reference — bring it into MOSAIC, keep it for later, and then open, play, organize or share it from the place that made sense. The reverse direction matters too: content or references held in MOSAIC must be easy to copy, open or share back out to another app. This is a two-way movement of user-selected content and context, not a one-way browser bookmark feature.
+MOSAIC exists because media is fragmented across apps and websites, background playback is restricted or inconsistent, and advertising interrupts the experience. The user's intended product is straightforward and ambitious: **play media from other sources in the background, and block ads wherever possible**. The user explicitly wants this to cover sources such as YouTube, Spotify, Facebook, Instagram and other media services — not just files already stored on the phone.
 
-The founding interaction must be obvious and low-friction:
+The core experience is one place to find or open media, start playback, continue listening or watching while using other apps or with the screen off, and control playback through one coherent interface. MOSAIC should pursue the broadest technically feasible ad and tracker blocking, including inside its own browser and, where feasible, across other apps on the device.
 
-1. **Copy → paste into MOSAIC:** the user copies a link or text in another app, opens MOSAIC and explicitly pastes it into a capture/paste entry point. MOSAIC identifies what was pasted, previews it, and lets the user save or act on it. The initial supported payloads are plain text and URLs; media files and richer metadata use Android's document/open/share mechanisms.
-2. **Share → MOSAIC:** when the source app offers Android Share, the user can send a URL, text or supported file to MOSAIC. It enters the same capture flow as paste, rather than creating a disconnected feature.
-3. **MOSAIC → other apps:** the user can copy a saved value, open its link in a compatible app, or share supported content/files outward using Android intents and appropriate URI grants.
-4. **Keep it for later:** captured items should ultimately persist in a user-controlled inbox/library with source provenance, capture time, status and a clear next action. A URL pasted into the app is not yet a durable, searchable media library; that persistence work remains tracked in the roadmap.
+This is the product vision. It must not be rewritten as a clipboard manager, a bookmark inbox, a toy browser, or merely a local-file player. Sharing links into or out of MOSAIC may be useful supporting functionality, but copy/paste is not the founding purpose.
 
-The product grew from this capture-and-continue problem into a broader personal media environment: local media, podcasts, streams, browser-discovered content and permitted provider integrations should be collected and experienced through one coherent native app. The app is not intended to replace every provider or to pretend protected streams can be imported. It should preserve the user's ability to move references and user-owned files between apps while respecting source ownership and capability limits.
+### How source support should be approached
 
-**Important distinction:** MOSAIC's paste/capture flow is a user-invoked content workflow. It is not VaultOS's separate device-wide clipboard-history/automatic clipboard-capture product. Do not silently turn MOSAIC into a clipboard manager or add background clipboard polling. Read clipboard content only in response to an explicit user action (for example, tapping Paste), subject to Android's clipboard privacy behavior. Android share/open intents remain first-class alternatives.
+- Investigate each source independently: native/direct media URLs, RSS/podcasts, internet radio, browser playback, official SDK/API integrations, and Android's external media-session controls.
+- Prefer playback through MOSAIC's shared native playback service when the media can be accessed and played that way.
+- Where a source remains in its own app or browser, determine whether MOSAIC can keep it playing, control it, or provide a better supported playback path. Do not confuse remote play/pause controls with MOSAIC actually receiving and playing the audio.
+- Maintain a source capability matrix with clear evidence for foreground playback, background playback, lock-screen controls, queue support, ad filtering and known limitations.
+- YouTube, Spotify, Facebook, Instagram and other named sources are requirements to investigate, not blanket exemptions from the product vision. Do not declare them supported until tested; do not exclude them without recording technical and policy evidence.
 
-This founding use case is product-critical and must remain visible in Home/Browser/Inbox design, acceptance tests and future session handoffs. Do not demote it to a minor browser shortcut.
+### Ad-control approach
+
+- The goal is to block ads and trackers as broadly as technically feasible, both in MOSAIC Browser and, if viable, across other apps.
+- Evaluate browser request filtering and an optional user-consented Android local VPN/DNS filter for device-wide domain blocking. Record per-app coverage, VPN conflicts, false positives and battery impact.
+- Do not silently exempt a provider simply because it is a major service. Test the effect of filtering on both ads and core playback, and provide user-visible controls and diagnostics.
+- Be honest about technical limits: first-party, same-domain and in-stream ads may be inseparable from media delivery through ordinary DNS/host filtering. Do not claim universal blocking until a source/device test matrix proves it.
+- Any implementation must be reviewed for Android platform rules, source terms and applicable law. Do not use DRM circumvention, credential theft, private API scraping or TLS interception as shortcuts. These constraints require source-by-source engineering research; they do not change the user's stated product goal.
+
+### Important distinction
+
+MOSAIC's primary problem is cross-source background media playback and broad ad blocking. It is not VaultOS's device-wide clipboard-history product. Share/open intents can be supported as convenient ways to bring media into MOSAIC, but they are supporting features rather than the founding workflow.
 
 ## Primary job to be done
 
@@ -59,35 +70,35 @@ See `docs/TASKS.md` and `docs/TESTING.md`. Phase 1 is accepted only after CI bui
 
 ## Cross-source playback and ad-control requirements (product-critical)
 
-MOSAIC is a media hub, not merely a local file player. The intended experience is to discover, collect, continue and control media across sources from one coherent native interface. The source capability contract is authoritative: unsupported provider capabilities must be shown as unavailable, not simulated.
+The product target is broad cross-source playback in the background and broad ad blocking. The roadmap must work toward this target rather than preemptively limiting MOSAIC to local files or exempting major services.
 
-### Ad control
-- MOSAIC must never insert its own ads.
-- MOSAIC Browser must provide an on/off ad and tracker request filter for ordinary web pages, with a visible blocked-request count, per-site/provider exemptions and a user allowlist.
-- The initial filter is request/host-level. It is not a promise to remove every ad, cosmetic placeholder, first-party/in-stream ad or ad delivered from the same host as content.
-- YouTube and Spotify player pages and assets are exempt from MOSAIC filtering. The app must not strip, replace or interfere with provider-served advertisements or standard player functions.
-- A future optional local DNS/VPN filter may block known third-party ad/tracker domains across apps with explicit user consent. It must disclose VPN conflicts, compatibility limitations and the fact that same-domain/in-stream ads remain outside its reach.
-- No TLS interception, user certificate installation, private API scraping or DRM/paywall bypass.
+### Background playback
+- MOSAIC's own Media3 PlaybackService is the primary playback engine for local files and any accessible/authorized media stream that can be played natively.
+- Add and test adapters for RSS/podcasts, internet radio, direct audio/video URLs and browser-discovered media where technically accessible.
+- Investigate YouTube, Spotify, Facebook, Instagram and other sources individually. Explore official integrations, supported browser playback, available Android media sessions and other permitted routes. Record what actually works on the target device.
+- External MediaSession controls are useful but are not equivalent to importing a source's audio into MOSAIC's own player. The UI and capability matrix must distinguish native playback from delegated/external playback.
+- Background playback must be tested with screen off, app switching, lock screen, notifications, Bluetooth/headsets, audio focus and process lifecycle.
+- Do not mark a source supported based only on opening its page or seeing its metadata.
 
-### Background playback and source ownership
-- MOSAIC-owned sources (local files, permitted RSS enclosures, open radio streams and direct media URLs that the user is authorized to play) use the shared Media3 PlaybackService and can continue in the background.
-- Provider-owned sources remain in their provider player when the provider does not grant native stream playback. MOSAIC may show metadata and issue authorized remote commands, but must not claim provider audio is playing inside the MOSAIC player.
-- Background playback is a capability evaluated for each source, account, item and session. YouTube API playback must remain visible in its player and must not be converted into a hidden/background audio stream. Spotify Android App Remote controls the installed Spotify app; Spotify owns audio delivery and its background lifecycle.
-
-### Two-way media bridge ("vice versa")
-1. Into MOSAIC: Android share/open intents can send media links, files and metadata into the MOSAIC inbox. MOSAIC can discover/control an external active media session only after the user explicitly enables Android notification access and the source exposes a controllable MediaSession. This does not transfer protected audio bytes into MOSAIC.
-2. Out of MOSAIC: MOSAIC can share a link or a user-owned/local file through Android intents and temporary read grants, open it in a compatible external app, and expose its own playback through the standard Android MediaSession for system/headset controls.
-3. Remote control: where an official provider SDK exists, MOSAIC may control that provider's player after user authorization. Provider playback remains provider-owned.
-4. No false universal queue: native-playable sources can share the MOSAIC queue. Provider-owned playback is represented as a delegated/external session; MOSAIC cannot promise gapless mixing or arbitrary queue insertion across unrelated providers.
+### Ad and tracker blocking
+- MOSAIC must provide a visible, user-controllable ad/tracker shield in its own browser.
+- Investigate an optional Android VPNService-based local DNS/filtering mode for blocking known ad/tracker domains across other apps, with explicit consent, clear VPN-conflict handling and per-app diagnostics where possible.
+- Do not hard-code blanket exemptions for YouTube, Spotify or other named services without source-specific testing and a documented reason.
+- Track blocked requests/domains, allowlists, false positives, breakage and source compatibility. Make limitations understandable to the user.
+- Host/DNS filtering cannot reliably remove every first-party, same-domain or in-stream ad. This is a technical limitation to measure, not a reason to describe the product as browser-only ad blocking.
 
 ### Source capability labels
-- MOSAIC PLAYER: MOSAIC owns playback; background support is shown independently.
-- EXTERNAL PLAYER: provider app owns playback; MOSAIC can show/control it only where authorized.
-- BROWSER PLAYER: media remains in the browser page; native handoff is offered only when allowed and technically available.
-- LINK ONLY: MOSAIC can save/open/share the reference but cannot play or control it itself.
+- MOSAIC PLAYER: media is played by MOSAIC's native player; background capability is independently tested.
+- BROWSER PLAYER: media remains in MOSAIC Browser; background behavior and media controls are independently tested.
+- EXTERNAL PLAYER: another app owns playback; MOSAIC may control its exposed Android MediaSession when authorized.
+- LINK ONLY: MOSAIC can open or save a reference but has not demonstrated playback.
+- Ad filtering is a separate capability dimension. A source can support playback without ad filtering, or filtering without native playback.
 
-### Account-owned provider background playback
+### Two-way media handoff
+1. Into MOSAIC: Android share/open intents can bring links and supported user-selected files into the app.
+2. Out of MOSAIC: MOSAIC can open/share links and user-owned files through Android intents and expose its own session to system controls.
+3. External control: with explicit notification-access permission, MOSAIC may discover and control commands exposed by another app's Android MediaSession. This does not itself transfer audio bytes into MOSAIC.
+4. One queue: only sources actually playable by MOSAIC can join its native queue. Delegated sessions must be labelled honestly until a supported native playback path exists.
 
-- If a user's YouTube app/account supports background playback (for example, through the applicable YouTube Premium entitlement), the official YouTube app remains the player. MOSAIC may control its exposed Android media session after notification-access opt-in, but cannot grant that entitlement to a free account.
-- Spotify's installed app remains the player for both account tiers where the Spotify app itself permits background playback. MOSAIC's Android App Remote integration is a remote-control surface, not an audio-streaming SDK.
-- MOSAIC cannot route arbitrary local audio into Spotify or YouTube as if either were a generic audio sink. Outbound handoff means opening/sharing a supported link or user-owned file with an app that accepts it.
+### Current implementation status
+The current source snapshot contains local audio playback through Media3, a basic WebView browser with a conservative third-party host filter, and opt-in discovery/control of external Android media sessions. These are foundations, not completion of the cross-source background playback or broad ad-blocking vision. See docs/TASKS.md and PROJECT_STATE.md.
