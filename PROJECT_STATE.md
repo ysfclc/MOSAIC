@@ -34,6 +34,14 @@ Respect platform, security and content-access boundaries. These boundaries do no
 - Current filter only parses IPv4 UDP DNS. Apps using DoH/custom resolvers and same-domain or in-stream ads can bypass it; IPv6 DNS interception and named-app compatibility testing remain open.
 - Unified native queue for supported external media is not implemented.
 
+## APK installation and update compatibility
+
+The earlier CI workflow assembled debug APKs using each hosted runner's temporary Android debug keystore. The signing certificate therefore changed between builds, so Android rejected subsequent APKs as updates. This was a delivery-pipeline defect, not intended app behavior.
+
+The CI workflow now decodes one persistent **development-only** signing key from `tools/mosaic-debug-signing-key.b64`, configures Gradle to sign debug APKs with it, verifies the certificate fingerprint before artifact upload, and sets versionCode from the monotonically increasing GitHub Actions run number. The key is not a production/release signing identity.
+
+**Migration note:** the private signing key for already-installed ephemeral CI APKs cannot be recovered from their APKs. The first APK signed with the stable key may therefore require one final uninstall/reinstall. After that migration, ordinary MOSAIC CI updates should install over the existing app and retain app data. Do not install an older ephemeral-key artifact after migration.
+
 ## Toolchain and last known verification
 
 - Android Gradle Plugin: 9.1.1; Gradle: 9.3.1; Java: 17.
@@ -54,9 +62,9 @@ Respect platform, security and content-access boundaries. These boundaries do no
 
 ## Immediate next engineering task
 
-**P3-008 — complete device acceptance for Ad Shield.** The first implementation is built and CI-verified, but it remains IN PROGRESS until the Redmi Note 12 Pro 5G checks pass: ordinary DNS resolution, known blocked domain, allowlist override, upstream timeout, unrelated app traffic, VPN stop/revoke recovery, foreground notification and lock-screen behavior. Then expand P3-013 to named-app playback/ads and DoH/Private DNS coverage.
+**P3-014 — verify stable APK signing and upgrade-in-place delivery.** The first implementation is built and CI-verified, but it remains IN PROGRESS until the Redmi Note 12 Pro 5G checks pass: ordinary DNS resolution, known blocked domain, allowlist override, upstream timeout, unrelated app traffic, VPN stop/revoke recovery, foreground notification and lock-screen behavior. Then expand P3-013 to named-app playback/ads and DoH/Private DNS coverage.
 
-P3-007 Player controls and the first P3-008 Ad Shield slice are both CI-verified. Real-app and physical-device acceptance remain pending.
+P3-007 Player controls and the first P3-008 Ad Shield slice are both CI-verified. Real-app and physical-device acceptance remain pending. After P3-014 is verified, resume P3-008 device acceptance.
 
 ## Required handoff discipline
 
