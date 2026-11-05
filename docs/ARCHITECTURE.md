@@ -142,7 +142,7 @@ Compose UI <────── observed state <───── domain state <─
 Ad filtering is a separate capability from media playback and must be layered:
 
 1. **Browser layer:** request filtering for pages rendered inside MOSAIC, with user-visible status, per-site controls, allowlisting and diagnostics.
-2. **Device layer:** implement an explicitly user-enabled Android `VpnService` DNS-only local filter. Route only the virtual DNS endpoint (and explicitly supported DNS resolver destinations) through TUN; do not add a default route or tunnel ordinary app traffic. Forward allowed queries through an upstream socket protected with `VpnService.protect()`.
+2. **Device layer:** implement an explicitly user-enabled Android `VpnService` DNS-only local filter. Route only the virtual DNS endpoint through TUN; do not add a default route or tunnel ordinary app traffic. On Android 10+, forward allowed queries with `DnsResolver.rawQuery()` on an underlying non-VPN network so Android retains Private DNS behavior. On Android 8/9, use a protected UDP socket only when Private DNS is disabled; fail closed rather than downgrading it.
 3. **Rule engine:** source-aware block/allow rules with provenance, update mechanism, false-positive reporting and compatibility tests. No blanket provider exemption; no blind blocking of content/CDN hosts.
 4. **Known boundary:** ordinary DNS filtering cannot inspect encrypted page content or distinguish an ad from content delivered from the same host. Apps using DoH, strict Private DNS or unhandled hard-coded resolvers may bypass the filter. No TLS interception or payload inspection is permitted as a workaround.
 
