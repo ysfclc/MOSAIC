@@ -181,11 +181,18 @@ class AdShieldVpnService : VpnService() {
                 }
             }
         }
-        if (found.isEmpty()) {
-            found += UpstreamResolver(InetAddress.getByName(CLOUDFLARE_DNS), null)
-            found += UpstreamResolver(InetAddress.getByName(GOOGLE_DNS), null)
+        val distinct = found.distinctBy { it.address.hostAddress }
+        val networks = distinct.mapNotNull { it.network }.distinct()
+        if (networks.isNotEmpty()) {
+            setUnderlyingNetworks(networks.toTypedArray())
         }
-        return found.distinctBy { it.address.hostAddress }
+        if (distinct.isEmpty()) {
+            return listOf(
+                UpstreamResolver(InetAddress.getByName(CLOUDFLARE_DNS), null),
+                UpstreamResolver(InetAddress.getByName(GOOGLE_DNS), null),
+            )
+        }
+        return distinct
     }
 
     private fun startShieldNotification() {
