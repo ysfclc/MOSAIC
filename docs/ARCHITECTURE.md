@@ -20,6 +20,7 @@ MOSAIC is a local-first, native Android media player and ad-control hub. Its pri
 │                           MEDIA CORE                          │
 │ Media identity · source registry · capabilities · queue      │
 │ playback state · source ownership · ad-filter policy          │
+│ Ad Shield: browser rules + device VPN/DNS filter service       │
 └─────────────┬───────────────────┬───────────────────┬────────┘
               │                   │                   │
        ┌──────▼──────┐     ┌──────▼──────┐     ┌──────▼──────┐
@@ -36,7 +37,6 @@ MOSAIC is a local-first, native Android media player and ad-control hub. Its pri
 
 Optional upper layers, later phases:
   Optional Browser surface → media handoff → shared player
-  Ad Shield → WebView filtering + optional local VPN/DNS filtering
   Backup/export → user-selected external destination
   Optional remote sync → explicit opt-in, never required for playback
 ```
