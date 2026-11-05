@@ -52,6 +52,9 @@ Status values: DONE, IN PROGRESS, BLOCKED, TODO, PARKED.
 | P3-006 | MOSAIC-to-external share/open handoff | IN PROGRESS | Browser can share current page link; file/content handoff still pending |
 | P3-007 | External active MediaSession discovery and remote controls | IN PROGRESS | Notification-listener opt-in UI and controls added; device verification pending |
 | P3-008 | Optional device-wide local DNS/VPN ad/tracker filter | PARKED | Separate consent, VPN conflict handling and same-domain limitations |
+| P3-009 | Explicit copy/paste capture entry point | TODO | User can paste copied plain text/URLs into the same preview-and-capture flow as Android Share; clipboard is read only after an explicit paste action; no background clipboard polling |
+| P3-010 | Durable unified capture inbox | TODO | Pasted/shared URLs, text and supported files persist with source, capture time, content type and processing state; items survive process death and can be opened, copied or shared back out |
+| P3-011 | Capture round-trip acceptance | TODO | Verify copy in another app → paste into MOSAIC → save → reopen → copy/share/open back in another app; also verify Android Share follows the same inbox path |
 
 ## Phase 4 — Official platform integrations
 
@@ -81,6 +84,10 @@ Status values: DONE, IN PROGRESS, BLOCKED, TODO, PARKED.
 | P6-003 | Manual external backup and restore verification | TODO |
 | P6-004 | Optional cross-device sync / self-host feasibility | TODO |
 | P6-005 | Android Auto, casting and adapter SDK assessments | TODO |
+
+## Founding product requirement — copy/paste and two-way capture
+
+MOSAIC originated from the need to move useful content between apps without losing it: copy a URL/text or share content into MOSAIC, keep it for later, and then copy/open/share it back out. This is a core product workflow, not merely a browser convenience. See the Origin and founding problem section in PRODUCT_SPEC.md. Paste must be explicit and user-initiated; do not implement background clipboard monitoring or conflate MOSAIC with VaultOS.
 
 ## Current blockers
 
