@@ -15,6 +15,14 @@ This is a live engineering matrix, not a list of product exclusions. The user's 
 | Instagram app/site | Investigate accessible media and source-owned playback paths | Explicit target; test reels/video and background behavior separately | Android MediaSession if exposed | Device-wide domain filter plus browser rules; measure first-party delivery | Not implemented or verified |
 | Other media apps/sites | Discover by capability, not hard-coded assumptions | Target where technically feasible | Android MediaSession when exposed | Device-wide filter plus source-specific compatibility | Not implemented or verified |
 
+## Android-native integration path (no provider API dependency)
+
+- **Session discovery/control:** use Android `MediaSessionManager` with explicit Notification Listener access. Read only active session metadata and advertised transport actions; send play/pause/next/previous/seek to the source app. This is already wired into MOSAIC's primary Player. The original app remains the playback owner.
+- **Visible ad skip:** an optional Android AccessibilityService is now registered for the YouTube app only. It looks for a visible, enabled control whose text/content description exactly matches a small allowlist of ad-specific labels (English, Polish and Turkish), then clicks the nearest clickable ancestor. It does not click generic “Skip” controls, inspect audio/network content, or claim to remove an ad. Service enablement is explicit in Android Accessibility settings.
+- **Device-wide filtering:** the separate local VPN/DNS layer can block known ad/tracker hosts when requests are separable. It cannot reliably block ads delivered from the same host as content.
+- **Background continuation:** Android foreground media services keep MOSAIC-owned playback alive. For source-owned playback, MOSAIC can only control the session exposed by the source; an accessibility helper cannot override another app's background-playback policy.
+- **Acceptance:** the accessibility service is code-added but not yet CI-verified or tested on the Redmi. Record app version, exact skip label, whether it was clicked, false-positive behavior, screen-off behavior and accessibility permission state before marking it complete.
+
 ## Playback modes (must never be conflated)
 
 - **MOSAIC PLAYER:** MOSAIC has a usable media locator and plays the item through its shared Media3 service. It owns the playback queue and app session.
