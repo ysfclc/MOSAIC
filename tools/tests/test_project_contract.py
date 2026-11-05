@@ -66,6 +66,20 @@ class ProjectContractTests(unittest.TestCase):
         self.assertIn("ACTION_SKIP_TO_PREVIOUS", bridge)
         self.assertIn("ACTION_SEEK_TO", bridge)
 
+    def test_native_accessibility_ad_skip_is_opt_in_and_scoped(self):
+        manifest = (ROOT / "app/src/main/AndroidManifest.xml").read_text(encoding="utf-8")
+        service = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/browser/AdSkipAccessibilityService.kt").read_text(encoding="utf-8")
+        config = (ROOT / "app/src/main/res/xml/ad_skip_accessibility_service.xml").read_text(encoding="utf-8")
+        app = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/MosaicApp.kt").read_text(encoding="utf-8")
+        self.assertIn("BIND_ACCESSIBILITY_SERVICE", manifest)
+        self.assertIn("android:packageNames=\\"com.google.android.youtube\\"", config)
+        self.assertIn("AD_SKIP_LABELS", service)
+        self.assertIn('"skip ad"', service)
+        self.assertIn("performAction(AccessibilityNodeInfo.ACTION_CLICK)", service)
+        self.assertNotIn('"skip"', service)
+        self.assertIn("AdSkipPanel", app)
+        self.assertIn("ACTION_ACCESSIBILITY_SETTINGS", app)
+
     def test_android_text_share_opens_in_mosaic_browser(self):
         manifest = (ROOT / "app/src/main/AndroidManifest.xml").read_text(encoding="utf-8")
         activity = (ROOT / "app/src/main/java/com/ysfclc/mosaic/MainActivity.kt").read_text(encoding="utf-8")
