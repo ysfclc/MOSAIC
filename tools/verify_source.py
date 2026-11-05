@@ -58,6 +58,7 @@ checks = {
     "Android share target is registered": "android.intent.action.SEND" in manifest and "android:mimeType=" in manifest,
     "Ad Shield fails over safely when underlying-network socket binding fails": "runCatching { network.bindSocket(socket) }.isFailure" in ad_shield_service,
     "Ad Shield pins upstream UDP replies to the selected resolver": "socket.connect(resolver, DNS_PORT)" in ad_shield_service,
+    "Ad Shield validates upstream DNS transaction and question": "DnsPacketCodec.isMatchingResponse(query, answer)" in ad_shield_service and "fun isMatchingResponse(query: ByteArray, response: ByteArray)" in (ROOT / "app/src/main/java/com/ysfclc/mosaic/adshield/DnsPacketCodec.kt").read_text(encoding="utf-8"),
     "Ad Shield refreshes underlying network selection including disconnects": "setUnderlyingNetworks(networks.toTypedArray())" in ad_shield_service,
     "shared URLs are forwarded into the Browser": "initialSharedText" in (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/MosaicApp.kt").read_text(encoding="utf-8") and "onInitialUrlConsumed" in browser,
     "Phase 1 picker is audio-only until video UI exists": 'documentLauncher.launch(arrayOf("audio/*"))' in (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/MosaicApp.kt").read_text(encoding="utf-8"),
