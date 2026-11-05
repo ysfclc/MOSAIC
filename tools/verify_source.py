@@ -19,6 +19,7 @@ REQUIRED = [
     "docs/PHASES.md",
     "docs/TASKS.md",
     "PROJECT_STATE.md",
+    "tools/mosaic-debug-signing-key.b64",
 ]
 
 def fail(message: str) -> None:
@@ -47,6 +48,8 @@ checks = {
     "explicit source capabilities": "class SourceCapabilities" in contract,
     "current architecture notes": (ROOT / "docs/ARCHITECTURE.md").is_file(),
     "workflow template included": workflow.is_file(),
+    "stable debug signing is configured in CI": "MOSAIC_DEBUG_KEYSTORE" in workflow.read_text(encoding="utf-8") and "700b857678b343aed93f7a7280e7d777df73c3f5f5e5024d94c119a4578079d0" in workflow.read_text(encoding="utf-8"),
+    "CI build version code is incremented": "mosaicVersionCode" in (ROOT / "app/build.gradle.kts").read_text(encoding="utf-8"),
     "browser has network permission for WebView": "android.permission.INTERNET" in manifest and "WebView(context)" in browser,
     "browser ad-filter policy is present": "object AdBlockPolicy" in (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/browser/AdBlockPolicy.kt").read_text(encoding="utf-8"),
     "external media controls require notification listener permission": "android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" in manifest,
