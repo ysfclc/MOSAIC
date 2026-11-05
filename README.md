@@ -5,11 +5,11 @@
 **Package:** `com.ysfclc.mosaic`  
 **Status:** Integrated source snapshot passed GitHub Actions run 41957296181; physical-device acceptance remains pending. A newer incoming ZIP was not imported (run 41962171501 failed preflight); see PROJECT_STATE.md.
 
-MOSAIC is a local-first Android media environment. It brings playback, browsing, a unified library, source adapters, optional intelligence and automation into one coherent native application. It is not a streaming service and it does not bypass provider advertising, DRM, paywalls or access controls.
+MOSAIC is an Android media player and ad-control hub. Its goal is to play media from as many sources as possible in the background and block ads/trackers across as many apps and surfaces as Android and each source technically allow. YouTube, Spotify, Facebook, Instagram and other external sources are explicit integration targets to investigate and test; the current build does not yet deliver universal support.
 
-## Why MOSAIC exists: capture, keep and move content
+## Why MOSAIC exists: background playback and ad blocking
 
-MOSAIC began with a simple cross-app problem: when you find something useful in another app, you should be able to copy its URL/text or use Android Share to bring it into MOSAIC, keep it for later, and then copy, open or share it back out. This two-way copy/paste-and-share workflow is a core product requirement, not just a browser shortcut. The broader product unifies local media and legitimate external sources around that capture-and-continue flow. Paste is explicit and user-triggered; MOSAIC is not a background clipboard-history manager (that is a separate VaultOS project). See docs/PRODUCT_SPEC.md.
+MOSAIC exists to break the fragmentation of media across apps and websites: play content from other sources in the background, keep control of playback in one coherent place, and block ads wherever technically possible. The intended source scope includes YouTube, Spotify, Facebook, Instagram, browser media, podcasts, radio, direct streams and local files. The target is broad; actual support must be demonstrated source by source on Android devices. A browser-only ad filter or external play/pause remote is not completion of this vision. See [docs/PRODUCT_SPEC.md](docs/PRODUCT_SPEC.md) and [ADR-014](docs/DECISIONS.md).
 
 ## Phase 1 shipped in this source snapshot
 
