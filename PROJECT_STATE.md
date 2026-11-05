@@ -38,7 +38,7 @@ Respect platform, security and content-access boundaries. These boundaries do no
 
 The earlier CI workflow assembled debug APKs using each hosted runner's temporary Android debug keystore. The signing certificate therefore changed between builds, so Android rejected subsequent APKs as updates. This was a delivery-pipeline defect, not intended app behavior.
 
-The CI workflow now decodes one persistent **development-only** signing key from `tools/mosaic-debug-signing-key.b64`, configures Gradle to sign debug APKs with it, verifies the certificate fingerprint before artifact upload, and sets versionCode from the monotonically increasing GitHub Actions run number. The key is not a production/release signing identity.
+The CI workflow now decodes one persistent **development-only** signing key from `tools/mosaic-debug-signing-key.b64`, configures Gradle to sign debug APKs with it, verifies the certificate fingerprint before artifact upload, and sets versionCode from the monotonically increasing GitHub Actions run number. This was verified in [run 42055276990](https://github.com/ysfclc/MOSAIC/actions/runs/42055276990), commit `311fa7ebb628e2282a60662cd13b7114cce51701`, versionCode `80`. Unit tests, lint, APK assembly and signing-certificate verification passed. APK SHA-256: `23778ffc59b9e3921ee98ab158a3d08c7ee0c5da155fbeb7993612e59717dd0a`. The key is not a production/release signing identity.
 
 **Migration note:** the private signing key for already-installed ephemeral CI APKs cannot be recovered from their APKs. The first APK signed with the stable key may therefore require one final uninstall/reinstall. After that migration, ordinary MOSAIC CI updates should install over the existing app and retain app data. Do not install an older ephemeral-key artifact after migration.
 
@@ -62,9 +62,9 @@ The CI workflow now decodes one persistent **development-only** signing key from
 
 ## Immediate next engineering task
 
-**P3-014 — verify stable APK signing and upgrade-in-place delivery.** The first implementation is built and CI-verified, but it remains IN PROGRESS until the Redmi Note 12 Pro 5G checks pass: ordinary DNS resolution, known blocked domain, allowlist override, upstream timeout, unrelated app traffic, VPN stop/revoke recovery, foreground notification and lock-screen behavior. Then expand P3-013 to named-app playback/ads and DoH/Private DNS coverage.
+**P3-008 — complete device acceptance for Ad Shield.** The first implementation is built and CI-verified, but it remains IN PROGRESS until the Redmi Note 12 Pro 5G checks pass: ordinary DNS resolution, known blocked domain, allowlist override, upstream timeout, unrelated app traffic, VPN stop/revoke recovery, foreground notification and lock-screen behavior. Then expand P3-013 to named-app playback/ads and DoH/Private DNS coverage.
 
-P3-007 Player controls and the first P3-008 Ad Shield slice are both CI-verified. Real-app and physical-device acceptance remain pending. After P3-014 is verified, resume P3-008 device acceptance.
+P3-007 Player controls and the first P3-008 Ad Shield slice are both CI-verified. Real-app and physical-device acceptance remain pending. P3-014 is CI-verified; the remaining update-path check is installing the stable-key APK over the current app after the one-time signature migration.
 
 ## Required handoff discipline
 
