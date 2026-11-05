@@ -51,6 +51,22 @@ class DnsPacketCodecTest {
         assertNull(DnsPacketCodec.parseIpv4UdpQuery(byteArrayOf(1, 2, 3)))
     }
 
+    @Test
+    fun acceptsOnlyMatchingDnsResponses() {
+        val query = dnsQuery("media.example")
+        val valid = DnsPacketCodec.buildServFailResponse(query)!!
+        assertTrue(DnsPacketCodec.isMatchingResponse(query, valid))
+
+        val wrongId = valid.copyOf().also { it[0] = (it[0].toInt() xor 0x01).toByte() }
+        assertFalse(DnsPacketCodec.isMatchingResponse(query, wrongId))
+
+        val notAResponse = valid.copyOf().also { it[2] = (it[2].toInt() and 0x7f).toByte() }
+        assertFalse(DnsPacketCodec.isMatchingResponse(query, notAResponse))
+
+        val wrongQuestion = valid.copyOf().also { it[13] = 'x'.code.toByte() }
+        assertFalse(DnsPacketCodec.isMatchingResponse(query, wrongQuestion))
+    }
+
     private fun ipv4DnsQuery(domain: String): ByteArray {
         val dns = dnsQuery(domain)
         val packet = ByteArray(20 + 8 + dns.size)
