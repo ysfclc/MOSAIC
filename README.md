@@ -43,13 +43,11 @@ The initial source ZIP intentionally omits generated wrapper binaries. The Gradl
 
 ### Build in CI
 
-The separate workflow installs Java 17, Android SDK packages and Gradle 9.3.1, bootstraps the verified wrapper, then runs:
+Direct pushes that change app/core code, tools, documentation or build configuration automatically run source verification, Python contract tests, Android unit tests, lint and debug APK assembly. The workflow also offers a manual `direct` build mode.
 
-```bash
-./gradlew --no-daemon :core:media:testDebugUnitTest :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
-```
+The separate ZIP-import mode remains available for `incoming/mosaic.zip` (and the legacy named archive path). It validates and safely extracts the uploaded source, preserves active workflows/history, then verifies and builds before committing an import note.
 
-The expected debug APK is `app/build/outputs/apk/debug/app-debug.apk`.
+The Android build uses Java 17, Android SDK platform `platforms;android-37.2`, Build Tools 36.0.0 and Gradle 9.3.1. The expected debug APK is `app/build/outputs/apk/debug/app-debug.apk`.
 
 ## First-run usage
 
