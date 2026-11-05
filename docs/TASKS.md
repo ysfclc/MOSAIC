@@ -50,7 +50,7 @@ Status values: DONE, IN PROGRESS, BLOCKED, TODO, PARKED.
 | P3-004 | Browser media detection and native background-playback handoff | TODO | Investigate accessible media and route supported sources into shared Media3 player |
 | P3-005 | Share-to-MOSAIC inbox (links, files and metadata) | IN PROGRESS | Android text/plain SEND target opens shared URL/text in Browser; file inbox and durable capture still pending |
 | P3-006 | MOSAIC-to-external share/open handoff | IN PROGRESS | Browser can share current page link; file/content handoff still pending |
-| P3-007 | Move external MediaSession controls into the primary Player | IN PROGRESS | Existing opt-in bridge is surfaced in Browser; move to Player, add previous/seek/source labels where supported, and verify on device; external control is not native stream playback |
+| P3-007 | Move external MediaSession controls into the primary Player | IN PROGRESS | Moved from Browser into Player; app labels, play/pause, previous/next and seek appear only when the source advertises support. CI build passed in run 42034925797; Redmi real-app verification remains pending. External control is not native stream playback |
 | P3-008 | Device-wide local VPN/DNS ad and tracker filter | TODO | First-class Ad Shield pillar; Android VPNService, DNS/host rules, consent, VPN conflicts, recovery and same-domain limits |
 | P3-009 | Cross-source background playback capability matrix | TODO | Investigate YouTube, Spotify, Facebook, Instagram, browser media, RSS, radio and direct URLs; record native/delegated paths and evidence |
 | P3-010 | Native playback adapters for accessible external media | TODO | Route supported browser/direct/RSS/radio media into the shared Media3 background player; no unsupported source claims |
