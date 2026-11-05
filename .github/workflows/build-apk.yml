@@ -5,6 +5,17 @@ on:
     paths:
       - "incoming/mosaic.zip"
       - "incoming/MOSAIC-Phase-1-Repository.zip"
+      - "app/**"
+      - "core/**"
+      - "tools/**"
+      - "docs/**"
+      - "gradle/**"
+      - "*.gradle.kts"
+      - "gradle.properties"
+      - "gradlew"
+      - "README.md"
+      - "PROJECT_STATE.md"
+      - ".github/workflows/build-apk.yml"
   workflow_dispatch:
 
 permissions:
@@ -19,6 +30,7 @@ jobs:
     name: Resolve upload revision and prevent duplicate imports
     runs-on: ubuntu-latest
     outputs:
+      mode: ${{ steps.resolve.outputs.mode }}
       already_imported: ${{ steps.resolve.outputs.already_imported }}
       archive_path: ${{ steps.resolve.outputs.archive_path }}
       upload_commit: ${{ steps.resolve.outputs.upload_commit }}
@@ -29,16 +41,17 @@ jobs:
           ref: ${{ github.sha }}
           fetch-depth: 0
 
-      - name: Resolve the uploaded source ZIP
+      - name: Resolve import or direct-build mode
         id: resolve
         shell: bash
         run: |
           set -euo pipefail
           if [[ "$GITHUB_REF_TYPE" != "branch" ]]; then
-            echo "::error::MOSAIC imports must run from a branch."
+            echo "::error::MOSAIC builds must run from a branch."
             exit 1
           fi
 
+          MODE="direct"
           ARCHIVE_PATH=""
           if [[ "$GITHUB_EVENT_NAME" == "workflow_dispatch" ]]; then
             if [[ -s "$GITHUB_WORKSPACE/incoming/mosaic.zip" ]]; then
@@ -56,11 +69,7 @@ jobs:
               changed.update(commit.get("added", []))
               changed.update(commit.get("modified", []))
               changed.update(commit.get("removed", []))
-          candidates = (
-              "incoming/mosaic.zip",
-              "incoming/MOSAIC-Phase-1-Repository.zip",
-          )
-          for candidate in candidates:
+          for candidate in ("incoming/mosaic.zip", "incoming/MOSAIC-Phase-1-Repository.zip"):
               if candidate in changed:
                   print(candidate)
                   break
@@ -68,31 +77,35 @@ jobs:
           )"
           fi
 
-          if [[ -z "$ARCHIVE_PATH" || ! -s "$GITHUB_WORKSPACE/$ARCHIVE_PATH" ]]; then
-            echo "::error::Upload a non-empty source archive as incoming/mosaic.zip or incoming/MOSAIC-Phase-1-Repository.zip."
-            exit 1
-          fi
-
-          UPLOAD_COMMIT="$(git log -1 --format=%H "$GITHUB_SHA" -- "$ARCHIVE_PATH")"
-          if [[ ! "$UPLOAD_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
-            echo "::error::Unable to identify the upload commit for $ARCHIVE_PATH."
-            exit 1
-          fi
-
-          git fetch --no-tags origin "$GITHUB_REF_NAME"
-          NOTE_PATH="notes/imports/${UPLOAD_COMMIT}.md"
           ALREADY_IMPORTED="false"
-          if git cat-file -e "FETCH_HEAD:$NOTE_PATH" 2>/dev/null; then
-            ALREADY_IMPORTED="true"
-            echo "This exact upload commit was already integrated. Rerun is an idempotent no-op."
+          UPLOAD_COMMIT=""
+          if [[ -n "$ARCHIVE_PATH" ]]; then
+            MODE="import"
+            if [[ ! -s "$GITHUB_WORKSPACE/$ARCHIVE_PATH" ]]; then
+              echo "::error::The changed MOSAIC source archive is missing or empty."
+              exit 1
+            fi
+            UPLOAD_COMMIT="$(git log -1 --format=%H "$GITHUB_SHA" -- "$ARCHIVE_PATH")"
+            if [[ ! "$UPLOAD_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
+              echo "::error::Unable to identify the upload commit for $ARCHIVE_PATH."
+              exit 1
+            fi
+            git fetch --no-tags origin "$GITHUB_REF_NAME"
+            NOTE_PATH="notes/imports/${UPLOAD_COMMIT}.md"
+            if git cat-file -e "FETCH_HEAD:$NOTE_PATH" 2>/dev/null; then
+              ALREADY_IMPORTED="true"
+              echo "This exact upload commit was already integrated. Rerun is an idempotent no-op."
+            fi
+          else
+            echo "No source ZIP changed. Running verification against the checked-out repository revision."
           fi
 
           {
+            echo "mode=$MODE"
             echo "already_imported=$ALREADY_IMPORTED"
             echo "archive_path=$ARCHIVE_PATH"
             echo "upload_commit=$UPLOAD_COMMIT"
           } >> "$GITHUB_OUTPUT"
-
       - name: Record preflight failure
         if: failure()
         shell: bash
@@ -123,7 +136,7 @@ jobs:
 
   build:
     needs: preflight
-    if: needs.preflight.outputs.already_imported != 'true'
+    if: needs.preflight.outputs.mode == 'import' && needs.preflight.outputs.already_imported != 'true'
     name: Validate, extract, build and integrate
     runs-on: ubuntu-latest
     timeout-minutes: 90
@@ -686,3 +699,111 @@ jobs:
           No verified integration commit is confirmed. Inspect the run log for ZIP validation, source verification, unit test, lint, APK, stale-branch or push failure. The original uploaded ZIP commit remains available for correction.
           NOTE
           cat "$RUNNER_TEMP/MOSAIC-Import-Failure.md" >> "$GITHUB_STEP_SUMMARY"
+
+  direct-build:
+    needs: preflight
+    if: needs.preflight.outputs.mode == 'direct'
+    name: Verify direct repository changes and build APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Check out the exact triggering revision
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 0
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          accept-android-sdk-licenses: true
+          packages: platform-tools
+
+      - name: Install pinned Android SDK packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdkmanager --install \\
+            "platform-tools" \\
+            "platforms;android-37.2" \\
+            "build-tools;36.0.0"
+
+      - name: Set up pinned Gradle 9.3.1
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: "9.3.1"
+
+      - name: Verify source invariants and Python tooling
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/verify_source.py
+          python3 -m unittest discover -s tools/tests -v
+
+      - name: Verify existing Gradle wrapper
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s gradle/wrapper/gradle-wrapper.jar
+          grep -q "gradle-9.3.1-bin.zip" gradle/wrapper/gradle-wrapper.properties
+          grep -q "distributionSha256Sum=" gradle/wrapper/gradle-wrapper.properties
+          chmod +x ./gradlew
+          ./gradlew --no-daemon --version
+
+      - name: Run Android unit tests, lint and debug APK build
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./gradlew --no-daemon --stacktrace \\
+            :core:media:testDebugUnitTest \\
+            :app:testDebugUnitTest \\
+            :app:lintDebug \\
+            :app:assembleDebug
+
+      - name: Verify APK and calculate checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK="app/build/outputs/apk/debug/app-debug.apk"
+          test -s "$APK"
+          mkdir -p "$RUNNER_TEMP/mosaic-direct-delivery"
+          cp "$APK" "$RUNNER_TEMP/mosaic-direct-delivery/MOSAIC-debug.apk"
+          sha256sum "$RUNNER_TEMP/mosaic-direct-delivery/MOSAIC-debug.apk" > "$RUNNER_TEMP/mosaic-direct-delivery/MOSAIC-debug.apk.sha256.txt"
+          {
+            echo "## MOSAIC direct-source verification passed"
+            echo "- Commit: `$GITHUB_SHA`"
+            echo "- Workflow: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo "- Unit tests, lint and debug APK: passed"
+            echo "- Physical device acceptance: not performed by CI"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload direct-build APK
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: MOSAIC-Android-debug-APK
+          path: |
+            ${{ runner.temp }}/mosaic-direct-delivery/MOSAIC-debug.apk
+            ${{ runner.temp }}/mosaic-direct-delivery/MOSAIC-debug.apk.sha256.txt
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
+
+      - name: Preserve direct-build reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: MOSAIC-Direct-Build-Reports
+          path: |
+            app/build/reports/**
+            app/build/test-results/**
+            core/media/build/reports/**
+            core/media/build/test-results/**
+          if-no-files-found: warn
+          retention-days: 7
