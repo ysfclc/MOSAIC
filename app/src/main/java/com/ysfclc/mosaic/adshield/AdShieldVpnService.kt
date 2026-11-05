@@ -245,7 +245,7 @@ class AdShieldVpnService : VpnService() {
                 val responsePacket = DatagramPacket(responseBuffer, responseBuffer.size)
                 socket.receive(responsePacket)
                 val answer = responsePacket.data.copyOf(responsePacket.length)
-                if (answer.size >= 12 && answer[0] == query[0] && answer[1] == query[1]) {
+                if (DnsPacketCodec.isMatchingResponse(query, answer)) {
                     AdShieldState.setError(this, null)
                     return answer
                 }
