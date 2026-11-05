@@ -1,10 +1,12 @@
 package com.ysfclc.mosaic.ui
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.OpenableColumns
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedContent
@@ -42,6 +44,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
@@ -101,8 +105,11 @@ import com.ysfclc.mosaic.core.library.MediaStoreCatalog
 import com.ysfclc.mosaic.core.media.MediaItemRecord
 import com.ysfclc.mosaic.core.media.PlaybackConnection
 import com.ysfclc.mosaic.ui.browser.BrowserScreen
+import com.ysfclc.mosaic.ui.browser.ExternalMediaSession
+import com.ysfclc.mosaic.ui.browser.ExternalMediaSessionBridge
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
@@ -125,6 +132,16 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
 
     var destination by remember { mutableStateOf(Destination.HOME) }
     var pendingBrowserUrl by remember { mutableStateOf<String?>(null) }
+    var externalSessions by remember { mutableStateOf(emptyList<ExternalMediaSession>()) }
+    var notificationAccess by remember { mutableStateOf(ExternalMediaSessionBridge.hasNotificationAccess(context)) }
+
+    LaunchedEffect(context) {
+        while (isActive) {
+            notificationAccess = ExternalMediaSessionBridge.hasNotificationAccess(context)
+            externalSessions = if (notificationAccess) ExternalMediaSessionBridge.activeSessions(context) else emptyList()
+            delay(2000)
+        }
+    }
 
     LaunchedEffect(initialSharedText) {
         if (!initialSharedText.isNullOrBlank()) {
@@ -262,6 +279,9 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
                         controller = controller,
                         revision = playerRevision,
                         connectionError = connectionError,
+                        externalSessions = externalSessions,
+                        hasExternalSessionAccess = notificationAccess,
+                        onEnableExternalSessionAccess = { context.startActivity(Intent(Settings.ACTION_NOTIFICATION_LISTENER_SETTINGS)) },
                         onOpenLibrary = { destination = Destination.LIBRARY },
                     )
                     Destination.BROWSER -> BrowserScreen(initialUrl = pendingBrowserUrl, onInitialUrlConsumed = { pendingBrowserUrl = null })
@@ -639,7 +659,15 @@ private fun MediaTrackRow(item: MediaItemRecord, index: Int, onClick: () -> Unit
 }
 
 @Composable
-private fun PlayerScreen(controller: MediaController?, revision: Int, connectionError: String?, onOpenLibrary: () -> Unit) {
+private fun PlayerScreen(
+    controller: MediaController?,
+    revision: Int,
+    connectionError: String?,
+    externalSessions: List<ExternalMediaSession>,
+    hasExternalSessionAccess: Boolean,
+    onEnableExternalSessionAccess: () -> Unit,
+    onOpenLibrary: () -> Unit,
+) {
     val mediaItem = controller?.currentMediaItem
     val metadata = mediaItem?.mediaMetadata
     val title = metadata?.title?.toString()?.ifBlank { "Unknown title" } ?: "Nothing playing yet"
@@ -652,7 +680,7 @@ private fun PlayerScreen(controller: MediaController?, revision: Int, connection
     val positionFraction = draggingPosition ?: (rawPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
 
     Column(
-        modifier = Modifier.fillMaxSize().padding(horizontal = 22.dp).padding(top = 12.dp, bottom = 10.dp),
+        modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 22.dp).padding(top = 12.dp, bottom = 18.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -723,7 +751,135 @@ private fun PlayerScreen(controller: MediaController?, revision: Int, connection
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Default.Waves, contentDescription = null, tint = MosaicPalette.Cyan, modifier = Modifier.size(13.dp))
                 Spacer(Modifier.width(7.dp))
-                Text("BACKGROUND SESSION READY", color = MosaicPalette.Cyan, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = .8.sp)
+                Text("MOSAIC BACKGROUND SESSION READY", color = MosaicPalette.Cyan, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = .8.sp)
+            }
+        }
+        Spacer(Modifier.height(22.dp))
+        ExternalPlaybackPanel(
+            hasAccess = hasExternalSessionAccess,
+            sessions = externalSessions,
+            onEnableAccess = onEnableExternalSessionAccess,
+        )
+    }
+}
+
+@Composable
+private fun ExternalPlaybackPanel(
+    hasAccess: Boolean,
+    sessions: List<ExternalMediaSession>,
+    onEnableAccess: () -> Unit,
+) {
+    Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
+            Text("PLAYING IN OTHER APPS", color = MosaicPalette.Cyan, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
+            Text("Control source-owned sessions from MOSAIC", color = MosaicPalette.TextPrimary, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+            Text(
+                "These controls talk to the original app. They do not move its audio into MOSAIC.",
+                color = MosaicPalette.TextMuted,
+                fontSize = 9.sp,
+                lineHeight = 13.sp,
+            )
+        }
+        if (!hasAccess) {
+            Surface(
+                color = Color(0x661B2940),
+                shape = RoundedCornerShape(15.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(13.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                        Text("External media access is off", color = MosaicPalette.TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                        Text("Android requires you to enable notification-listener access before MOSAIC can see supported media sessions. MOSAIC does not read notification text.", color = MosaicPalette.TextMuted, fontSize = 9.sp, lineHeight = 13.sp)
+                    }
+                    Spacer(Modifier.width(8.dp))
+                    Button(onClick = onEnableAccess, shape = RoundedCornerShape(11.dp)) {
+                        Text("Enable", fontSize = 10.sp)
+                    }
+                }
+            }
+        } else if (sessions.isEmpty()) {
+            Surface(
+                color = Color(0x441B2940),
+                shape = RoundedCornerShape(15.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Text(
+                    "No external session detected. Start media in YouTube, Spotify or another app; any session exposed by Android will appear here.",
+                    color = MosaicPalette.TextMuted,
+                    fontSize = 10.sp,
+                    lineHeight = 15.sp,
+                    modifier = Modifier.padding(13.dp),
+                )
+            }
+        } else {
+            sessions.forEach { session ->
+                ExternalSessionCard(session)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ExternalSessionCard(session: ExternalMediaSession) {
+    var seekingFraction by remember(session.packageName, session.title) { mutableStateOf<Float?>(null) }
+    val duration = session.durationMs
+    val fraction = seekingFraction ?: if (duration > 0L) {
+        (session.positionMs.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+    } else {
+        0f
+    }
+    Surface(
+        color = Color(0x771B2940),
+        shape = RoundedCornerShape(15.dp),
+        modifier = Modifier.fillMaxWidth(),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MosaicPalette.Cyan.copy(alpha = .13f)),
+    ) {
+        Column(Modifier.padding(horizontal = 13.dp, vertical = 11.dp), verticalArrangement = Arrangement.spacedBy(7.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(session.appLabel.uppercase(Locale.ROOT), color = MosaicPalette.Cyan, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, maxLines = 1)
+                    Text(session.title, color = MosaicPalette.TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    if (session.artist.isNotBlank()) {
+                        Text(session.artist, color = MosaicPalette.TextMuted, fontSize = 9.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    }
+                }
+                Surface(
+                    color = if (session.isPlaying) MosaicPalette.Cyan.copy(alpha = .15f) else MosaicPalette.SurfaceGlass,
+                    shape = RoundedCornerShape(8.dp),
+                ) {
+                    Text(if (session.isPlaying) "PLAYING" else "PAUSED", color = if (session.isPlaying) MosaicPalette.Cyan else MosaicPalette.TextMuted, fontSize = 7.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 7.dp, vertical = 5.dp))
+                }
+            }
+            if (session.canSeek && duration > 0L) {
+                Slider(
+                    value = fraction,
+                    onValueChange = { seekingFraction = it },
+                    onValueChangeFinished = {
+                        seekingFraction?.let { session.seekTo((duration * it).toLong()) }
+                        seekingFraction = null
+                    },
+                )
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    Text(formatDuration((duration * fraction).toLong()), color = MosaicPalette.TextMuted, fontSize = 8.sp)
+                    Text(formatDuration(duration), color = MosaicPalette.TextMuted, fontSize = 8.sp)
+                }
+            }
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                IconButton(onClick = session::skipPrevious, enabled = session.canSkipPrevious) {
+                    Icon(Icons.Default.SkipPrevious, contentDescription = "Previous in ${session.appLabel}", tint = MosaicPalette.TextSecondary)
+                }
+                IconButton(onClick = session::togglePlayback, enabled = session.canPlayPause) {
+                    Icon(if (session.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, contentDescription = if (session.isPlaying) "Pause ${session.appLabel}" else "Play ${session.appLabel}", tint = MosaicPalette.Cyan, modifier = Modifier.size(27.dp))
+                }
+                IconButton(onClick = session::skipNext, enabled = session.canSkipNext) {
+                    Icon(Icons.Default.SkipNext, contentDescription = "Next in ${session.appLabel}", tint = MosaicPalette.TextSecondary)
+                }
             }
         }
     }
