@@ -5,7 +5,7 @@
 **Vision lock:** docs/MOSAIC_PRODUCT_VISION.md + ADR-014/ADR-015 in docs/DECISIONS.md  
 **Architecture:** native Android, Kotlin, Jetpack Compose, Media3  
 **Target device:** Redmi Note 12 Pro 5G  
-**Current phase:** Product experience reset — source-first Home/Explore, external-session Player prominence and unified external mini-player passed GitHub Actions run 42259426896 (build #170), commit 17a2ac82a7eb58290bdeb9d04692d1a8788790ba. Physical Redmi/source acceptance remains pending. Existing native playback, Browser handoff and Ad Shield foundations remain in place.
+**Current phase:** Product experience reset — source-first Home/Explore, external-session Player prominence and unified external mini-player passed GitHub Actions run 42261337270 (build #174), commit a824dd6dfc90a2840857ba9fd4dd16639c5c64f0. Physical Redmi/source acceptance remains pending. Existing native playback, Browser handoff and Ad Shield foundations remain in place.
 
 ## Locked product vision
 
@@ -27,9 +27,9 @@ The source-first correction is committed in `app/src/main/java/com/ysfclc/mosaic
 - Explore is a dedicated source hub for YouTube, Spotify, Instagram, Facebook, local media, podcasts/radio, Browser and Ad Shield.
 - The bottom navigation prioritizes Home, Explore, Library, Player and Shield; Browser is reached as a supporting source from Home/Explore.
 - Source entry points launch the matching Android app when available and fall back to its web destination. This is an app-opening handoff, not proof that MOSAIC owns the external stream.
-- External Android media sessions are surfaced before the native Player area; when no MOSAIC-owned item is active, the external session becomes the main Player focus.
+- External Android media sessions are surfaced before the native Player area; when no MOSAIC-owned item is active or an external session is the currently playing source, the external session becomes the main Player focus.
 - The bottom mini-player follows an external session when appropriate and exposes the source's supported play/pause and next actions. The original app still owns the stream.
-- These changes passed source verification, Python contract tests, Android unit tests, lint, APK assembly, checksum and persistent signing verification in GitHub Actions run 42259426896 (build #170).
+- These changes passed source verification, Python contract tests, Android unit tests, lint, APK assembly, checksum and persistent signing verification in GitHub Actions run 42261337270 (build #174).
 
 This is the first UX correction, not a claim that the full brainstorm is complete. Product-grade artwork, deeper source integration, Library unification, device acceptance and the later Intelligence/Automation layers remain active roadmap work.
 
