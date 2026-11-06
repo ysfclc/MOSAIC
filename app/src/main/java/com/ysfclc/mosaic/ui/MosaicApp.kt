@@ -747,7 +747,7 @@ private fun MediaTrackRow(item: MediaItemRecord, index: Int, onClick: () -> Unit
     }
 }
 
-@UnstableApi
+@androidx.annotation.OptIn(markerClass = [UnstableApi::class])
 @Composable
 private fun PlayerScreen(
     controller: MediaController?,
