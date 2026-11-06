@@ -3,7 +3,7 @@
 **Product:** Source-first personal media operating system for Android  
 **Repository:** ysfclc/MOSAIC  
 **Package:** `com.ysfclc.mosaic`  
-**Status:** Integrated source snapshot passed GitHub Actions run 41957296181; physical-device acceptance remains pending. A newer incoming ZIP was not imported (run 41962171501 failed preflight); see PROJECT_STATE.md.
+**Status:** Source-first Home/Explore, central external-session Player and unified mini-player passed GitHub Actions run [42259426896](https://github.com/ysfclc/MOSAIC/actions/runs/42259426896) (build #170). Physical-device/source acceptance remains pending; see PROJECT_STATE.md.
 
 MOSAIC is a local-first personal media operating system for Android. It brings the media people already use into one coherent environment to discover, open, play, continue, organize and eventually understand across apps, websites and local sources. Cross-source background playback and broad ad/tracker protection are core pillars; YouTube, Spotify, Facebook, Instagram and other sources remain explicit integration targets. The current build is an early foundation, not universal source support.
 
@@ -55,11 +55,12 @@ The Android build uses Java 17, Android SDK platform `platforms;android-37.2`, B
 
 ## First-run usage
 
-1. Open **Library**.
-2. Choose **Scan device** and grant audio access, or choose **Open one media file** to play a file without granting broad library access.
-3. Tap a track to start a queue.
-4. Open **Player**, lock the screen or switch apps. Media3 owns playback in a service independent of the Compose screen.
-5. Use the Android media notification, lock-screen controls or supported Bluetooth controls.
+1. Start on **Home**. Open **Explore** to jump into YouTube, Spotify, Instagram, Facebook or one of MOSAIC's own media sources.
+2. When using an external app, return to MOSAIC and open **Player**. Grant Android notification-listener access when prompted to expose the source's media session. MOSAIC can control only the actions that source and Android expose.
+3. The external mini-player stays available while navigating MOSAIC. It is labelled as external because the original app still owns that stream.
+4. For MOSAIC-native media, open **Explore → Device library** to scan audio or choose **Open file** to play a file without broad library permission.
+5. Use **Player** for native HTTPS/HLS streams and podcast feeds. MOSAIC's Media3 service owns those streams and exposes Android notification, lock-screen and supported Bluetooth controls.
+6. Open **Shield** for browser filtering and optional device-wide DNS protection controls.
 
 Local library indexing and file selection remain audio-only. MOSAIC Browser can hand direct HTTPS HTML5 audio/video sources to the shared Media3 player, and the Player renders video frames through a native Media3 surface. DRM-protected, Media Source Extensions, blob and app-internal segmented streams remain unsupported; a full video library and picture-in-picture are later-phase work.
 
