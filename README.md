@@ -3,7 +3,7 @@
 **Product:** Source-first personal media operating system for Android  
 **Repository:** ysfclc/MOSAIC  
 **Package:** `com.ysfclc.mosaic`  
-**Status:** Source-first Home/Explore, central external-session Player and unified mini-player passed GitHub Actions run [42259426896](https://github.com/ysfclc/MOSAIC/actions/runs/42259426896) (build #170). Physical-device/source acceptance remains pending; see PROJECT_STATE.md.
+**Status:** Source-first Home/Explore, central external-session Player and unified mini-player passed GitHub Actions run [42261337270](https://github.com/ysfclc/MOSAIC/actions/runs/42261337270) (build #174). Physical-device/source acceptance remains pending; see PROJECT_STATE.md.
 
 MOSAIC is a local-first personal media operating system for Android. It brings the media people already use into one coherent environment to discover, open, play, continue, organize and eventually understand across apps, websites and local sources. Cross-source background playback and broad ad/tracker protection are core pillars; YouTube, Spotify, Facebook, Instagram and other sources remain explicit integration targets. The current build is an early foundation, not universal source support.
 
