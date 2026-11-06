@@ -57,7 +57,7 @@ The Android build uses Java 17, Android SDK platform `platforms;android-37.2`, B
 4. Open **Player**, lock the screen or switch apps. Media3 owns playback in a service independent of the Compose screen.
 5. Use the Android media notification, lock-screen controls or supported Bluetooth controls.
 
-Phase 1 deliberately exposes audio playback only. A dedicated video surface, picture-in-picture, video library and video-specific browsing are planned for a later phase; the source model already includes a video media kind.
+Local library indexing and file selection remain audio-only. MOSAIC Browser can hand direct HTTPS HTML5 audio/video sources to the shared Media3 player, and the Player renders video frames through a native Media3 surface. DRM-protected, Media Source Extensions, blob and app-internal segmented streams remain unsupported; a full video library and picture-in-picture are later-phase work.
 
 ## Architecture is locked
 
