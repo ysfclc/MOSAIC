@@ -281,7 +281,7 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
                 .padding(top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding())
                 .padding(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()),
         ) {
-            MosaicHeader(phaseLabel = "PHASE 01")
+            MosaicHeader(phaseLabel = "YOUR SPACE")
 
             AnimatedContent(
                 targetState = destination,
@@ -681,7 +681,7 @@ private fun HeroCard(
                 Spacer(Modifier.width(7.dp))
                 Text(if (nowPlaying) "IN YOUR SESSION" else "BUILT AROUND YOU", color = MosaicPalette.Cyan, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
                 Spacer(Modifier.weight(1f))
-                Text("PHASE 01", color = Color.White.copy(alpha = .46f), fontSize = 9.sp, letterSpacing = 1.sp)
+                Text("SOURCE FIRST", color = Color.White.copy(alpha = .46f), fontSize = 9.sp, letterSpacing = 1.sp)
             }
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -696,9 +696,9 @@ private fun HeroCard(
                     colors = ButtonDefaults.buttonColors(containerColor = MosaicPalette.Violet, contentColor = Color(0xFF100D26)),
                     shape = RoundedCornerShape(13.dp),
                 ) {
-                    Icon(if (nowPlaying) Icons.Default.PlayArrow else Icons.Default.LibraryMusic, contentDescription = null, modifier = Modifier.size(17.dp))
+                    Icon(if (nowPlaying) Icons.Default.PlayArrow else Icons.Default.Language, contentDescription = null, modifier = Modifier.size(17.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text(if (nowPlaying) "Resume" else "Open library", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(if (nowPlaying) "Resume" else "Explore sources", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
                 OutlinedButton(onClick = onSecondary, shape = RoundedCornerShape(13.dp)) {
                     Text("Open player", fontSize = 12.sp, color = Color.White)
