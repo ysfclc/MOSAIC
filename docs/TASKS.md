@@ -3,14 +3,26 @@
 Source of truth: this file. Update task status in the same commit as code changes.
 Status values: DONE, IN PROGRESS, BLOCKED, TODO, PARKED.
 
+## Product direction and experience reset
+
+The complete north star is [docs/MOSAIC_PRODUCT_VISION.md](MOSAIC_PRODUCT_VISION.md). MOSAIC is a personal media OS, not a generic local player with extra panels. The source-first Home and Explore implementation is now being corrected; CI and device acceptance are still required.
+
+| ID | Task | Status | Verification / note |
+|---|---|---|---|
+| MOS-001 | Recover and lock the original personal media OS brainstorm | DONE | Canonical vision in docs/MOSAIC_PRODUCT_VISION.md; includes source scope, playback continuity, Ad Shield, unified Library, Home/Explore/Player, local-first principles, and future Intelligence/Automation |
+| MOS-002 | Replace phase/status-led Home with source-first media command centre and add Explore | IN PROGRESS | Implemented in MosaicApp.kt commit 257052f8f5ff95151ddf4c00291aab3dd55f411a; CI and usability verification pending |
+| MOS-003 | Make requested source entry points open installed apps with safe web fallback | IN PROGRESS | YouTube, Spotify, Instagram and Facebook intents wired in MosaicApp.kt; physical app launch and return-to-MOSAIC session behavior pending |
+| MOS-004 | Make Player the coherent home for MOSAIC-owned and Android-exposed external sessions | IN PROGRESS | Native Media3 and external MediaSession surfaces exist; refine ownership labels, queue boundaries and end-to-end behavior |
+| MOS-005 | Complete premium design language and product-grade states across all destinations | IN PROGRESS | Existing dark palette and motion are a base only; continue hierarchy, artwork, empty/loading/error states, accessibility and reduced-motion work |
+
 ## Phase 1 — Native foundation and local playback
 
 | ID | Task | Status | Verification / note |
 |---|---|---|---|
 | P1-001 | Establish modular Gradle project and package identity | DONE | :app, :core:media, :core:library, :core:design |
 | P1-002 | Lock Media Core / adapter / capability contracts | DONE | docs/ARCHITECTURE.md, core/media |
-| P1-003 | Create MOSAIC dark design system and motion language | DONE | Compose theme, ambient glow, animated artwork and transitions |
-| P1-004 | Build Home / Library / Player navigation and states | DONE | MosaicApp.kt |
+| P1-003 | Create MOSAIC dark design system and motion language | IN PROGRESS | Palette and motion foundation exists; full product-grade visual system and screen consistency remain open |
+| P1-004 | Build source-first Home / Explore / Library / Player navigation and states | IN PROGRESS | Home and Explore now foreground source journeys; CI/device verification and remaining screen integration pending |
 | P1-005 | Implement read-only MediaStore audio catalog | DONE | MediaStoreCatalog; permission failure handled |
 | P1-006 | Implement Storage Access Framework open-file playback | DONE | OpenDocument path; persist URI read permission where offered |
 | P1-007 | Implement Media3 foreground playback service and session | DONE | PlaybackService, manifest service declaration |
