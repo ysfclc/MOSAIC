@@ -45,13 +45,20 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.ysfclc.mosaic.core.design.MosaicPalette
+import com.ysfclc.mosaic.core.media.PlayableStreamAddress
+import org.json.JSONObject
+import org.json.JSONTokener
 import java.io.ByteArrayInputStream
 import java.util.concurrent.atomic.AtomicBoolean
 import java.util.concurrent.atomic.AtomicReference
 
 
 @Composable
-fun BrowserScreen(initialUrl: String? = null, onInitialUrlConsumed: () -> Unit = {}) {
+fun BrowserScreen(
+    initialUrl: String? = null,
+    onInitialUrlConsumed: () -> Unit = {},
+    onPlayMedia: (String, String, String?) -> Boolean = { _, _, _ -> false },
+) {
     val context = LocalContext.current
     var address by remember { mutableStateOf("") }
     var pageTitle by remember { mutableStateOf("New tab") }
@@ -61,6 +68,10 @@ fun BrowserScreen(initialUrl: String? = null, onInitialUrlConsumed: () -> Unit =
     var canGoBack by remember { mutableStateOf(false) }
     var shieldEnabled by remember { mutableStateOf(true) }
     var loadError by remember { mutableStateOf<String?>(null) }
+    var detectedMediaUrl by remember { mutableStateOf<String?>(null) }
+    var detectedMediaTitle by remember { mutableStateOf<String?>(null) }
+    var detectedMediaType by remember { mutableStateOf<String?>(null) }
+    var mediaDetectionMessage by remember { mutableStateOf<String?>(null) }
 
     val shieldRef = remember { AtomicBoolean(true) }
     val topHostRef = remember { AtomicReference("") }
@@ -117,6 +128,29 @@ fun BrowserScreen(initialUrl: String? = null, onInitialUrlConsumed: () -> Unit =
                 }
             }
             loadUrl("https://www.google.com")
+        }
+    }
+
+    fun detectPageMedia() {
+        mediaDetectionMessage = null
+        webView.evaluateJavascript(
+            """(function(){var nodes=Array.from(document.querySelectorAll('audio,video'));var el=nodes.find(function(node){var u=node.currentSrc||node.src;return /^https:\/\//i.test(u);});if(!el)return null;var source=el.querySelector('source');return JSON.stringify({url:el.currentSrc||el.src,title:document.title||'Web media',type:el.getAttribute('type')||(source?source.type:'')});})()""",
+        ) { rawResult ->
+            val payload = runCatching { JSONTokener(rawResult).nextValue() as? String }.getOrNull()
+            val media = payload?.let { runCatching { JSONObject(it) }.getOrNull() }
+            val candidate = media?.optString("url").orEmpty()
+            val safeAddress = PlayableStreamAddress.normalize(candidate)
+            if (safeAddress != null) {
+                detectedMediaUrl = safeAddress
+                detectedMediaTitle = media?.optString("title")?.takeIf { it.isNotBlank() }
+                detectedMediaType = media?.optString("type")?.takeIf { it.isNotBlank() }
+                mediaDetectionMessage = "Direct media URL found. DRM, blob and segmented app streams are not transferable."
+            } else {
+                detectedMediaUrl = null
+                detectedMediaTitle = null
+                detectedMediaType = null
+                mediaDetectionMessage = "No direct HTTPS media URL found on this page."
+            }
         }
     }
 
@@ -200,6 +234,31 @@ fun BrowserScreen(initialUrl: String? = null, onInitialUrlConsumed: () -> Unit =
             TextButton(onClick = { navigate("https://www.youtube.com") }) { Text("YouTube") }
             TextButton(onClick = { navigate("https://open.spotify.com") }) { Text("Spotify") }
             TextButton(onClick = { navigate("https://www.google.com") }) { Text("Search") }
+            TextButton(onClick = { detectPageMedia() }, enabled = address.isNotBlank()) { Text("Detect media") }
+        }
+
+        if (detectedMediaUrl != null) {
+            Surface(
+                color = Color(0x77202E48),
+                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text("DIRECT MEDIA DETECTED", color = MosaicPalette.Cyan, fontSize = 8.sp, letterSpacing = 1.sp)
+                    Text(detectedMediaTitle ?: "Web media", color = MosaicPalette.TextPrimary, fontSize = 11.sp)
+                    Text(detectedMediaUrl.orEmpty(), color = MosaicPalette.TextMuted, fontSize = 8.sp, maxLines = 2)
+                    Button(
+                        onClick = {
+                            val started = onPlayMedia(detectedMediaUrl.orEmpty(), detectedMediaTitle ?: pageTitle, detectedMediaType)
+                            mediaDetectionMessage = if (started) "Opening in MOSAIC Player…" else "MOSAIC could not play this media URL."
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) { Text("Play in MOSAIC") }
+                }
+            }
+        }
+        if (mediaDetectionMessage != null) {
+            Text(mediaDetectionMessage.orEmpty(), color = MosaicPalette.TextMuted, fontSize = 8.sp, lineHeight = 12.sp)
         }
 
         if (progress in 1..99) {
