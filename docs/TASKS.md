@@ -5,14 +5,14 @@ Status values: DONE, IN PROGRESS, BLOCKED, TODO, PARKED.
 
 ## Product direction and experience reset
 
-The complete north star is [docs/MOSAIC_PRODUCT_VISION.md](MOSAIC_PRODUCT_VISION.md). MOSAIC is a personal media OS, not a generic local player with extra panels. The source-first Home/Explore and external-session Player/mini-player correction passed CI run 42259426896; physical device acceptance remains open.
+The complete north star is [docs/MOSAIC_PRODUCT_VISION.md](MOSAIC_PRODUCT_VISION.md). MOSAIC is a personal media OS, not a generic local player with extra panels. The source-first Home/Explore and external-session Player/mini-player correction passed CI run 42261337270; physical device acceptance remains open.
 
 | ID | Task | Status | Verification / note |
 |---|---|---|---|
 | MOS-001 | Recover and lock the original personal media OS brainstorm | DONE | Canonical vision in docs/MOSAIC_PRODUCT_VISION.md; includes source scope, playback continuity, Ad Shield, unified Library, Home/Explore/Player, local-first principles, and future Intelligence/Automation |
-| MOS-002 | Replace phase/status-led Home with source-first media command centre and add Explore | IN PROGRESS | Home/Explore redesign passed CI run 42259426896 (build #170); Redmi usability acceptance remains pending |
-| MOS-003 | Make requested source entry points open installed apps with safe web fallback | IN PROGRESS | YouTube, Spotify, Instagram and Facebook intents wired in MosaicApp.kt; CI run 42259426896 passed; physical app launch and return-to-MOSAIC session behavior pending |
-| MOS-004 | Make Player the coherent home for MOSAIC-owned and Android-exposed external sessions | IN PROGRESS | External sessions appear at the top of Player and in a dedicated mini-player; CI run 42259426896 passed; Redmi source-session acceptance and queue boundaries remain open |
+| MOS-002 | Replace phase/status-led Home with source-first media command centre and add Explore | IN PROGRESS | Home/Explore redesign passed CI run 42261337270 (build #174); Redmi usability acceptance remains pending |
+| MOS-003 | Make requested source entry points open installed apps with safe web fallback | IN PROGRESS | YouTube, Spotify, Instagram and Facebook intents wired in MosaicApp.kt; CI run 42261337270 passed; physical app launch and return-to-MOSAIC session behavior pending |
+| MOS-004 | Make Player the coherent home for MOSAIC-owned and Android-exposed external sessions | IN PROGRESS | External sessions appear at the top of Player and in a dedicated mini-player; CI run 42261337270 passed; Redmi source-session acceptance and queue boundaries remain open |
 | MOS-005 | Complete premium design language and product-grade states across all destinations | IN PROGRESS | Existing dark palette and motion are a base only; continue hierarchy, artwork, empty/loading/error states, accessibility and reduced-motion work |
 
 ## Phase 1 — Native foundation and local playback
