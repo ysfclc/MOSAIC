@@ -5,7 +5,7 @@
 **Vision lock:** ADR-014 and ADR-015 in docs/DECISIONS.md  
 **Architecture:** native Android, Kotlin, Jetpack Compose, Media3  
 **Target device:** Redmi Note 12 Pro 5G  
-**Current phase:** Native HTTPS/HLS playback, secure podcast feeds and local feed subscriptions are CI-verified; direct HTML5 browser-media handoff is implemented and awaiting its integrated CI run. Physical-device/source acceptance remains open.
+**Current phase:** Native HTTPS/HLS playback, secure podcast feeds, local feed subscriptions and direct HTML5 browser-media handoff are CI-verified. A native Media3 video surface is implemented and awaiting its integrated CI run. Physical-device/source acceptance remains open.
 
 ## Locked product vision
 
