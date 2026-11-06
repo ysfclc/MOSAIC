@@ -2,7 +2,6 @@ package com.ysfclc.mosaic.core.media
 
 import java.io.StringReader
 import java.net.URI
-import javax.xml.XMLConstants
 import javax.xml.parsers.DocumentBuilderFactory
 import org.w3c.dom.Element
 import org.xml.sax.InputSource
@@ -15,6 +14,8 @@ data class PodcastFeed(
 /** Secure, bounded RSS 2.0 / Atom parser. Only HTTPS episode media is admitted. */
 object PodcastFeedParser {
     private const val MAX_XML_CHARS = 2 * 1024 * 1024
+    private const val ACCESS_EXTERNAL_DTD = "http://javax.xml.XMLConstants/property/accessExternalDTD"
+    private const val ACCESS_EXTERNAL_SCHEMA = "http://javax.xml.XMLConstants/property/accessExternalSchema"
 
     fun parse(xml: String, feedAddress: String): PodcastFeed {
         require(xml.length <= MAX_XML_CHARS) { "Podcast feed is larger than 2 MB." }
@@ -29,8 +30,10 @@ object PodcastFeedParser {
             setFeature("http://xml.org/sax/features/external-general-entities", false)
             setFeature("http://xml.org/sax/features/external-parameter-entities", false)
             setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", false)
-            setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "")
-            setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "")
+            // These JAXP properties are not implemented by every Android XML provider.
+            // The mandatory parser features above still fail closed if unsupported.
+            runCatching { setAttribute(ACCESS_EXTERNAL_DTD, "") }
+            runCatching { setAttribute(ACCESS_EXTERNAL_SCHEMA, "") }
         }
         val document = factory.newDocumentBuilder().parse(InputSource(StringReader(xml)))
         val root = document.documentElement ?: throw IllegalArgumentException("Podcast feed is empty.")
@@ -54,7 +57,6 @@ object PodcastFeedParser {
             val title = item.directChildText("title").ifBlank { "Untitled episode" }
             val creator = item.directChildText("author")
                 .ifBlank { item.directChildText("creator") }
-                .ifBlank { item.directChildText("encoded") }
                 .takeIf { it.isNotBlank() }
             val mimeType = enclosure?.getAttribute("type")
                 ?.takeIf { it.isNotBlank() }
