@@ -1,11 +1,15 @@
-# MOSAIC — Media Player & Ad Shield
+# MOSAIC — Personal Media OS
 
-**Phase 1 · Native foundation and local playback**  
+**Product:** Source-first personal media operating system for Android  
 **Repository:** ysfclc/MOSAIC  
 **Package:** `com.ysfclc.mosaic`  
 **Status:** Integrated source snapshot passed GitHub Actions run 41957296181; physical-device acceptance remains pending. A newer incoming ZIP was not imported (run 41962171501 failed preflight); see PROJECT_STATE.md.
 
-MOSAIC is an Android media player and ad-control hub. Its goal is to play media from as many sources as possible in the background and block ads/trackers across as many apps and surfaces as Android and each source technically allow. YouTube, Spotify, Facebook, Instagram and other external sources are explicit integration targets to investigate and test; the current build does not yet deliver universal support.
+MOSAIC is a local-first personal media operating system for Android. It brings the media people already use into one coherent environment to discover, open, play, continue, organize and eventually understand across apps, websites and local sources. Cross-source background playback and broad ad/tracker protection are core pillars; YouTube, Spotify, Facebook, Instagram and other sources remain explicit integration targets. The current build is an early foundation, not universal source support.
+
+## The product vision
+
+The full, user-approved product north star is locked in [docs/MOSAIC_PRODUCT_VISION.md](docs/MOSAIC_PRODUCT_VISION.md). It defines the personal media OS, source-first Home and Explore, centrepiece Player, unified Library, supporting Browser, Ad Shield, and later Intelligence/Automation. This is the canonical reference for product direction.
 
 ## Why MOSAIC exists: background playback and ad blocking
 
@@ -14,7 +18,7 @@ MOSAIC exists to break the fragmentation of media across apps and websites: play
 ## Phase 1 shipped in this source snapshot
 
 - Native Kotlin + Jetpack Compose application shell with an animated dark visual system.
-- Home, Library and Player destinations with responsive transitions.
+- Source-first Home and Explore, unified Library, centrepiece Player, Ad Shield and supporting Browser destinations with responsive transitions.
 - Android MediaStore audio indexing, read-only and without copying or moving original files.
 - Storage Access Framework file picker for directly opening a selected audio file without broad library permission.
 - Media3 ExoPlayer hosted in a `MediaSessionService` for background playback.
