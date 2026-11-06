@@ -1,8 +1,10 @@
 # Product specification — MOSAIC
 
+> Canonical product north star: [MOSAIC Product Vision](MOSAIC_PRODUCT_VISION.md). This specification implements that broader personal media OS vision; it must not narrow MOSAIC to a local player, browser or ad-blocking utility.
+
 ## Product statement
 
-A native Android media player and ad-control hub whose central goal is to play media from as many sources as possible in the background, while blocking ads and trackers across as many apps and surfaces as Android and each source technically allow. Local media, browser media, streams, podcasts, radio and third-party services should feel like one coherent media experience; source-specific limitations must be investigated and tested, not assumed away or used to quietly narrow the vision.
+A native Android personal media operating system whose central goal is to unify discovery, playback continuity, library, source access and ad/tracker protection across as many apps and surfaces as Android and each source technically allow. Local media, browser media, streams, podcasts, radio and third-party services should feel like one coherent media experience; source-specific limitations must be investigated and tested, not assumed away or used to quietly narrow the vision.
 
 ## Origin and founding problem — cross-source background playback and ad blocking
 
