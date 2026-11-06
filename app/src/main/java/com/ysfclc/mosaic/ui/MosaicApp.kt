@@ -351,7 +351,23 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
                         onOpenLibrary = { destination = Destination.LIBRARY },
                     )
                     Destination.SHIELD -> com.ysfclc.mosaic.ui.adshield.AdShieldScreen()
-                    Destination.BROWSER -> BrowserScreen(initialUrl = pendingBrowserUrl, onInitialUrlConsumed = { pendingBrowserUrl = null })
+                    Destination.BROWSER -> BrowserScreen(
+                        initialUrl = pendingBrowserUrl,
+                        onInitialUrlConsumed = { pendingBrowserUrl = null },
+                        onPlayMedia = { rawAddress, mediaTitle, mediaType ->
+                            val safeAddress = PlayableStreamAddress.normalize(rawAddress)
+                            if (safeAddress == null) {
+                                false
+                            } else {
+                                val uri = Uri.parse(safeAddress)
+                                val mimeType = mediaType?.takeIf { it.isNotBlank() }
+                                    ?: if (uri.path.orEmpty().endsWith(".m3u8", ignoreCase = true)) "application/x-mpegURL" else null
+                                playback.playUri(uri, mediaTitle.ifBlank { "Web media" }, mimeType)
+                                destination = Destination.PLAYER
+                                true
+                            }
+                        },
+                    )
                 }
             }
 
