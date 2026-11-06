@@ -104,6 +104,7 @@ import androidx.core.content.ContextCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.VideoSize
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import androidx.media3.session.MediaController
@@ -746,6 +747,7 @@ private fun MediaTrackRow(item: MediaItemRecord, index: Int, onClick: () -> Unit
     }
 }
 
+@OptIn(UnstableApi::class)
 @Composable
 private fun PlayerScreen(
     controller: MediaController?,
