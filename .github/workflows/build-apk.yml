@@ -819,6 +819,7 @@ jobs:
 
       - name: Upload direct-build APK
         if: success()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: MOSAIC-Android-debug-APK
@@ -831,6 +832,7 @@ jobs:
 
       - name: Preserve direct-build reports
         if: always()
+        continue-on-error: true
         uses: actions/upload-artifact@v4
         with:
           name: MOSAIC-Direct-Build-Reports
@@ -841,3 +843,25 @@ jobs:
             core/media/build/test-results/**
           if-no-files-found: warn
           retention-days: 7
+
+      - name: Publish signed APK as a private GitHub prerelease
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          DELIVERY_DIR="$RUNNER_TEMP/mosaic-direct-delivery"
+          APK="$DELIVERY_DIR/MOSAIC-debug.apk"
+          CHECKSUM="$DELIVERY_DIR/MOSAIC-debug.apk.sha256.txt"
+          test -s "$APK"
+          test -s "$CHECKSUM"
+          TAG="mosaic-dev-build-$GITHUB_RUN_NUMBER"
+          gh release create "$TAG" "$APK" "$CHECKSUM" \
+            --repo "$GITHUB_REPOSITORY" \
+            --title "MOSAIC development build #$GITHUB_RUN_NUMBER" \
+            --notes "Automated signed development APK. Commit: $GITHUB_SHA. CI unit tests, lint, APK assembly and persistent signer verification passed. Physical-device acceptance is not implied." \
+            --prerelease \
+            --target "$GITHUB_SHA"
+          RELEASE_URL="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json url --jq .url)"
+          echo "Private APK release: $RELEASE_URL" | tee -a "$GITHUB_STEP_SUMMARY"
