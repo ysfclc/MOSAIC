@@ -260,6 +260,8 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
 
     val currentItem = controller?.currentMediaItem
     val hasNowPlaying = currentItem != null
+    val activeExternalSession = externalSessions.firstOrNull { it.isPlaying } ?: externalSessions.firstOrNull()
+    val preferExternalMiniPlayer = activeExternalSession?.isPlaying == true && controller?.isPlaying != true
     val currentTitle = currentItem?.mediaMetadata?.title?.toString().orEmpty()
     val currentArtist = currentItem?.mediaMetadata?.artist?.toString().orEmpty()
 
@@ -405,15 +407,21 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
                 }
             }
 
-            if (hasNowPlaying && destination != Destination.PLAYER) {
-                MiniPlayer(
-                    title = currentTitle.ifBlank { "Unknown title" },
-                    subtitle = currentArtist,
-                    isPlaying = controller?.isPlaying == true,
-                    onOpen = { destination = Destination.PLAYER },
-                    onToggle = { if (controller?.isPlaying == true) controller?.pause() else controller?.play() },
-                    onNext = { controller?.seekToNextMediaItem() },
-                )
+            if ((hasNowPlaying || activeExternalSession != null) && destination != Destination.PLAYER) {
+                if (preferExternalMiniPlayer) {
+                    activeExternalSession?.let { session ->
+                        ExternalMiniPlayer(session = session, onOpen = { destination = Destination.PLAYER })
+                    }
+                } else {
+                    MiniPlayer(
+                        title = currentTitle.ifBlank { "Unknown title" },
+                        subtitle = currentArtist,
+                        isPlaying = controller?.isPlaying == true,
+                        onOpen = { destination = Destination.PLAYER },
+                        onToggle = { if (controller?.isPlaying == true) controller?.pause() else controller?.play() },
+                        onNext = { controller?.seekToNextMediaItem() },
+                    )
+                }
             }
 
             BottomNavigation(
@@ -1462,6 +1470,44 @@ private fun MiniPlayer(title: String, subtitle: String, isPlaying: Boolean, onOp
                 Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, contentDescription = if (isPlaying) "Pause" else "Play", tint = MosaicPalette.TextPrimary)
             }
             IconButton(onClick = onNext, modifier = Modifier.size(34.dp)) {
+                Icon(Icons.Default.SkipNext, contentDescription = "Next", tint = MosaicPalette.Cyan)
+            }
+        }
+    }
+}
+
+@Composable
+private fun ExternalMiniPlayer(
+    session: ExternalMediaSession,
+    onOpen: () -> Unit,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 7.dp),
+        color = Color(0xE91B2940),
+        shape = RoundedCornerShape(17.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, MosaicPalette.Cyan.copy(alpha = .22f)),
+        shadowElevation = 12.dp,
+    ) {
+        Row(
+            Modifier.clickable(onClick = onOpen).padding(horizontal = 12.dp, vertical = 9.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                Modifier.size(36.dp).clip(RoundedCornerShape(10.dp))
+                    .background(Brush.linearGradient(listOf(MosaicPalette.VioletDeep, Color(0xFF155D66)))),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Default.Waves, contentDescription = null, tint = Color.White, modifier = Modifier.size(19.dp))
+            }
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(session.title, color = MosaicPalette.TextPrimary, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text("${session.appLabel} · external playback", color = MosaicPalette.TextMuted, fontSize = 8.sp, maxLines = 1)
+            }
+            IconButton(onClick = session::togglePlayback, enabled = session.canPlayPause, modifier = Modifier.size(34.dp)) {
+                Icon(if (session.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, contentDescription = if (session.isPlaying) "Pause" else "Play", tint = MosaicPalette.TextPrimary)
+            }
+            IconButton(onClick = session::skipNext, enabled = session.canSkipNext, modifier = Modifier.size(34.dp)) {
                 Icon(Icons.Default.SkipNext, contentDescription = "Next", tint = MosaicPalette.Cyan)
             }
         }
