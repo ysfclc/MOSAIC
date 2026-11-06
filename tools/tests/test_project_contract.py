@@ -124,6 +124,7 @@ class ProjectContractTests(unittest.TestCase):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn("androidx.media3:media3-ui:1.11.1", gradle)
         self.assertIn("PlayerView(viewContext)", app)
+        self.assertIn("@androidx.annotation.OptIn(markerClass = [UnstableApi::class])", app)
         self.assertIn("onVideoSizeChanged(videoSize: VideoSize)", app)
         self.assertIn("Local library indexing and file selection remain audio-only", readme)
 
