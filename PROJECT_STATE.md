@@ -5,7 +5,7 @@
 **Vision lock:** ADR-014 and ADR-015 in docs/DECISIONS.md  
 **Architecture:** native Android, Kotlin, Jetpack Compose, Media3  
 **Target device:** Redmi Note 12 Pro 5G  
-**Current phase:** Native HTTPS/HLS playback, secure podcast feeds, local feed subscriptions and direct HTML5 browser-media handoff are CI-verified. A native Media3 video surface is implemented and awaiting its integrated CI run. Physical-device/source acceptance remains open.
+**Current phase:** Native HTTPS/HLS playback, secure podcast feeds, local feed subscriptions, direct HTML5 browser-media handoff and native Media3 video rendering are CI-verified. Physical-device/source acceptance remains open.
 
 ## Locked product vision
 
@@ -89,7 +89,7 @@ The CI workflow now decodes one persistent **development-only** signing key from
 
 ## Immediate next engineering task
 
-P3-010 now includes direct HTTPS streams, HLS radio, RSS/Atom podcast queueing and locally saved podcast feeds. These native playback/feed features passed CI run 42159518077 and were published as private prerelease #137. Browser direct HTML5 media handoff is implemented with explicit DRM/MSE/blob limitations and is awaiting the latest integrated CI run. Next priority: validate real station/feed/browser media URLs and continue P3-008 Ad Shield and P3-018 YouTube/Spotify acceptance on-device. P3-018 native external session controls/ad-skip helper passed CI run 42110725075 but still needs real YouTube/Spotify tests on the Redmi. P3-008 Ad Shield physical acceptance also remains open.
+P3-010 now includes direct HTTPS streams, HLS radio, RSS/Atom podcast queueing and locally saved podcast feeds. These native playback/feed features passed CI run 42159518077 and were published as private prerelease #137. Browser direct HTML5 media handoff and the native video surface are implemented with explicit DRM/MSE/blob limitations and passed CI run 42161983485; private prerelease #153 is available. Next priority: validate real station/feed/browser media URLs and continue P3-008 Ad Shield and P3-018 YouTube/Spotify acceptance on-device. P3-018 native external session controls/ad-skip helper passed CI run 42110725075 but still needs real YouTube/Spotify tests on the Redmi. P3-008 Ad Shield physical acceptance also remains open.
 
 The follow-up DNS-routing hardening passed [GitHub Actions run 42094128331](https://github.com/ysfclc/MOSAIC/actions/runs/42094128331) on commit `e0f51143c400556d697b9047502b59b2fe6a7de8`. Source verification, Python contract tests, Android unit tests, lint, APK assembly, APK checksum and persistent signing-certificate checks all passed. APK artifact ID: `13445249944`. Physical-device acceptance remains unperformed.
 
