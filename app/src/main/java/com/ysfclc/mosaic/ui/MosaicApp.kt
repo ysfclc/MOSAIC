@@ -145,6 +145,12 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
     var podcastFeedTitle by remember { mutableStateOf<String?>(null) }
     var podcastLoading by remember { mutableStateOf(false) }
     var podcastError by remember { mutableStateOf<String?>(null) }
+    val podcastFeedPreferences = remember(context) {
+        context.getSharedPreferences("mosaic_podcast_feeds", android.content.Context.MODE_PRIVATE)
+    }
+    var savedPodcastFeeds by remember(podcastFeedPreferences) {
+        mutableStateOf(podcastFeedPreferences.getStringSet("saved_urls", emptySet()).orEmpty().toList().sorted())
+    }
     val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(context) {
@@ -313,6 +319,12 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
                         podcastFeedTitle = podcastFeedTitle,
                         podcastLoading = podcastLoading,
                         podcastError = podcastError,
+                        savedPodcastFeeds = savedPodcastFeeds,
+                        onRemovePodcastFeed = { address ->
+                            val updated = savedPodcastFeeds - address
+                            savedPodcastFeeds = updated
+                            podcastFeedPreferences.edit().putStringSet("saved_urls", updated.toSet()).apply()
+                        },
                         onLoadPodcastFeed = { address ->
                             podcastLoading = true
                             podcastError = null
@@ -321,6 +333,11 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
                                     .onSuccess { feed ->
                                         podcastFeedTitle = feed.title
                                         podcastEpisodes = feed.episodes
+                                        PlayableStreamAddress.normalize(address)?.let { safeAddress ->
+                                            val updated = (savedPodcastFeeds + safeAddress).distinct().sorted()
+                                            savedPodcastFeeds = updated
+                                            podcastFeedPreferences.edit().putStringSet("saved_urls", updated.toSet()).apply()
+                                        }
                                         if (feed.episodes.isEmpty()) podcastError = "No playable HTTPS episodes were found in this feed."
                                     }
                                     .onFailure { error -> podcastError = error.message ?: "Could not load this podcast feed." }
@@ -723,6 +740,8 @@ private fun PlayerScreen(
     podcastFeedTitle: String?,
     podcastLoading: Boolean,
     podcastError: String?,
+    savedPodcastFeeds: List<String>,
+    onRemovePodcastFeed: (String) -> Unit,
     onLoadPodcastFeed: (String) -> Unit,
     onPlayPodcastEpisode: (Int) -> Unit,
     onOpenLibrary: () -> Unit,
@@ -821,6 +840,8 @@ private fun PlayerScreen(
             feedTitle = podcastFeedTitle,
             loading = podcastLoading,
             error = podcastError,
+            savedFeeds = savedPodcastFeeds,
+            onRemoveFeed = onRemovePodcastFeed,
             onLoadFeed = onLoadPodcastFeed,
             onPlayEpisode = onPlayPodcastEpisode,
         )
@@ -897,6 +918,8 @@ private fun PodcastFeedPanel(
     feedTitle: String?,
     loading: Boolean,
     error: String?,
+    savedFeeds: List<String>,
+    onRemoveFeed: (String) -> Unit,
     onLoadFeed: (String) -> Unit,
     onPlayEpisode: (Int) -> Unit,
 ) {
@@ -931,6 +954,31 @@ private fun PodcastFeedPanel(
             shape = RoundedCornerShape(13.dp),
         ) {
             Text(if (loading) "Loading feed…" else "Load episodes", fontSize = 11.sp)
+        }
+        if (savedFeeds.isNotEmpty()) {
+            Text("SAVED FEEDS", color = MosaicPalette.TextMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.1.sp)
+            savedFeeds.forEach { savedFeed ->
+                Row(
+                    modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(11.dp)).background(Color(0x441B2940)).padding(start = 11.dp, end = 8.dp, top = 8.dp, bottom = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        savedFeed,
+                        color = MosaicPalette.TextSecondary,
+                        fontSize = 9.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f).clickable(enabled = !loading) { feedAddress = savedFeed; onLoadFeed(savedFeed) }.padding(vertical = 5.dp),
+                    )
+                    Text(
+                        "REMOVE",
+                        color = MosaicPalette.TextMuted,
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.clickable { onRemoveFeed(savedFeed) }.padding(horizontal = 5.dp, vertical = 6.dp),
+                    )
+                }
+            }
         }
         if (error != null) {
             Text(error, color = Color(0xFFFF9B9B), fontSize = 9.sp, lineHeight = 13.sp)
