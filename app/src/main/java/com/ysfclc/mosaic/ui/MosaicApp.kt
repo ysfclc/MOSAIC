@@ -261,7 +261,7 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
     val currentItem = controller?.currentMediaItem
     val hasNowPlaying = currentItem != null
     val activeExternalSession = externalSessions.firstOrNull { it.isPlaying } ?: externalSessions.firstOrNull()
-    val preferExternalMiniPlayer = activeExternalSession?.isPlaying == true && controller?.isPlaying != true
+    val preferExternalMiniPlayer = activeExternalSession != null && controller?.isPlaying != true
     val currentTitle = currentItem?.mediaMetadata?.title?.toString().orEmpty()
     val currentArtist = currentItem?.mediaMetadata?.artist?.toString().orEmpty()
 
