@@ -26,7 +26,8 @@ object PodcastFeedLoader {
         try {
             val status = connection.responseCode
             require(status in 200..299) { "Podcast server returned HTTP $status." }
-            require(connection.contentLengthLong <= MAX_FEED_BYTES || connection.contentLengthLong < 0L) {
+            val contentLength = connection.contentLengthLong
+            require(contentLength < 0L || contentLength <= MAX_FEED_BYTES) {
                 "Podcast feed is larger than 2 MB."
             }
             val bytes = connection.inputStream.use { input ->
@@ -42,7 +43,7 @@ object PodcastFeedLoader {
                 }
                 output.toByteArray()
             }
-            val xml = bytes.toString(Charsets.UTF_8.name())
+            val xml = String(bytes, Charsets.UTF_8)
             PodcastFeedParser.parse(xml, safeAddress)
         } finally {
             connection.disconnect()
