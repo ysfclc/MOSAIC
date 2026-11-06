@@ -99,9 +99,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
+import androidx.media3.common.VideoSize
+import androidx.media3.ui.AspectRatioFrameLayout
+import androidx.media3.ui.PlayerView
 import androidx.media3.session.MediaController
 import com.ysfclc.mosaic.core.design.MosaicPalette
 import com.ysfclc.mosaic.core.library.MediaStoreCatalog
@@ -217,6 +221,7 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
             override fun onIsPlayingChanged(isPlaying: Boolean) { playerRevision++ }
             override fun onPlaybackStateChanged(playbackState: Int) { playerRevision++ }
             override fun onMediaMetadataChanged(mediaMetadata: androidx.media3.common.MediaMetadata) { playerRevision++ }
+            override fun onVideoSizeChanged(videoSize: VideoSize) { playerRevision++ }
         }
         controller?.addListener(listener)
         onDispose { controller?.removeListener(listener) }
@@ -788,8 +793,27 @@ private fun PlayerScreen(
             }
         }
         Spacer(Modifier.height(18.dp))
-        Box(Modifier.fillMaxWidth().aspectRatio(1f).padding(horizontal = 13.dp), contentAlignment = Alignment.Center) {
-            PlayerArtwork(isPlaying = isPlaying, revision = revision)
+        val videoSize = controller?.videoSize
+        if (videoSize != null && videoSize.width > 0 && videoSize.height > 0) {
+            AndroidView(
+                factory = { viewContext ->
+                    PlayerView(viewContext).apply {
+                        useController = false
+                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                        player = controller
+                    }
+                },
+                update = { playerView -> playerView.player = controller },
+                onRelease = { playerView -> playerView.player = null },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(videoSize.width.toFloat() / videoSize.height.toFloat())
+                    .clip(RoundedCornerShape(22.dp)),
+            )
+        } else {
+            Box(Modifier.fillMaxWidth().aspectRatio(1f).padding(horizontal = 13.dp), contentAlignment = Alignment.Center) {
+                PlayerArtwork(isPlaying = isPlaying, revision = revision)
+            }
         }
         Spacer(Modifier.height(17.dp))
         Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)) {
