@@ -118,9 +118,14 @@ class ProjectContractTests(unittest.TestCase):
         self.assertIn("--prerelease", workflow)
         self.assertIn("continue-on-error: true", workflow)
 
-    def test_video_is_not_advertised_before_video_surface_exists(self):
+    def test_direct_web_video_has_a_native_player_surface(self):
+        app = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/MosaicApp.kt").read_text(encoding="utf-8")
+        gradle = (ROOT / "app/build.gradle.kts").read_text(encoding="utf-8")
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
-        self.assertIn("Phase 1 deliberately exposes audio playback only", readme)
+        self.assertIn("androidx.media3:media3-ui:1.11.1", gradle)
+        self.assertIn("PlayerView(viewContext)", app)
+        self.assertIn("onVideoSizeChanged(videoSize: VideoSize)", app)
+        self.assertIn("Local library indexing and file selection remain audio-only", readme)
 
 if __name__ == "__main__":
     unittest.main()
