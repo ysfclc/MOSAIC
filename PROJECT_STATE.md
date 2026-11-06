@@ -5,7 +5,7 @@
 **Vision lock:** docs/MOSAIC_PRODUCT_VISION.md + ADR-014/ADR-015 in docs/DECISIONS.md  
 **Architecture:** native Android, Kotlin, Jetpack Compose, Media3  
 **Target device:** Redmi Note 12 Pro 5G  
-**Current phase:** Product experience reset — source-first Home and Explore are implemented in commit 257052f8f5ff95151ddf4c00291aab3dd55f411a; CI and device verification are pending. Existing native playback, Browser handoff and Ad Shield foundations remain in place.
+**Current phase:** Product experience reset — source-first Home/Explore, external-session Player prominence and unified external mini-player passed GitHub Actions run 42259426896 (build #170), commit 17a2ac82a7eb58290bdeb9d04692d1a8788790ba. Physical Redmi/source acceptance remains pending. Existing native playback, Browser handoff and Ad Shield foundations remain in place.
 
 ## Locked product vision
 
@@ -23,11 +23,13 @@ Respect platform, security and content-access boundaries. These boundaries do no
 The app had drifted toward a local-file dashboard: Home foregrounded indexing, permission metrics and a “Phase 01” foundation; source access was buried in Player; Browser occupied a primary navigation slot despite being a supporting surface. This did not express the approved personal media OS.
 
 The source-first correction is committed in `app/src/main/java/com/ysfclc/mosaic/ui/MosaicApp.kt`:
-- Home now acts as the media command centre, with a now-playing hero, direct source entry points, local library access and Ad Shield access.
+- Home now acts as the media command centre, with a now-playing hero, direct source entry points, local library access and Ad Shield access. Leftover phase/demo language was removed.
 - Explore is a dedicated source hub for YouTube, Spotify, Instagram, Facebook, local media, podcasts/radio, Browser and Ad Shield.
-- The bottom navigation now prioritizes Home, Explore, Library, Player and Shield; Browser is reached as a supporting source from Home/Explore.
+- The bottom navigation prioritizes Home, Explore, Library, Player and Shield; Browser is reached as a supporting source from Home/Explore.
 - Source entry points launch the matching Android app when available and fall back to its web destination. This is an app-opening handoff, not proof that MOSAIC owns the external stream.
-- The central Player continues to distinguish MOSAIC-native playback from external app sessions.
+- External Android media sessions are surfaced before the native Player area; when no MOSAIC-owned item is active, the external session becomes the main Player focus.
+- The bottom mini-player follows an external session when appropriate and exposes the source's supported play/pause and next actions. The original app still owns the stream.
+- These changes passed source verification, Python contract tests, Android unit tests, lint, APK assembly, checksum and persistent signing verification in GitHub Actions run 42259426896 (build #170).
 
 This is the first UX correction, not a claim that the full brainstorm is complete. Product-grade artwork, deeper source integration, Library unification, device acceptance and the later Intelligence/Automation layers remain active roadmap work.
 
@@ -102,7 +104,7 @@ The CI workflow now decodes one persistent **development-only** signing key from
 
 ## Immediate next engineering task
 
-**Immediate product task:** continue the source-first UX reset from the canonical vision. The first Home/Explore correction is committed; validate the build, then make the Player, source capability states and Library feel like one coherent media OS rather than isolated panels. Do not return to adding unrelated adapters until the primary user journey is product-grade. Existing P3-010 work includes direct HTTPS streams, HLS radio, RSS/Atom podcast queueing and locally saved podcast feeds. These native playback/feed features passed CI run 42159518077 and were published as private prerelease #137. Browser direct HTML5 media handoff and the native video surface are implemented with explicit DRM/MSE/blob limitations and passed CI run 42162337225; private prerelease #157 is available. Next priority: validate real station/feed/browser media URLs and continue P3-008 Ad Shield and P3-018 YouTube/Spotify acceptance on-device. P3-018 native external session controls/ad-skip helper passed CI run 42110725075 but still needs real YouTube/Spotify tests on the Redmi. P3-008 Ad Shield physical acceptance also remains open.
+**Immediate product task:** physically validate the source-first Home/Explore and external-session mini-player on the Redmi Note 12 Pro 5G. Test YouTube, Spotify, Instagram and Facebook app launch/return behavior, notification-listener permission, session discovery, available controls, app switching and screen-off behavior. Record per-source results in docs/PROVIDER_CAPABILITY_MATRIX.md. After that, make the Library and remaining Player journeys feel like one coherent media OS; do not return to unrelated adapter work before the primary journeys are product-grade. Existing P3-010 native stream, radio, podcast and browser handoff capabilities remain available. These native playback/feed features passed CI run 42159518077 and were published as private prerelease #137. Browser direct HTML5 media handoff and the native video surface are implemented with explicit DRM/MSE/blob limitations and passed CI run 42162337225; private prerelease #157 is available. Next priority: validate real station/feed/browser media URLs and continue P3-008 Ad Shield and P3-018 YouTube/Spotify acceptance on-device. P3-018 native external session controls/ad-skip helper passed CI run 42110725075 but still needs real YouTube/Spotify tests on the Redmi. P3-008 Ad Shield physical acceptance also remains open.
 
 The follow-up DNS-routing hardening passed [GitHub Actions run 42094128331](https://github.com/ysfclc/MOSAIC/actions/runs/42094128331) on commit `e0f51143c400556d697b9047502b59b2fe6a7de8`. Source verification, Python contract tests, Android unit tests, lint, APK assembly, APK checksum and persistent signing-certificate checks all passed. APK artifact ID: `13445249944`. Physical-device acceptance remains unperformed.
 
