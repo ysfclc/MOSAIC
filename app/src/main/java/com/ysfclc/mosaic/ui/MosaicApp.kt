@@ -948,85 +948,104 @@ private fun PlayerScreen(
                 Text("MOSAIC PLAYER", color = MosaicPalette.Violet, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = .8.sp, modifier = Modifier.padding(horizontal = 10.dp, vertical = 7.dp))
             }
         }
-        Spacer(Modifier.height(18.dp))
-        val videoSize = controller?.videoSize
-        if (videoSize != null && videoSize.width > 0 && videoSize.height > 0) {
-            AndroidView(
-                factory = { viewContext ->
-                    PlayerView(viewContext).apply {
-                        useController = false
-                        resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
-                        player = controller
-                    }
-                },
-                update = { playerView -> playerView.player = controller },
-                onRelease = { playerView -> playerView.player = null },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(videoSize.width.toFloat() / videoSize.height.toFloat())
-                    .clip(RoundedCornerShape(22.dp)),
-            )
-        } else {
-            Box(Modifier.fillMaxWidth().aspectRatio(1f).padding(horizontal = 13.dp), contentAlignment = Alignment.Center) {
-                PlayerArtwork(isPlaying = isPlaying, revision = revision)
-            }
-        }
-        Spacer(Modifier.height(17.dp))
-        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            Text(title, color = MosaicPalette.TextPrimary, fontSize = 19.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(artist, color = MosaicPalette.TextSecondary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
-        Spacer(Modifier.height(14.dp))
-        Slider(
-            value = positionFraction,
-            onValueChange = { draggingPosition = it },
-            onValueChangeFinished = {
-                draggingPosition?.let { fraction -> controller?.seekTo((duration * fraction).toLong()) }
-                draggingPosition = null
-            },
-            enabled = controller != null && mediaItem != null,
-            modifier = Modifier.fillMaxWidth(),
+        ExternalPlaybackPanel(
+            hasAccess = hasExternalSessionAccess,
+            sessions = externalSessions,
+            onEnableAccess = onEnableExternalSessionAccess,
         )
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-            Text(formatDuration((duration * positionFraction).toLong()), color = MosaicPalette.TextMuted, fontSize = 9.sp)
-            Text(formatDuration(actualDuration), color = MosaicPalette.TextMuted, fontSize = 9.sp)
-        }
-        Spacer(Modifier.height(9.dp))
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(23.dp)) {
-            IconButton(onClick = { controller?.seekToPreviousMediaItem() }, enabled = controller != null, modifier = Modifier.size(48.dp)) {
-                Icon(Icons.Default.SkipPrevious, contentDescription = "Previous", tint = MosaicPalette.TextSecondary, modifier = Modifier.size(29.dp))
-            }
-            Surface(
-                onClick = { if (isPlaying) controller?.pause() else controller?.play() },
-                enabled = controller != null && mediaItem != null,
-                color = MosaicPalette.Violet,
-                shape = CircleShape,
-                modifier = Modifier.size(66.dp),
-                shadowElevation = 10.dp,
+        Spacer(Modifier.height(18.dp))
+        if (mediaItem == null && externalSessions.isNotEmpty()) {
+            Column(
+                modifier = Modifier.fillMaxWidth().padding(vertical = 26.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(7.dp),
             ) {
-                Box(contentAlignment = Alignment.Center) {
-                    Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, contentDescription = if (isPlaying) "Pause" else "Play", tint = Color(0xFF100D26), modifier = Modifier.size(32.dp))
+                Text("EXTERNAL SOURCE SESSION", color = MosaicPalette.Cyan, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.4.sp)
+                Text("Your source. One control space.", color = MosaicPalette.TextPrimary, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                Text("The original app still owns the stream. MOSAIC brings its available playback controls here.", color = MosaicPalette.TextMuted, fontSize = 10.sp, lineHeight = 15.sp)
+            }
+        } else {
+            Spacer(Modifier.height(18.dp))
+            val videoSize = controller?.videoSize
+            if (videoSize != null && videoSize.width > 0 && videoSize.height > 0) {
+                AndroidView(
+                    factory = { viewContext ->
+                        PlayerView(viewContext).apply {
+                            useController = false
+                            resizeMode = AspectRatioFrameLayout.RESIZE_MODE_FIT
+                            player = controller
+                        }
+                    },
+                    update = { playerView -> playerView.player = controller },
+                    onRelease = { playerView -> playerView.player = null },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(videoSize.width.toFloat() / videoSize.height.toFloat())
+                        .clip(RoundedCornerShape(22.dp)),
+                )
+            } else {
+                Box(Modifier.fillMaxWidth().aspectRatio(1f).padding(horizontal = 13.dp), contentAlignment = Alignment.Center) {
+                    PlayerArtwork(isPlaying = isPlaying, revision = revision)
                 }
             }
-            IconButton(onClick = { controller?.seekToNextMediaItem() }, enabled = controller != null, modifier = Modifier.size(48.dp)) {
-                Icon(Icons.Default.SkipNext, contentDescription = "Next", tint = MosaicPalette.TextSecondary, modifier = Modifier.size(29.dp))
+            Spacer(Modifier.height(17.dp))
+            Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Text(title, color = MosaicPalette.TextPrimary, fontSize = 19.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(artist, color = MosaicPalette.TextSecondary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
             }
-        }
-        Spacer(Modifier.height(12.dp))
-        if (mediaItem == null) {
-            Text(connectionError ?: "The player is ready. Choose a local track or open a media file.", color = MosaicPalette.TextMuted, fontSize = 10.sp, lineHeight = 15.sp)
-            Spacer(Modifier.height(8.dp))
-            Button(onClick = onOpenLibrary, shape = RoundedCornerShape(13.dp)) {
-                Icon(Icons.Default.LibraryMusic, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(Modifier.width(7.dp))
-                Text("Open library", fontSize = 11.sp)
+            Spacer(Modifier.height(14.dp))
+            Slider(
+                value = positionFraction,
+                onValueChange = { draggingPosition = it },
+                onValueChangeFinished = {
+                    draggingPosition?.let { fraction -> controller?.seekTo((duration * fraction).toLong()) }
+                    draggingPosition = null
+                },
+                enabled = controller != null && mediaItem != null,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(formatDuration((duration * positionFraction).toLong()), color = MosaicPalette.TextMuted, fontSize = 9.sp)
+                Text(formatDuration(actualDuration), color = MosaicPalette.TextMuted, fontSize = 9.sp)
             }
-        } else {
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Default.Waves, contentDescription = null, tint = MosaicPalette.Cyan, modifier = Modifier.size(13.dp))
-                Spacer(Modifier.width(7.dp))
-                Text("MOSAIC BACKGROUND SESSION READY", color = MosaicPalette.Cyan, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = .8.sp)
+            Spacer(Modifier.height(9.dp))
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(23.dp)) {
+                IconButton(onClick = { controller?.seekToPreviousMediaItem() }, enabled = controller != null, modifier = Modifier.size(48.dp)) {
+                    Icon(Icons.Default.SkipPrevious, contentDescription = "Previous", tint = MosaicPalette.TextSecondary, modifier = Modifier.size(29.dp))
+                }
+                Surface(
+                    onClick = { if (isPlaying) controller?.pause() else controller?.play() },
+                    enabled = controller != null && mediaItem != null,
+                    color = MosaicPalette.Violet,
+                    shape = CircleShape,
+                    modifier = Modifier.size(66.dp),
+                    shadowElevation = 10.dp,
+                ) {
+                    Box(contentAlignment = Alignment.Center) {
+                        Icon(if (isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow, contentDescription = if (isPlaying) "Pause" else "Play", tint = Color(0xFF100D26), modifier = Modifier.size(32.dp))
+                    }
+                }
+                IconButton(onClick = { controller?.seekToNextMediaItem() }, enabled = controller != null, modifier = Modifier.size(48.dp)) {
+                    Icon(Icons.Default.SkipNext, contentDescription = "Next", tint = MosaicPalette.TextSecondary, modifier = Modifier.size(29.dp))
+                }
             }
+            Spacer(Modifier.height(12.dp))
+            if (mediaItem == null) {
+                Text(connectionError ?: "The player is ready. Choose a local track or open a media file.", color = MosaicPalette.TextMuted, fontSize = 10.sp, lineHeight = 15.sp)
+                Spacer(Modifier.height(8.dp))
+                Button(onClick = onOpenLibrary, shape = RoundedCornerShape(13.dp)) {
+                    Icon(Icons.Default.LibraryMusic, contentDescription = null, modifier = Modifier.size(16.dp))
+                    Spacer(Modifier.width(7.dp))
+                    Text("Open library", fontSize = 11.sp)
+                }
+            } else {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Default.Waves, contentDescription = null, tint = MosaicPalette.Cyan, modifier = Modifier.size(13.dp))
+                    Spacer(Modifier.width(7.dp))
+                    Text("MOSAIC BACKGROUND SESSION READY", color = MosaicPalette.Cyan, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = .8.sp)
+                }
+            }
+    
         }
         Spacer(Modifier.height(22.dp))
         StreamSourcePanel(onPlayStream = onPlayStream)
@@ -1042,12 +1061,6 @@ private fun PlayerScreen(
             onPlayEpisode = onPlayPodcastEpisode,
         )
         Spacer(Modifier.height(22.dp))
-        ExternalPlaybackPanel(
-            hasAccess = hasExternalSessionAccess,
-            sessions = externalSessions,
-            onEnableAccess = onEnableExternalSessionAccess,
-        )
-        Spacer(Modifier.height(14.dp))
         AdSkipPanel(enabled = adSkipEnabled, onEnable = onEnableAdSkip)
     }
 }
