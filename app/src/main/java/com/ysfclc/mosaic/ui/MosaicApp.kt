@@ -129,7 +129,7 @@ import kotlin.math.cos
 import kotlin.math.sin
 
 private enum class Destination(val title: String) {
-    HOME("Home"), LIBRARY("Library"), PLAYER("Player"), SHIELD("Shield"), BROWSER("Browser")
+    HOME("Home"), EXPLORE("Explore"), LIBRARY("Library"), PLAYER("Player"), SHIELD("Shield"), BROWSER("Browser")
 }
 
 @OptIn(ExperimentalAnimationApi::class)
@@ -243,6 +243,20 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
         playback.play(tracks, index)
         destination = Destination.PLAYER
     }
+    val openExternalSource: (String) -> Unit = { source ->
+        val target = when (source.lowercase(Locale.ROOT)) {
+            "youtube" -> "com.google.android.youtube" to "https://www.youtube.com"
+            "spotify" -> "com.spotify.music" to "https://open.spotify.com"
+            "instagram" -> "com.instagram.android" to "https://www.instagram.com"
+            "facebook" -> "com.facebook.katana" to "https://www.facebook.com"
+            else -> "" to "https://www.google.com"
+        }
+        val appIntent = Intent(Intent.ACTION_VIEW, Uri.parse(target.second)).apply {
+            if (target.first.isNotBlank()) setPackage(target.first)
+        }
+        runCatching { context.startActivity(appIntent) }
+            .onFailure { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(target.second))) }
+    }
 
     val currentItem = controller?.currentMediaItem
     val hasNowPlaying = currentItem != null
@@ -286,11 +300,25 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
                         nowPlaying = hasNowPlaying,
                         currentTitle = currentTitle,
                         currentArtist = currentArtist,
+                        externalSessionCount = externalSessions.size,
                         onScan = requestScan,
                         onOpenFile = openFile,
                         onOpenLibrary = { destination = Destination.LIBRARY },
                         onOpenPlayer = { destination = Destination.PLAYER },
+                        onExplore = { destination = Destination.EXPLORE },
+                        onOpenBrowser = { destination = Destination.BROWSER },
+                        onOpenShield = { destination = Destination.SHIELD },
+                        onOpenSource = openExternalSource,
                         onResume = { controller?.play() },
+                    )
+                    Destination.EXPLORE -> ExploreScreen(
+                        onOpenSource = openExternalSource,
+                        onOpenBrowser = { destination = Destination.BROWSER },
+                        onOpenLibrary = { destination = Destination.LIBRARY },
+                        onOpenPlayer = { destination = Destination.PLAYER },
+                        onOpenShield = { destination = Destination.SHIELD },
+                        onScan = requestScan,
+                        onOpenFile = openFile,
                     )
                     Destination.LIBRARY -> LibraryScreen(
                         tracks = tracks,
@@ -429,7 +457,7 @@ private fun MosaicHeader(phaseLabel: String) {
         Spacer(Modifier.width(10.dp))
         Column(verticalArrangement = Arrangement.spacedBy((-2).dp)) {
             Text("MOSAIC", color = MosaicPalette.TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.Black, letterSpacing = 2.4.sp)
-            Text("MEDIA PLAYER · AD SHIELD", color = MosaicPalette.TextMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.25.sp)
+            Text("PERSONAL MEDIA OS", color = MosaicPalette.TextMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.25.sp)
         }
         Spacer(Modifier.weight(1f))
         Surface(
@@ -450,22 +478,27 @@ private fun HomeScreen(
     nowPlaying: Boolean,
     currentTitle: String,
     currentArtist: String,
+    externalSessionCount: Int,
     onScan: () -> Unit,
     onOpenFile: () -> Unit,
     onOpenLibrary: () -> Unit,
     onOpenPlayer: () -> Unit,
+    onExplore: () -> Unit,
+    onOpenBrowser: () -> Unit,
+    onOpenShield: () -> Unit,
+    onOpenSource: (String) -> Unit,
     onResume: () -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 20.dp, end = 20.dp, top = 16.dp, bottom = 22.dp),
-        verticalArrangement = Arrangement.spacedBy(19.dp),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(20.dp),
     ) {
         item {
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("YOUR SPACE, YOUR SOUND", color = MosaicPalette.Cyan, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.8.sp)
-                Text("Media without\nthe boundaries.", color = MosaicPalette.TextPrimary, fontSize = 31.sp, lineHeight = 35.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-.8).sp)
-                Text("One place for the things you choose to hear and watch.", color = MosaicPalette.TextSecondary, fontSize = 13.sp)
+            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Text("YOUR MEDIA, IN ONE FLOW", color = MosaicPalette.Cyan, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.8.sp)
+                Text("Everything you love.\nOne place to play.", color = MosaicPalette.TextPrimary, fontSize = 30.sp, lineHeight = 34.sp, fontWeight = FontWeight.SemiBold, letterSpacing = (-.8).sp)
+                Text("Across your apps, your library and the open web.", color = MosaicPalette.TextSecondary, fontSize = 12.sp)
             }
         }
         item {
@@ -473,33 +506,154 @@ private fun HomeScreen(
                 nowPlaying = nowPlaying,
                 currentTitle = currentTitle,
                 currentArtist = currentArtist,
-                onPrimary = if (nowPlaying) onResume else onOpenLibrary,
+                onPrimary = if (nowPlaying) onResume else onExplore,
                 onSecondary = onOpenPlayer,
             )
         }
         item {
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                MetricCard("LOCAL ITEMS", trackCount.toString().padStart(2, '0'), Icons.Default.LibraryMusic, Modifier.weight(1f))
-                MetricCard("LIBRARY ACCESS", if (hasPermission) "GRANTED" else "NEEDED", Icons.Default.CheckCircle, Modifier.weight(1f), positive = hasPermission)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                SectionHeading("YOUR SOURCES", "Pick up anywhere")
+                Spacer(Modifier.weight(1f))
+                Text("SEE ALL", color = MosaicPalette.Cyan, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, modifier = Modifier.clickable(onClick = onExplore).padding(6.dp))
             }
-        }
-        item {
-            SectionHeading("Quick actions", "Your next move")
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                ActionTile("Index device", "Find local audio", Icons.Default.Refresh, onScan, Modifier.weight(1f), loading = indexing)
-                ActionTile("Open audio", "Choose a file", Icons.Default.FolderOpen, onOpenFile, Modifier.weight(1f))
-            }
-        }
-        item {
-            SectionHeading("Connected foundation", "Phase 01")
             Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                SourceStatusCard("Device library", "Read-only indexing · originals stay in place", "READY", MosaicPalette.Cyan)
-                SourceStatusCard("Background player", "Media session · system controls · queue", "READY", MosaicPalette.Violet)
-                SourceStatusCard("Ad Shield", "Cross-app DNS protection · source-aware rules", "BUILDING", MosaicPalette.Cyan)
+                Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                    SourceLaunchCard("YouTube", "Video · sessions", Icons.Default.PlayArrow, Modifier.weight(1f)) { onOpenSource("YouTube") }
+                    SourceLaunchCard("Spotify", "Music · sessions", Icons.Default.MusicNote, Modifier.weight(1f)) { onOpenSource("Spotify") }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                    SourceLaunchCard("Instagram", "Reels · video", Icons.Default.Waves, Modifier.weight(1f)) { onOpenSource("Instagram") }
+                    SourceLaunchCard("Facebook", "Video · watch", Icons.Default.Language, Modifier.weight(1f)) { onOpenSource("Facebook") }
+                }
             }
         }
         item {
-            Text("MOSAIC is local-first. Your library is indexed, not copied.", color = MosaicPalette.TextMuted, fontSize = 10.sp, lineHeight = 15.sp, modifier = Modifier.padding(top = 2.dp))
+            SectionHeading("YOUR MEDIA SPACE", "Everything stays yours")
+            Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                MetricCard("LOCAL ITEMS", trackCount.toString().padStart(2, '0'), Icons.Default.LibraryMusic, Modifier.weight(1f))
+                MetricCard("EXTERNAL SESSIONS", externalSessionCount.toString().padStart(2, '0'), Icons.Default.Waves, Modifier.weight(1f), positive = externalSessionCount > 0)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                ActionTile("Your library", "Browse local media", Icons.Default.LibraryMusic, onOpenLibrary, Modifier.weight(1f))
+                ActionTile("Open the web", "Find media online", Icons.Default.Language, onOpenBrowser, Modifier.weight(1f))
+            }
+        }
+        item {
+            SectionHeading("QUICK ACCESS", "Your tools, not the whole product")
+            Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                ActionTile("Scan device", if (hasPermission) "Refresh local library" else "Grant audio access", Icons.Default.Refresh, onScan, Modifier.weight(1f), loading = indexing)
+                ActionTile("Open a file", "Play from storage", Icons.Default.FolderOpen, onOpenFile, Modifier.weight(1f))
+            }
+            Spacer(Modifier.height(9.dp))
+            SourceStatusCard(
+                "Ad Shield",
+                "Browser and device-wide DNS protection",
+                "OPEN",
+                MosaicPalette.Cyan,
+                modifier = Modifier.clickable(onClick = onOpenShield),
+            )
+        }
+        item {
+            Text(
+                "MOSAIC is local-first. It never copies or moves your original media. External apps keep ownership of streams MOSAIC cannot lawfully or technically play itself.",
+                color = MosaicPalette.TextMuted,
+                fontSize = 9.sp,
+                lineHeight = 14.sp,
+                modifier = Modifier.padding(top = 1.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ExploreScreen(
+    onOpenSource: (String) -> Unit,
+    onOpenBrowser: () -> Unit,
+    onOpenLibrary: () -> Unit,
+    onOpenPlayer: () -> Unit,
+    onOpenShield: () -> Unit,
+    onScan: () -> Unit,
+    onOpenFile: () -> Unit,
+) {
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 20.dp, vertical = 16.dp),
+        verticalArrangement = Arrangement.spacedBy(17.dp),
+    ) {
+        item {
+            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                Text("EXPLORE", color = MosaicPalette.Cyan, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.8.sp)
+                Text("One space.\nMany sources.", color = MosaicPalette.TextPrimary, fontSize = 29.sp, lineHeight = 33.sp, fontWeight = FontWeight.SemiBold)
+                Text("Open a source, then return to MOSAIC for the controls Android makes available.", color = MosaicPalette.TextSecondary, fontSize = 11.sp, lineHeight = 16.sp)
+            }
+        }
+        item {
+            SectionHeading("STREAMING SERVICES", "Open your existing apps")
+            Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                    SourceLaunchCard("YouTube", "External playback session", Icons.Default.PlayArrow, Modifier.weight(1f)) { onOpenSource("YouTube") }
+                    SourceLaunchCard("Spotify", "External playback session", Icons.Default.MusicNote, Modifier.weight(1f)) { onOpenSource("Spotify") }
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                    SourceLaunchCard("Instagram", "Reels and video", Icons.Default.Waves, Modifier.weight(1f)) { onOpenSource("Instagram") }
+                    SourceLaunchCard("Facebook", "Video and Watch", Icons.Default.Language, Modifier.weight(1f)) { onOpenSource("Facebook") }
+                }
+            }
+        }
+        item {
+            SectionHeading("YOUR OWN SOURCES", "MOSAIC-native playback")
+            Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                SourceLaunchCard("Device library", "Index without moving originals", Icons.Default.LibraryMusic, Modifier.fillMaxWidth(), onClick = onOpenLibrary)
+                SourceLaunchCard("Podcasts & radio", "RSS feeds and HTTPS streams", Icons.Default.Waves, Modifier.fillMaxWidth(), onClick = onOpenPlayer)
+                SourceLaunchCard("Open web media", "Browse and hand off accessible streams", Icons.Default.Language, Modifier.fillMaxWidth(), onClick = onOpenBrowser)
+            }
+            Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                ActionTile("Scan device", "Refresh library", Icons.Default.Refresh, onScan, Modifier.weight(1f))
+                ActionTile("Open file", "Choose local media", Icons.Default.FolderOpen, onOpenFile, Modifier.weight(1f))
+            }
+        }
+        item {
+            SectionHeading("PROTECTION", "Ad Shield")
+            SourceLaunchCard("Ad & tracker shield", "Browser filtering and optional local DNS VPN", Icons.Default.Shield, Modifier.fillMaxWidth(), onClick = onOpenShield)
+        }
+        item {
+            Text("External services remain the owners of their own playback. MOSAIC shows only controls and capabilities that Android actually exposes.", color = MosaicPalette.TextMuted, fontSize = 9.sp, lineHeight = 14.sp)
+        }
+    }
+}
+
+@Composable
+private fun SourceLaunchCard(
+    title: String,
+    detail: String,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit,
+) {
+    Surface(
+        onClick = onClick,
+        modifier = modifier,
+        color = Color(0xA51B2940),
+        shape = RoundedCornerShape(17.dp),
+        border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = .075f)),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 13.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                Modifier.size(37.dp).clip(RoundedCornerShape(11.dp))
+                    .background(Brush.linearGradient(listOf(MosaicPalette.Violet.copy(alpha = .35f), MosaicPalette.Cyan.copy(alpha = .18f)))),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(icon, contentDescription = null, tint = MosaicPalette.Cyan, modifier = Modifier.size(19.dp))
+            }
+            Spacer(Modifier.width(10.dp))
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(3.dp)) {
+                Text(title, color = MosaicPalette.TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(detail, color = MosaicPalette.TextMuted, fontSize = 8.sp, lineHeight = 11.sp, maxLines = 2, overflow = TextOverflow.Ellipsis)
+            }
+            Icon(Icons.Default.PlayArrow, contentDescription = "Open $title", tint = MosaicPalette.Cyan, modifier = Modifier.size(17.dp))
         }
     }
 }
@@ -1313,10 +1467,10 @@ private fun BottomNavigation(selected: Destination, onSelect: (Destination) -> U
     ) {
         val destinations = listOf(
             Triple(Destination.HOME, Icons.Default.Home, "Home"),
+            Triple(Destination.EXPLORE, Icons.Default.Language, "Explore"),
             Triple(Destination.LIBRARY, Icons.Default.LibraryMusic, "Library"),
             Triple(Destination.PLAYER, Icons.Default.Waves, "Player"),
             Triple(Destination.SHIELD, Icons.Default.Shield, "Shield"),
-            Triple(Destination.BROWSER, Icons.Default.Language, "Browser"),
         )
         destinations.forEach { (destination, icon, label) ->
             val active = selected == destination
