@@ -747,7 +747,7 @@ private fun MediaTrackRow(item: MediaItemRecord, index: Int, onClick: () -> Unit
     }
 }
 
-@OptIn(UnstableApi::class)
+@UnstableApi
 @Composable
 private fun PlayerScreen(
     controller: MediaController?,
