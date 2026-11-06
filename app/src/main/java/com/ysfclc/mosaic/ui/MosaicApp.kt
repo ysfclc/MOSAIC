@@ -511,10 +511,10 @@ private fun HomeScreen(
             )
         }
         item {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                SectionHeading("YOUR SOURCES", "Pick up anywhere")
+            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                Text("YOUR SOURCES", color = MosaicPalette.TextPrimary, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.weight(1f))
-                Text("SEE ALL", color = MosaicPalette.Cyan, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, modifier = Modifier.clickable(onClick = onExplore).padding(6.dp))
+                Text("PICK UP ANYWHERE", color = MosaicPalette.TextMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.sp, modifier = Modifier.clickable(onClick = onExplore).padding(6.dp))
             }
             Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
                 Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
@@ -762,8 +762,8 @@ private fun SectionHeading(title: String, eyebrow: String) {
 }
 
 @Composable
-private fun SourceStatusCard(title: String, subtitle: String, status: String, accent: Color) {
-    Surface(color = MosaicPalette.Surface.copy(alpha = .86f), shape = RoundedCornerShape(15.dp), border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = .055f))) {
+private fun SourceStatusCard(title: String, subtitle: String, status: String, accent: Color, modifier: Modifier = Modifier) {
+    Surface(modifier = modifier, color = MosaicPalette.Surface.copy(alpha = .86f), shape = RoundedCornerShape(15.dp), border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = .055f))) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 13.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(7.dp).clip(CircleShape).background(accent))
             Spacer(Modifier.width(11.dp))
