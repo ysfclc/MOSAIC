@@ -261,7 +261,7 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
     val currentItem = controller?.currentMediaItem
     val hasNowPlaying = currentItem != null
     val activeExternalSession = externalSessions.firstOrNull { it.isPlaying } ?: externalSessions.firstOrNull()
-    val preferExternalMiniPlayer = activeExternalSession != null && controller?.isPlaying != true
+    val preferExternalMiniPlayer = activeExternalSession != null && (currentItem == null || (activeExternalSession.isPlaying && controller?.isPlaying != true))
     val currentTitle = currentItem?.mediaMetadata?.title?.toString().orEmpty()
     val currentArtist = currentItem?.mediaMetadata?.artist?.toString().orEmpty()
 
@@ -962,7 +962,7 @@ private fun PlayerScreen(
             onEnableAccess = onEnableExternalSessionAccess,
         )
         Spacer(Modifier.height(18.dp))
-        if (mediaItem == null && externalSessions.isNotEmpty()) {
+        if (externalSessions.isNotEmpty() && (mediaItem == null || (externalSessions.any { it.isPlaying } && !isPlaying))) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(vertical = 26.dp),
                 horizontalAlignment = Alignment.CenterHorizontally,
