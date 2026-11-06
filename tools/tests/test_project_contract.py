@@ -96,6 +96,28 @@ class ProjectContractTests(unittest.TestCase):
         self.assertIn("setAudioAttributes(AudioAttributes.DEFAULT", source)
         self.assertIn("setWakeMode(C.WAKE_MODE_LOCAL)", source)
 
+    def test_browser_direct_media_handoff_is_https_only_and_native(self):
+        browser = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/browser/BrowserScreen.kt").read_text(encoding="utf-8")
+        app = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/MosaicApp.kt").read_text(encoding="utf-8")
+        self.assertIn("querySelectorAll('audio,video')", browser)
+        self.assertIn("PlayableStreamAddress.normalize(candidate)", browser)
+        self.assertIn("No direct HTTPS media URL found", browser)
+        self.assertIn("onPlayMedia = { rawAddress, mediaTitle, mediaType ->", app)
+        self.assertIn('playback.playUri(uri, mediaTitle.ifBlank { "Web media" }, mimeType)', app)
+
+    def test_podcast_feed_subscriptions_are_saved_on_device(self):
+        app = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/MosaicApp.kt").read_text(encoding="utf-8")
+        self.assertIn('getSharedPreferences("mosaic_podcast_feeds"', app)
+        self.assertIn('putStringSet("saved_urls"', app)
+        self.assertIn("savedFeeds.forEach", app)
+        self.assertIn("onRemoveFeed(savedFeed)", app)
+
+    def test_ci_publishes_apk_as_private_prerelease_when_artifact_storage_is_full(self):
+        workflow = (ROOT / ".github/workflows/build-apk.yml").read_text(encoding="utf-8")
+        self.assertIn("gh release create", workflow)
+        self.assertIn("--prerelease", workflow)
+        self.assertIn("continue-on-error: true", workflow)
+
     def test_video_is_not_advertised_before_video_surface_exists(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn("Phase 1 deliberately exposes audio playback only", readme)
