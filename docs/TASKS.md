@@ -44,13 +44,13 @@ The complete north star is [docs/MOSAIC_PRODUCT_VISION.md](MOSAIC_PRODUCT_VISION
 | P2-002 | Persist playback history, queue and resume positions | TODO | Process-death and reboot tests |
 | P2-003 | Add incremental MediaStore sync and stable identity rules | TODO | No duplicate copies; preserve original files |
 | P2-004 | Add collections, bookmarks, sorting and filters | TODO | Durable library UX |
-| P2-005 | Add RSS podcast adapter | TODO | Feed validation, episode metadata and resume |
-| P2-006 | Add internet radio adapter and reconnect policy | TODO | MIME/format detection and ICY metadata |
+| P2-005 | Add RSS podcast adapter | IN PROGRESS | Player currently loads bounded HTTPS RSS 2.0 / Atom feeds, parses accessible HTTPS enclosures, queues episodes in Media3 and saves feed URLs locally; a dedicated source adapter, durable episode identity/resume and device acceptance remain open |
+| P2-006 | Add internet radio adapter and reconnect policy | IN PROGRESS | Player accepts validated HTTPS stream URLs and Media3 HLS is included; station discovery, ICY metadata, reconnect policy and device acceptance remain open |
 | P2-007 | Add offline/download manager for permitted sources | TODO | Terms/capability checked per source |
 | P2-008 | Add sleep timer and playback speed controls | TODO | Shared Media3 session |
 | P2-009 | Add Room migrations and process-death tests | TODO | Migration coverage |
 | P2-010 | Add reduced-motion/accessibility settings and robust dynamic text states | TODO | System animation settings and readable layouts |
-| P2-011 | Add a native video surface, orientation handling and picture-in-picture | TODO | Native sources only where supported |
+| P2-011 | Add a native video surface, orientation handling and picture-in-picture | IN PROGRESS | A Media3 PlayerView surface exists for supported direct web video; orientation handling, picture-in-picture and device acceptance remain open |
 
 ## Phase 3 — Browser, ad control and two-way media bridge
 
@@ -59,12 +59,12 @@ The complete north star is [docs/MOSAIC_PRODUCT_VISION.md](MOSAIC_PRODUCT_VISION
 | P3-001 | Browser shell, navigation and user-controllable ad/tracker shield | IN PROGRESS | Basic WebView navigation and conservative third-party host filter exist; live site/device matrix pending |
 | P3-002 | Persistent tabs, bookmarks, downloads and browser session restore | TODO | Room-backed browser session state |
 | P3-003 | Maintainable ad/tracker filter lists, allowlist and diagnostics | TODO | Source-specific rules, rule provenance, false-positive handling and user controls |
-| P3-004 | Browser media detection and native background-playback handoff | TODO | Investigate accessible media and route supported sources into shared Media3 player |
+| P3-004 | Browser media detection and native background-playback handoff | IN PROGRESS | Browser detects visible direct HTTPS HTML5 audio/video sources and can hand the validated URL to the shared Media3 player; DRM, MSE, blob, cookie/header-dependent streams and physical-device behavior remain unverified |
 | P3-005 | Share-to-MOSAIC inbox (links, files and metadata) | IN PROGRESS | Android text/plain SEND target opens shared URL/text in Browser; file inbox and durable capture still pending |
 | P3-006 | MOSAIC-to-external share/open handoff | IN PROGRESS | Browser can share current page link; file/content handoff still pending |
 | P3-007 | Move external MediaSession controls into the primary Player | IN PROGRESS | Moved from Browser into Player; app labels, play/pause, previous/next and seek appear only when the source advertises support. CI build passed in run 42034925797; Redmi real-app verification remains pending. External control is not native stream playback |
 | P3-008 | Device-wide DNS-only VPN Ad Shield and user controls | IN PROGRESS | First implementation is CI-verified in run 42051683244. Added an in-app DNS self-test for normal resolution, blocked-host interception and allowlist override, plus docs/AD_SHIELD_DEVICE_ACCEPTANCE.md. Source verification, unit tests, lint, APK assembly and signing verification passed in run 42078014230. Follow-up hardening now requires successful underlying-network socket binding, pins UDP replies to the selected resolver, validates DNS transaction ID/opcode/question/response flag, and clears stale underlying-network selections; all source verification, unit tests, lint, APK assembly, checksum and signing checks passed in run 42094128331. Redmi checks for upstream loss/recovery, unrelated-app traffic, VPN stop/revoke, notification and lock-screen behavior remain pending |
-| P3-009 | Cross-source background playback capability matrix | TODO | Investigate YouTube, Spotify, Facebook, Instagram, browser media, RSS, radio and direct URLs; record native/delegated paths and evidence |
+| P3-009 | Cross-source background playback capability matrix | IN PROGRESS | Matrix exists; update it to distinguish native HTTPS/HLS/RSS and direct-browser handoff from delegated external sessions, and record per-source Redmi evidence before marking support |
 | P3-010 | Native playback adapters for accessible external media | IN PROGRESS | Player accepts validated HTTPS audio/HLS URLs; bounded HTTPS RSS 2.0 / Atom feeds are parsed securely and episode enclosures enter MOSAIC's Media3 queue. Feed URLs persist locally. Browser detects direct HTTPS HTML5 audio/video URLs and hands them to the native player; a Media3 PlayerView renders video frames. DRM, MSE/blob and protected streams remain unsupported. Integrated browser/video slice plus Media3 lint opt-in regression check passed source verification, Python contract tests, Android unit tests, lint, APK assembly and stable signer verification in run 42162337225; private prerelease #157 published. Redmi source/screen-off acceptance remains pending; HTTP-only stations remain excluded |
 | P3-011 | Cross-source background playback acceptance | TODO | Test each source with screen off, app switching, lock screen, notification, Bluetooth/headset and queue/control behavior |
 | P3-012 | DNS packet parser and IPv4 UDP response codec | DONE | Unit tests cover IPv4 UDP DNS question parsing, malformed/non-DNS packets, exact suffix matching, allowlist overrides, NXDOMAIN response content and IPv4 header checksum; passed in run 42051683244 |
@@ -81,7 +81,7 @@ The complete north star is [docs/MOSAIC_PRODUCT_VISION.md](MOSAIC_PRODUCT_VISION
 |---|---|---|---|
 | P4-001 | YouTube source integration and background-playback/ad-filter feasibility | TODO | Research current APIs, browser/native paths, Android behavior and ad-filter compatibility; test rather than assume exclusions |
 | P4-002 | Spotify source integration and background-playback/ad-filter feasibility | TODO | Research official SDKs, browser/native paths, Android behavior and ad-filter compatibility; distinguish remote control from native audio playback |
-| P4-003 | Provider capability matrix and delegated-player UI | IN PROGRESS | Matrix documented; UI labels/implementation pending |
+| P4-003 | Provider capability matrix and delegated-player UI | IN PROGRESS | Generic Android MediaSession controls and clear external-session Player labels exist; source-specific integrations and real-app/Redmi acceptance remain pending |
 | P4-004 | Source policy, technical feasibility and integration regression review | TODO | Re-check current platform/provider terms and Android capabilities without preemptively narrowing the product goal |
 
 ## Phase 5 — Local intelligence
@@ -115,7 +115,7 @@ The complete north star is [docs/MOSAIC_PRODUCT_VISION.md](MOSAIC_PRODUCT_VISION
 
 MOSAIC has two primary pillars: **cross-source background media playback/control** and **broad ad/tracker blocking across apps and websites**. Requested sources include YouTube, Spotify, Facebook, Instagram and other apps/sites, plus podcasts, radio, direct streams and local media. The browser is one supporting route, not the product. Copy/paste and clipboard history are not the founding purpose.
 
-Current implementation is a foundation only: local audio plays through Media3; a basic browser host filter exists; external Android MediaSession discovery/control exists but does not transfer audio into MOSAIC. Native background playback from the named third-party sources and cross-app ad filtering are not yet delivered.
+Current implementation remains a foundation, but it is broader than local audio: the Player accepts validated HTTPS streams (with HLS support), securely loads RSS 2.0 / Atom podcast feeds and queues accessible HTTPS enclosures, and Browser can hand directly exposed HTTPS HTML5 audio/video to the shared Media3 player. The Player also exposes delegated Android MediaSession controls, and Ad Shield has an opt-in DNS-only local VPN implementation. These capabilities are not yet accepted on the Redmi. Native playback from named third-party apps remains unproven, and device-wide DNS filtering is limited and not yet device-accepted. The browser filter still contains legacy blanket provider exemptions that conflict with ADR-014/015; P3-015 remains open.
 
 ## Current blockers
 
