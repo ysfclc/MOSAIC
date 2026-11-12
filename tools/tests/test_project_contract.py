@@ -69,6 +69,8 @@ class ProjectContractTests(unittest.TestCase):
         self.assertIn("packetLength > packet.size", codec)
         self.assertIn("if (length < 0) break", service)
         self.assertIn("DnsPacketCodec.isMatchingResponse(query, answer)", service)
+        self.assertIn("AdShieldState.setRunning(this, false)", service)
+        self.assertLess(service.index("AdShieldState.setRunning(this, false)"), service.index("VpnService.prepare(this)"))
         self.assertIn("rejectsPacketLengthOutsideBackingBuffer", tests)
         self.assertIn("rejectsFragmentedAndInconsistentUdpPackets", tests)
 
