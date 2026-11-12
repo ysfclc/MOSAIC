@@ -5,10 +5,10 @@ import java.net.URI
 /**
  * Source-aware request filter for MOSAIC Browser.
  *
- * Known third-party ad/tracker hosts are filtered on provider pages too. The
- * only temporary compatibility exception is Google's ad infrastructure on
- * YouTube pages, which can participate in YouTube player delivery. This is
- * deliberately narrower than exempting an entire provider page or its assets.
+ * Known third-party ad/tracker hosts are filtered on provider pages too.
+ * The temporary Google ad-infrastructure compatibility exception applies only
+ * when the top-level page or request Referer belongs to YouTube. It does not
+ * exempt Spotify or unrelated third-party ad/tracker requests.
  */
 object AdBlockPolicy {
     private val blockedDomains = setOf(
