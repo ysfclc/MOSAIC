@@ -160,3 +160,5 @@
 
 - Ad Shield startup now clears stale persisted `running` state before VPN permission, Private DNS and tunnel-establishment checks, preventing a failed restart from leaving the UI stuck on a false active state.
 - Browser policy documentation now accurately describes the YouTube top-level/Referer compatibility scope rather than implying a top-level-only exception.
+
+- Vercel Sandbox diagnostics: the only existing `mosaic-apk-builder` snapshot is 829,834,562 bytes; the sandbox cannot clone the private repository without credentials and has no Java/Gradle toolchain. A new V4 Sandbox was rejected with 402 because Hobby snapshot storage is over limit. No snapshot was deleted and no paid upgrade was made.
