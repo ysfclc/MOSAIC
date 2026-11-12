@@ -119,7 +119,8 @@ class AdShieldVpnService : VpnService() {
         try {
             while (isRunning) {
                 val length = input.read(buffer)
-                if (length <= 0) continue
+                if (length < 0) break
+                if (length == 0) continue
                 val query = DnsPacketCodec.parseIpv4UdpQuery(buffer, length) ?: continue
                 val question = DnsPacketCodec.parseQuestion(query.dnsMessage) ?: continue
 
@@ -211,8 +212,14 @@ class AdShieldVpnService : VpnService() {
                 AdShieldState.setError(this, "System DNS timed out. Check the network or stop Ad Shield.")
                 null
             } else {
-                response.get().also { answer ->
-                    if (answer != null) AdShieldState.setError(this, null)
+                val answer = response.get()
+                when {
+                    answer == null -> null
+                    !DnsPacketCodec.isMatchingResponse(query, answer) -> {
+                        AdShieldState.setError(this, "System DNS returned a mismatched response.")
+                        null
+                    }
+                    else -> answer.also { AdShieldState.setError(this, null) }
                 }
             }
         } catch (error: Exception) {
