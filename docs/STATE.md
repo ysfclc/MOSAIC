@@ -61,7 +61,7 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 **Done this session**
 - Confirmed the Vercel `mosaic-apk` project is linked to private repository `ysfclc/MOSAIC`; explicitly enabled Preview deployments and confirmed no live or Preview APK deployment exists.
 - Hardened the source-aware Browser filter: only HTTP(S) requests are considered, host suffix boundaries are tested, and lookalike YouTube Referer hosts cannot activate the compatibility exception.
-- Hardened DNS Ad Shield packet handling: invalid backing-buffer lengths are rejected, the packet reader exits on EOF, and system-resolver replies must match the original DNS transaction/question.
+- Hardened DNS Ad Shield packet handling: invalid backing-buffer lengths are rejected, the packet reader exits on EOF, stale persisted running state is cleared before startup checks, and system-resolver replies must match the original DNS transaction/question.
 - Implemented the first P3-015 source-aware Browser filtering slice: removed blanket provider-page exemptions, blocked known third-party ad/tracker hosts on provider pages, and added a narrow YouTube-only Google player compatibility allowlist that recognizes top-level and embedded-frame Referer context.
 - Added deterministic Android SDK license acceptance to the build script.
 - Saved Vercel project build settings (build command, install command, output directory and Node 22).
