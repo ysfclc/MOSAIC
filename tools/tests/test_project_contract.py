@@ -49,6 +49,19 @@ class ProjectContractTests(unittest.TestCase):
         self.assertIn("object AdBlockPolicy", policy)
         self.assertIn("shouldBlock", policy)
 
+    def test_browser_filter_uses_source_and_referrer_context(self):
+        browser = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/browser/BrowserScreen.kt").read_text(encoding="utf-8")
+        policy = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/browser/AdBlockPolicy.kt").read_text(encoding="utf-8")
+        tests = (ROOT / "app/src/test/java/com/ysfclc/mosaic/ui/browser/AdBlockPolicyTest.kt").read_text(encoding="utf-8")
+        self.assertIn("request.requestHeaders.entries", browser)
+        self.assertIn('it.key.equals("Referer", ignoreCase = true)', browser)
+        self.assertIn("topHostRef.get(), referrerUrl", browser)
+        self.assertIn("val contextHosts = listOfNotNull", policy)
+        self.assertIn("youtubePlayerCompatibilityDomains", policy)
+        self.assertNotIn("isProtectedProviderHost", policy)
+        self.assertIn("matchesDomainBoundariesAndNormalizesRequestHosts", tests)
+        self.assertIn("doesNotTrustLookalikeYoutubeReferrersForCompatibility", tests)
+
     def test_external_media_controls_require_explicit_notification_access(self):
         manifest = (ROOT / "app/src/main/AndroidManifest.xml").read_text(encoding="utf-8")
         bridge = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/browser/ExternalMediaSessionBridge.kt").read_text(encoding="utf-8")
