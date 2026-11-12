@@ -157,3 +157,6 @@
 - Added Kotlin tests for out-of-range packet lengths, truncated buffers, fragmented IPv4 packets and inconsistent UDP lengths.
 - Added Python source-contract checks for the tunnel EOF and upstream response guards.
 - Tests are committed but not executed: GitHub Actions preflight still fails before job steps; Vercel's deployment API quota and Hobby Sandbox snapshot-storage limit block a Vercel build in this session.
+
+- Ad Shield startup now clears stale persisted `running` state before VPN permission, Private DNS and tunnel-establishment checks, preventing a failed restart from leaving the UI stuck on a false active state.
+- Browser policy documentation now accurately describes the YouTube top-level/Referer compatibility scope rather than implying a top-level-only exception.
