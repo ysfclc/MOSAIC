@@ -1,5 +1,5 @@
 # State Ledger
-_Last updated: 2026-11-12 by ChatGPT GPT-6 — session 2 (Vercel APK build pipeline)_
+_Last updated: 2026-11-12 by ChatGPT GPT-6 — session 3 (source-aware filtering hardening and Vercel deployment diagnostics)_
 
 ## 1. Product snapshot
 MOSAIC is a local-first native Android personal media operating system. It unifies discovery, source access, playback continuity, a durable personal library and ad/tracker protection across local files, browser media, streams, podcasts/radio and third-party apps. The two primary pillars are cross-source background playback/control and broad ad/tracker blocking. Completion requires source-by-source real-device evidence, honest playback-ownership labels, measured filtering coverage/limits and a reliable unified media experience; CI success alone is not product acceptance. Canonical north star: `docs/MOSAIC_PRODUCT_VISION.md`; narrative requirements: `docs/PRODUCT_SPEC.md`; requirement/test traceability: `docs/SPEC.md`; architecture constraints: `docs/DECISIONS.md`.
@@ -14,7 +14,7 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 | Browser | 🟡 partial | Supporting WebView and direct HTTPS HTML5 audio/video handoff to Media3 exist; DRM/MSE/blob/cookie/header limitations remain; Browser-owned background playback not accepted. |
 | External media sessions | 🟡 partial | Explicit notification-listener access discovers Android sessions and exposes advertised actions; source app owns the stream. Named-app/Redmi behavior remains unverified. |
 | YouTube ad-skip helper | 🟡 partial | Opt-in YouTube-package-scoped accessibility helper is present and contract-checked; exact label variants/false positives require on-device testing. |
-| Ad Shield browser filtering | 🟡 partial | Removed whole-page YouTube/Spotify exemptions. Known third-party ad/tracker domains are blocked on provider pages; Google ad infrastructure is blocked by default with a narrow YouTube top-level-page or embedded-frame Referer compatibility exception. New policy tests are committed but not yet executed; Redmi compatibility acceptance remains open. |
+| Ad Shield browser filtering | 🟡 partial | Removed whole-page YouTube/Spotify exemptions. Known third-party ad/tracker domains are blocked on provider pages; Google ad infrastructure is blocked by default with a narrow YouTube top-level-page or embedded-frame Referer compatibility exception. New policy tests cover HTTP(S)-only filtering, domain boundaries, lookalike Referer rejection and provider compatibility, but are not yet executed; Redmi compatibility acceptance remains open. |
 | Ad Shield device DNS filter | 🟡 partial | Opt-in DNS-only local VPN, allowlist, status, notification Stop and DNS self-test exist; IPv4 UDP only, lifecycle/routing unit coverage is incomplete, and Redmi acceptance is pending. |
 | Named provider integrations | ⚪ not started / 🟡 partial | YouTube/Spotify/Facebook/Instagram remain targets; generic delegated MediaSession control exists, not native audio ingestion. |
 | Durable unified Library | ⚪ not started | Read-only local audio index exists; durable media identity, history, collections, resume/migrations remain TODO. |
@@ -28,7 +28,7 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 - Native stream/feed and Browser handoff — source implementations and tests exist; real streams, feeds and browser media still need device acceptance.
 
 ## 4. Known gaps & stubs
-- Browser filter policy now blocks known third-party ad/tracker hosts on YouTube/Spotify pages and blocks Google ad infrastructure by default. Only YouTube top-level pages retain a narrow Google player compatibility allowlist; verify on-device before narrowing it further.
+- Browser filter policy now blocks known third-party ad/tracker hosts on YouTube/Spotify pages and blocks Google ad infrastructure by default. Only YouTube top-level pages or embedded-frame Referer contexts retain a narrow Google player compatibility allowlist; verify on-device before narrowing it further.
 - Ad Shield service lifecycle, VPN revocation, ordinary-traffic routing, upstream timeout/recovery and named-app compatibility do not have complete unit coverage; physical acceptance checklist `docs/AD_SHIELD_DEVICE_ACCEPTANCE.md` is unsigned.
 - IPv4 UDP DNS interception does not cover DoH/custom DNS/IPv6 or same-host/in-stream advertising.
 - External YouTube/Spotify/Facebook/Instagram native playback is not demonstrated; external MediaSession control remains delegated to the source app.
@@ -48,8 +48,8 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 - Vercel project: `mosaic-apk` (`prj_17TuuD9O7qZQcjqJoPTxlydWt0sV`), linked to `ysfclc/MOSAIC`; production branch is `main`. No production deployment was created in this session.
 
 ## 6. Next three increments
-1. Validate the first Vercel Preview build end-to-end: source checks, Python tests, Android unit tests, lint, APK assembly, signing fingerprint, checksum and deployed download.
-2. Run the new P3-015 Browser policy tests and perform Redmi YouTube/Spotify compatibility checks; adjust the narrow Google-player allowlist only with evidence.
+1. Trigger and validate a Vercel Preview build from the current branch after the deployment API quota clears; confirm the build runs source checks, Python tests, Android unit tests, lint, APK assembly, signing fingerprint and checksum.
+2. Run the expanded P3-015 Browser policy tests in the Vercel build and perform Redmi YouTube/Spotify compatibility checks; adjust the narrow Google-player allowlist only with evidence.
 3. Complete the Redmi Note 12 Pro 5G acceptance for local audio, HTTPS/HLS, podcast feed, Browser handoff, YouTube/Spotify/social sessions and Ad Shield; record per-source outcomes in `docs/PROVIDER_CAPABILITY_MATRIX.md` and `docs/AD_SHIELD_DEVICE_ACCEPTANCE.md`.
 
 ## 7. Open questions for the human
@@ -58,7 +58,8 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 ## Session Handoff
 
 **Done this session**
-- Added the Vercel-hosted Android APK build path and created Vercel project mosaic-apk, linked to private repository ysfclc/MOSAIC.
+- Confirmed the Vercel `mosaic-apk` project is linked to private repository `ysfclc/MOSAIC`; inspected deployment history and confirmed there is no live or Preview APK deployment.
+- Hardened the source-aware Browser filter: only HTTP(S) requests are considered, host suffix boundaries are tested, and lookalike YouTube Referer hosts cannot activate the compatibility exception.
 - Implemented the first P3-015 source-aware Browser filtering slice: removed blanket provider-page exemptions, blocked known third-party ad/tracker hosts on provider pages, and added a narrow YouTube-only Google player compatibility allowlist that recognizes top-level and embedded-frame Referer context.
 - Added deterministic Android SDK license acceptance to the build script.
 - Saved Vercel project build settings (build command, install command, output directory and Node 22).
@@ -69,6 +70,7 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 - docs/VERCEL_APK_BUILD.md — build flow, artifact contract and release boundary.
 - docs/STATE.md, docs/CHANGELOG.md, README.md — updated build target and continuity.
 - AdBlockPolicy.kt, AdBlockPolicyTest.kt, BrowserScreen.kt — source-aware filter behavior, regression tests and truthful Browser status copy.
+- tools/tests/test_project_contract.py — source/Referer integration contract.
 - docs/SPEC.md, docs/TASKS.md, docs/PROVIDER_CAPABILITY_MATRIX.md — updated requirement evidence and P3-015 status.
 
 **Verified**
@@ -76,12 +78,13 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 - Deployment dpl_AswuWhBgWLhh1NT4nid8Pb5Eh23X was canceled before build because its metadata unexpectedly reported production for the continuity branch. It never went live and produced no APK.
 - A direct Vercel deployment API request hit the Hobby team's api-deployments-free-per-day limit (100/day; retry after 24 hours). Vercel Sandbox v3 starts a 5-minute session, but Java/Gradle are not preinstalled; sandbox timeout extension attempts returned 400. No APK was built.
 - The Android build script now uses a finite 100-response SDK license input to avoid yes/SIGPIPE failure with pipefail.
-- P3-015 tests were authored and source-level policy reviewed, but no Kotlin/Gradle test execution is claimed because the Vercel deployment quota and GitHub Actions runner issue remain unresolved.
-- Latest GitHub Actions branch run #192 (commit 8fce7d8bb800eed12e9e0b133ff06c8ae56ad22b) failed in the preflight job before any build/test steps ran; downstream Android jobs were skipped. No branch CI pass is claimed.
+- P3-015 Kotlin tests and the Python Browser integration contract were expanded and source-reviewed; none were executed because the Vercel deployment quota and GitHub Actions runner issue remain unresolved.
+- Confirmed the repository has no standalone `docs/RISKS.md`; the security baseline is `docs/SECURITY.md` and project risks are recorded in this ledger.
+- Latest GitHub Actions branch run #192 (commit 8fce7d8bb800eed12e9e0b133ff06c8ae56ad22b) failed in the preflight job before any build/test steps ran; downstream Android jobs were skipped. The job had no logs/steps, consistent with runner provisioning failure. No branch CI pass is claimed.
 
 **Not done / next**
-1. Restore a runnable Vercel build path after the deployment quota clears, ensure the target is Preview, and execute the new P3-015 unit tests as part of the Android build.
-2. Fix any build errors and verify APK signature, checksum and deployed download.
+1. Trigger a Preview deployment through the linked Git integration after the deployment quota clears; confirm target=preview before inspecting logs.
+2. Fix build errors, run the expanded source-aware filter tests, and verify APK signature, checksum and deployed download.
 3. Validate Browser YouTube/Spotify compatibility and in-place APK installation on the Redmi Note 12 Pro 5G.
 
 **Open questions**
