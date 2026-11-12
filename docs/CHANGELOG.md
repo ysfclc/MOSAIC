@@ -147,3 +147,13 @@
 - Confirmed `mosaic-apk` is linked to the private MOSAIC repository. Deployment history still contains only the canceled production-target deployment; no Preview build exists and no APK is available.
 - GitHub Actions run #192 failed before any job steps/logs were created; Android tests/build were skipped. No test/build success is claimed.
 - The repository has no standalone `docs/RISKS.md`; `docs/SECURITY.md` and the State Ledger are the current security/risk references.
+
+
+## 2026-11-12 — Ad Shield DNS reliability increment
+
+- Hardened the IPv4 DNS packet parser against caller-supplied lengths larger than the backing buffer.
+- The VPN packet loop now exits on tunnel EOF instead of repeatedly spinning on a negative read result.
+- Android `DnsResolver.rawQuery` responses are checked against the original transaction ID, response flag, opcode, question count and question bytes before being forwarded to the TUN interface. Mismatched responses fail closed with SERVFAIL.
+- Added Kotlin tests for out-of-range packet lengths, truncated buffers, fragmented IPv4 packets and inconsistent UDP lengths.
+- Added Python source-contract checks for the tunnel EOF and upstream response guards.
+- Tests are committed but not executed: GitHub Actions preflight still fails before job steps; Vercel's deployment API quota and Hobby Sandbox snapshot-storage limit block a Vercel build in this session.
