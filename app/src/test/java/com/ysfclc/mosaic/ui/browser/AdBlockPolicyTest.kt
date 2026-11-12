@@ -55,6 +55,30 @@ class AdBlockPolicyTest {
     }
 
     @Test
+    fun matchesDomainBoundariesAndNormalizesRequestHosts() {
+        assertTrue(AdBlockPolicy.shouldBlock("https://WWW.TABOOLA.COM./ad.js", "news.example"))
+        assertFalse(AdBlockPolicy.shouldBlock("https://taboola.com.attacker.example/ad.js", "news.example"))
+        assertFalse(AdBlockPolicy.shouldBlock("https://nottaboola.com/ad.js", "news.example"))
+    }
+
+    @Test
+    fun onlyFiltersHttpAndHttpsRequests() {
+        assertFalse(AdBlockPolicy.shouldBlock("ftp://taboola.com/ad.js", "news.example"))
+        assertFalse(AdBlockPolicy.shouldBlock("file:///taboola.com/ad.js", "news.example"))
+    }
+
+    @Test
+    fun doesNotTrustLookalikeYoutubeReferrersForCompatibility() {
+        assertTrue(
+            AdBlockPolicy.shouldBlock(
+                "https://securepubads.g.doubleclick.net/tag",
+                "news.example",
+                "https://youtube.com.attacker.example/embed/abc",
+            ),
+        )
+    }
+
+    @Test
     fun allowsOrdinaryContentAndUnknownHosts() {
         assertFalse(AdBlockPolicy.shouldBlock("https://cdn.example.com/app.js", "news.example"))
     }
