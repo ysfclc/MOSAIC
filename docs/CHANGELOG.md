@@ -121,3 +121,8 @@
 
 - Latest branch workflow run #189 for commit `4961715e547ae7be2d38191e7eaf4ef2988816d8` failed in the preflight job before any steps ran; Android test/build jobs were skipped. The new Kotlin policy tests remain unexecuted.
 - Hoisted the YouTube page-domain compatibility set to a single immutable value rather than allocating it on each intercepted request.
+
+
+## 2026-11-12 — CI preflight retry
+
+- Latest branch workflow run #190 for commit `8cd744da9c8636f4478244868aec3415986b5d94` again failed in the preflight job with no steps; Android build/test jobs were skipped. The source-aware Kotlin tests remain unexecuted.

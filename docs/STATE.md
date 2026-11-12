@@ -77,7 +77,7 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 - A direct Vercel deployment API request hit the Hobby team's api-deployments-free-per-day limit (100/day; retry after 24 hours). Vercel Sandbox v3 starts a 5-minute session, but Java/Gradle are not preinstalled; sandbox timeout extension attempts returned 400. No APK was built.
 - The Android build script now uses a finite 100-response SDK license input to avoid yes/SIGPIPE failure with pipefail.
 - P3-015 tests were authored and source-level policy reviewed, but no Kotlin/Gradle test execution is claimed because the Vercel deployment quota and GitHub Actions runner issue remain unresolved.
-- Latest GitHub Actions branch run #189 (commit 4961715e547ae7be2d38191e7eaf4ef2988816d8) failed in the preflight job before any build/test steps ran; downstream Android jobs were skipped. No branch CI pass is claimed.
+- Latest GitHub Actions branch run #190 (commit 8cd744da9c8636f4478244868aec3415986b5d94) failed in the preflight job before any build/test steps ran; downstream Android jobs were skipped. No branch CI pass is claimed.
 
 **Not done / next**
 1. Restore a runnable Vercel build path after the deployment quota clears, ensure the target is Preview, and execute the new P3-015 unit tests as part of the Android build.
