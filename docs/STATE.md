@@ -1,5 +1,5 @@
 # State Ledger
-_Last updated: 2026-11-12 by ChatGPT GPT-6 — session 1 (continuity bootstrap and reconciliation)_
+_Last updated: 2026-11-12 by ChatGPT GPT-6 — session 2 (Vercel APK build pipeline)_
 
 ## 1. Product snapshot
 MOSAIC is a local-first native Android personal media operating system. It unifies discovery, source access, playback continuity, a durable personal library and ad/tracker protection across local files, browser media, streams, podcasts/radio and third-party apps. The two primary pillars are cross-source background playback/control and broad ad/tracker blocking. Completion requires source-by-source real-device evidence, honest playback-ownership labels, measured filtering coverage/limits and a reliable unified media experience; CI success alone is not product acceptance. Canonical north star: `docs/MOSAIC_PRODUCT_VISION.md`; narrative requirements: `docs/PRODUCT_SPEC.md`; requirement/test traceability: `docs/SPEC.md`; architecture constraints: `docs/DECISIONS.md`.
@@ -19,7 +19,7 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 | Named provider integrations | ⚪ not started / 🟡 partial | YouTube/Spotify/Facebook/Instagram remain targets; generic delegated MediaSession control exists, not native audio ingestion. |
 | Durable unified Library | ⚪ not started | Read-only local audio index exists; durable media identity, history, collections, resume/migrations remain TODO. |
 | Documentation / traceability | 🟡 partial | Added this ledger and 11-row `docs/SPEC.md`; reconciled task/matrix/spec and updated README/legacy handoff. Branch CI has not executed tests/build due preflight runner assignment failure. |
-| CI / build pipeline | 🟡 partial | Main run #177 passed all direct-build checks. Branch runs #178–#183 failed before runner assignment (`runner_id: 0`, zero steps); Android build/test jobs were skipped. Do not treat branch documentation as CI-verified. |
+| CI / build pipeline | 🟡 partial | Vercel project `mosaic-apk` is linked to this private repository; Vercel build script/config are added on this branch. First Preview build is pending; no Vercel APK is verified yet. GitHub Actions runner preflight remains independently blocked. |
 
 ## 3. Currently in flight
 - Continuity and requirements reconciliation — complete as a documentation change on branch `continuity/state-ledger-bootstrap-2026-11-12`; requires a successful CI run before merge.
@@ -44,10 +44,11 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 - Lint: `./gradlew :app:lintDebug`.
 - Python checks: `python3 tools/verify_source.py` and `python3 -m unittest discover -s tools/tests -v`.
 - Expected APK: `app/build/outputs/apk/debug/app-debug.apk`. CI APKs use a persistent development signing identity, not a production release key.
-- This session's `/testbed` mount was empty; no local checkout, Gradle build or local test run was available. Branch CI also failed before runner assignment.
+- Vercel APK build: `vercel.json` invokes `scripts/vercel-build-apk.sh`; it installs Java 17 and Android SDK, runs checks/tests/lint/assemble, verifies the existing development signing identity and publishes the APK in `dist/`. First Vercel Preview build is pending; do not claim a successful build until deployment logs and download are checked.
+- Vercel project: `mosaic-apk` (`prj_17TuuD9O7qZQcjqJoPTxlydWt0sV`), linked to `ysfclc/MOSAIC`; production branch is `main`. No production deployment was created in this session.
 
 ## 6. Next three increments
-1. Restore a runnable GitHub Actions validation path for the continuity branch (inspect runner/preflight provisioning; retry only after runner assignment works) and require source verifier, Python tests, Android unit tests, lint and APK assembly to pass before merge.
+1. Validate the first Vercel Preview build end-to-end: source checks, Python tests, Android unit tests, lint, APK assembly, signing fingerprint, checksum and deployed download.
 2. Implement P3-015 as a narrow source-aware Browser filtering slice: define source/context-specific behavior, remove blanket exemptions only with compatibility evidence, and replace the tests that currently bless the exemption.
 3. Complete the Redmi Note 12 Pro 5G acceptance for local audio, HTTPS/HLS, podcast feed, Browser handoff, YouTube/Spotify/social sessions and Ad Shield; record per-source outcomes in `docs/PROVIDER_CAPABILITY_MATRIX.md` and `docs/AD_SHIELD_DEVICE_ACCEPTANCE.md`.
 
@@ -57,27 +58,31 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 ## Session Handoff
 
 **Done this session**
-- Continuity ledger and product-capability reconciliation — added `docs/STATE.md` and `docs/SPEC.md`; corrected stale source/task statements and updated continuity pointers on branch `continuity/state-ledger-bootstrap-2026-11-12`.
+- Added a Vercel-hosted Android APK build path: `vercel.json`, `scripts/vercel-build-apk.sh`, and `docs/VERCEL_APK_BUILD.md`.
+- Created Vercel project `mosaic-apk` and linked it to private repository `ysfclc/MOSAIC` without creating a deployment or changing production.
 
 **State changed**
-- `docs/STATE.md` — canonical session ledger and this handoff.
-- `docs/SPEC.md`, `docs/PRODUCT_SPEC.md` — 11 requirement IDs, evidence links and current capability summary.
-- `docs/TASKS.md`, `docs/PROVIDER_CAPABILITY_MATRIX.md` — corrected partial implementation statuses and explicit ad-filtering deviation.
-- `docs/CHANGELOG.md`, `README.md`, `PROJECT_STATE.md` — dated history and canonical ledger pointers.
+- `vercel.json` — Vercel build command, static output directory and APK download headers.
+- `scripts/vercel-build-apk.sh` — Java 17/Android SDK bootstrap, source/Python/Android checks, lint, debug APK assembly, signing-certificate verification, checksum and static download page.
+- `docs/VERCEL_APK_BUILD.md` — build flow, artifact contract and release boundary.
+- `docs/STATE.md`, `docs/CHANGELOG.md`, `README.md` — updated build target and continuity.
 
 **Verified**
-- Build: not run for this branch. Main baseline run #177 passed `:core:media:testDebugUnitTest`, `:app:testDebugUnitTest`, `:app:lintDebug`, `:app:assembleDebug` and signing/checksum checks.
-- Tests: main baseline source verifier and 16 Python contract tests passed in run #177. Branch runs #178–#183 failed preflight before runner assignment (`runner_id: 0`, zero steps); Android test/build jobs were skipped. No branch-specific test pass is claimed.
+- Vercel account context confirms the Hobby team and successful creation/linking of project `mosaic-apk`; no deployment was created by project setup.
+- Existing workflow confirms the expected toolchain, APK path, persistent development signing certificate fingerprint and verification tasks.
+- No Vercel build has completed yet. The sandbox v4 API rejected creation; a basic v3 sandbox had no Java/Gradle preinstalled and is not used as the build path.
+- GitHub Actions branch runs still failed before runner assignment; no branch CI pass is claimed.
 
 **Not done / next**
-1. Restore runner assignment and obtain a fully green validation run for this branch before merging.
-2. Work on P3-015 Browser source-aware filtering with compatibility tests.
-3. Perform Redmi device/source and Ad Shield acceptance when the phone is available.
+1. Inspect the first Vercel Preview deployment and fix any build/runtime configuration issues until the APK is produced and served.
+2. Validate the downloaded APK signature and checksum; verify it updates an existing install without uninstalling.
+3. Continue with P3-015 Browser source-aware filtering after the build pipeline is stable.
 
 **Open questions**
 - Redmi Note 12 Pro 5G availability for hands-on acceptance; default assumption is unavailable.
 
 **Risks / landmines**
-- Browser policy blanket exemptions contradict ADR-014/015; existing tests encode that deviation.
-- CI branch runs have not executed a single step due pre-runner failures; this is not evidence of a code/test failure, but the branch must not be merged as verified.
-- Named provider playback and all physical-device behavior remain unproven; delegated external controls must not be described as native playback.
+- The build pipeline is not verified until the Vercel deployment completes and the APK download is checked.
+- The APK is a development-signed debug build, not a production release.
+- The existing signing identity file is in the private repository; keep the repository private and plan a controlled migration to an encrypted Vercel secret before any public exposure.
+- Named provider playback and physical-device behavior remain unproven; delegated external controls must not be described as native playback.

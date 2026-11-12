@@ -84,3 +84,11 @@
 - Required explicit VPN consent, one-VPN conflict warning, persistent foreground notification with Stop action, Private DNS/DoH coverage warnings, blocked-domain diagnostics and safe stop/revoke recovery.
 - DNS packet codec and coverage tests are tracked separately before the TUN service is wired.
 - No device-wide filter implementation is claimed yet.
+
+
+## 2026-11-12 — Vercel APK build path
+
+- Created the Vercel Hobby project `mosaic-apk`, linked to the private `ysfclc/MOSAIC` repository; project creation did not trigger a deployment or change production.
+- Added `vercel.json` and `scripts/vercel-build-apk.sh` to bootstrap Java 17 and Android SDK, run source/Python/Android tests and lint, assemble the debug APK, verify the persistent development signing certificate and publish APK/checksum/build metadata as Vercel static output.
+- Added `docs/VERCEL_APK_BUILD.md` with the preview-to-production delivery flow and artifact contract.
+- First Vercel Preview build is pending. No APK from this pipeline is claimed until build logs, signature, checksum and deployed download are verified.

@@ -45,7 +45,11 @@ AGP 9 provides built-in Kotlin support. The project intentionally does **not** a
 
 The initial source ZIP intentionally omits generated wrapper binaries. The Gradle 9.3.1 wrapper and official distribution SHA-256 are already present in this integrated repository snapshot. Then open the integrated repository in an Android Studio release compatible with AGP 9.1.1, install Android SDK package `platforms;android-37.2` (the published API 37 platform) and Build Tools 36.0.0, sync and run the `app` configuration.
 
-### Build in CI
+### Build on Vercel
+
+The `mosaic-apk` Vercel project is linked to this private repository. A push to a feature branch builds a Preview APK; a reviewed merge to `main` updates the production download. The build runs `scripts/vercel-build-apk.sh`, which installs the pinned Android SDK baseline, runs source checks, Python tests, Android unit tests and lint, assembles the persistent-key-signed debug APK, verifies its certificate, and publishes `MOSAIC-debug.apk` plus checksum/build metadata. See [docs/VERCEL_APK_BUILD.md](docs/VERCEL_APK_BUILD.md). The first Preview build must pass before this pipeline is considered verified.
+
+## Build in CI
 
 Direct pushes that change app/core code, tools, documentation or build configuration automatically run source verification, Python contract tests, Android unit tests, lint and debug APK assembly. The workflow also offers a manual `direct` build mode.
 

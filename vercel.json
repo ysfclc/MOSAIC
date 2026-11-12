@@ -1,0 +1,14 @@
+{
+  "installCommand": "true",
+  "buildCommand": "bash scripts/vercel-build-apk.sh",
+  "outputDirectory": "dist",
+  "headers": [
+    {
+      "source": "/MOSAIC-debug.apk",
+      "headers": [
+        { "key": "Content-Type", "value": "application/vnd.android.package-archive" },
+        { "key": "Content-Disposition", "value": "attachment; filename=MOSAIC-debug.apk" }
+      ]
+    }
+  ]
+}
