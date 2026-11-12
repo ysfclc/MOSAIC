@@ -44,7 +44,7 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 - Lint: `./gradlew :app:lintDebug`.
 - Python checks: `python3 tools/verify_source.py` and `python3 -m unittest discover -s tools/tests -v`.
 - Expected APK: `app/build/outputs/apk/debug/app-debug.apk`. CI APKs use a persistent development signing identity, not a production release key.
-- Vercel APK build: `vercel.json` invokes `scripts/vercel-build-apk.sh`; it installs Java 17 and Android SDK, runs checks/tests/lint/assemble, verifies the existing development signing identity and publishes the APK in `dist/`. First Vercel Preview build is pending; do not claim a successful build until deployment logs and download are checked.
+- Vercel APK build: `vercel.json` invokes `scripts/vercel-build-apk.sh`; it installs Java 17 and Android SDK, runs checks/tests/lint/assemble, verifies the existing development signing identity and publishes the APK in `dist/`. The first deployment remains queued with no build logs. A Vercel API create-deployment request was rejected with api-deployments-free-per-day (100/day; retry after 24 hours). No APK is produced or verified yet.
 - Vercel project: `mosaic-apk` (`prj_17TuuD9O7qZQcjqJoPTxlydWt0sV`), linked to `ysfclc/MOSAIC`; production branch is `main`. No production deployment was created in this session.
 
 ## 6. Next three increments
@@ -58,31 +58,34 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 ## Session Handoff
 
 **Done this session**
-- Added a Vercel-hosted Android APK build path: `vercel.json`, `scripts/vercel-build-apk.sh`, and `docs/VERCEL_APK_BUILD.md`.
-- Created Vercel project `mosaic-apk` and linked it to private repository `ysfclc/MOSAIC` without creating a deployment or changing production.
+- Added the Vercel-hosted Android APK build path and created Vercel project mosaic-apk, linked to private repository ysfclc/MOSAIC.
+- Added deterministic Android SDK license acceptance to the build script.
+- Saved Vercel project build settings (build command, install command, output directory and Node 22).
 
 **State changed**
-- `vercel.json` — Vercel build command, static output directory and APK download headers.
-- `scripts/vercel-build-apk.sh` — Java 17/Android SDK bootstrap, source/Python/Android checks, lint, debug APK assembly, signing-certificate verification, checksum and static download page.
-- `docs/VERCEL_APK_BUILD.md` — build flow, artifact contract and release boundary.
-- `docs/STATE.md`, `docs/CHANGELOG.md`, `README.md` — updated build target and continuity.
+- vercel.json — Vercel build command, static output directory and APK download headers.
+- scripts/vercel-build-apk.sh — Java 17/Android SDK bootstrap, source/Python/Android checks, lint, debug APK assembly, signing-certificate verification, checksum and static download page.
+- docs/VERCEL_APK_BUILD.md — build flow, artifact contract and release boundary.
+- docs/STATE.md, docs/CHANGELOG.md, README.md — updated build target and continuity.
 
 **Verified**
-- Vercel account context confirms the Hobby team and successful creation/linking of project `mosaic-apk`; no deployment was created by project setup.
-- Existing workflow confirms the expected toolchain, APK path, persistent development signing certificate fingerprint and verification tasks.
-- No Vercel build has completed yet. The sandbox v4 API rejected creation; a basic v3 sandbox had no Java/Gradle preinstalled and is not used as the build path.
-- GitHub Actions branch runs still failed before runner assignment; no branch CI pass is claimed.
+- Vercel project created: mosaic-apk (prj_17TuuD9O7qZQcjqJoPTxlydWt0sV), linked to private repo; no existing Vercel project was modified.
+- Vercel deployment dpl_AswuWhBgWLhh1NT4nid8Pb5Eh23X exists for commit c946457f184d4a2777416f872014106d5a109e2d, but remains QUEUED; it has no build events and is not live. Metadata labels it production although its Git ref is the continuity branch. Do not treat it as a release.
+- A direct Vercel deployment API request hit the Hobby team's api-deployments-free-per-day limit (100/day; retry after 24 hours). Vercel Sandbox v3 starts a 5-minute session, but Java/Gradle are not preinstalled; sandbox timeout extension attempts returned 400. No APK was built.
+- The Android build script now uses a finite 100-response SDK license input to avoid yes/SIGPIPE failure with pipefail.
+- GitHub Actions branch runs remain blocked before runner assignment; no branch CI pass is claimed.
 
 **Not done / next**
-1. Inspect the first Vercel Preview deployment and fix any build/runtime configuration issues until the APK is produced and served.
-2. Validate the downloaded APK signature and checksum; verify it updates an existing install without uninstalling.
-3. Continue with P3-015 Browser source-aware filtering after the build pipeline is stable.
+1. Recheck the queued Vercel deployment after the platform deployment quota/queue clears; ensure the target is safe, then inspect build logs.
+2. If Vercel starts the build, fix environment/build errors and verify APK signature, checksum and download.
+3. Validate in-place installation on the Redmi Note 12 Pro 5G, then continue with P3-015 Browser source-aware filtering.
 
 **Open questions**
 - Redmi Note 12 Pro 5G availability for hands-on acceptance; default assumption is unavailable.
 
 **Risks / landmines**
-- The build pipeline is not verified until the Vercel deployment completes and the APK download is checked.
+- No APK from this Vercel pipeline exists yet; do not present any earlier APK as this build.
+- The first Vercel deployment is queued and its metadata unexpectedly says production for a continuity-branch commit. It is not live; inspect target before promotion or release.
 - The APK is a development-signed debug build, not a production release.
 - The existing signing identity file is in the private repository; keep the repository private and plan a controlled migration to an encrypted Vercel secret before any public exposure.
 - Named provider playback and physical-device behavior remain unproven; delegated external controls must not be described as native playback.

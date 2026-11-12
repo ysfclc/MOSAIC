@@ -92,3 +92,11 @@
 - Added `vercel.json` and `scripts/vercel-build-apk.sh` to bootstrap Java 17 and Android SDK, run source/Python/Android tests and lint, assemble the debug APK, verify the persistent development signing certificate and publish APK/checksum/build metadata as Vercel static output.
 - Added `docs/VERCEL_APK_BUILD.md` with the preview-to-production delivery flow and artifact contract.
 - First Vercel Preview build is pending. No APK from this pipeline is claimed until build logs, signature, checksum and deployed download are verified.
+
+
+## 2026-11-12 — Vercel APK pipeline status
+
+- Updated Android SDK license acceptance to feed a finite set of affirmative responses, avoiding a possible yes/SIGPIPE failure with pipefail enabled.
+- Saved Vercel project build settings for mosaic-apk (build command, install command, dist output and Node 22).
+- Vercel deployment dpl_AswuWhBgWLhh1NT4nid8Pb5Eh23X for commit c946457f184d4a2777416f872014106d5a109e2d remains queued with no build events and is not live. Its metadata reports a production target for a continuity-branch commit; this must be resolved before release.
+- The Vercel API deployment limit (api-deployments-free-per-day, 100/day, retry after 24 hours) blocked a direct deployment request. No APK has been built or verified by this pipeline.
