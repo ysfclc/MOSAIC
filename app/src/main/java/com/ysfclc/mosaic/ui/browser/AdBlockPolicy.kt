@@ -29,9 +29,9 @@ object AdBlockPolicy {
     private val providerPageDomains = youtubePageDomains + "spotify.com"
 
     /**
-     * YouTube's player may depend on these Google endpoints. Keep this
-     * exception scoped to YouTube top-level pages; the same hosts are blocked
-     * on ordinary pages and Spotify pages.
+     * Compatibility exception retained from the previous player behavior.
+     * It is limited to requests initiated in a YouTube top-level or embedded
+     * frame context. Validate on a physical device before narrowing or removing it.
      */
     private val youtubePlayerCompatibilityDomains = setOf(
         "doubleclick.net", "googlesyndication.com", "googleadservices.com",
@@ -39,7 +39,11 @@ object AdBlockPolicy {
     )
 
     fun shouldBlock(requestUrl: String, topLevelHost: String?, referrerUrl: String? = null): Boolean {
-        val requestHost = normalizeHost(runCatching { URI(requestUrl).host }.getOrNull()) ?: return false
+        val requestUri = runCatching { URI(requestUrl) }.getOrNull() ?: return false
+        if (!requestUri.scheme.equals("http", ignoreCase = true) &&
+            !requestUri.scheme.equals("https", ignoreCase = true)
+        ) return false
+        val requestHost = normalizeHost(requestUri.host) ?: return false
         val contextHosts = listOfNotNull(
             normalizeHost(topLevelHost),
             normalizeHost(referrerUrl?.let { url -> runCatching { URI(url).host }.getOrNull() }),
