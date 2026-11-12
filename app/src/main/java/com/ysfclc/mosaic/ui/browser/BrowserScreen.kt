@@ -89,7 +89,10 @@ fun BrowserScreen(
             webViewClient = object : WebViewClient() {
                 override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
                     if (!shieldRef.get() || !request.url.scheme.orEmpty().startsWith("http")) return null
-                    if (!AdBlockPolicy.shouldBlock(request.url.toString(), topHostRef.get())) return null
+                    val referrerUrl = request.requestHeaders.entries
+                        .firstOrNull { it.key.equals("Referer", ignoreCase = true) }
+                        ?.value
+                    if (!AdBlockPolicy.shouldBlock(request.url.toString(), topHostRef.get(), referrerUrl)) return null
                     mainHandler.post { blockedRequests += 1 }
                     return WebResourceResponse("text/plain", "utf-8", ByteArrayInputStream(ByteArray(0)))
                 }

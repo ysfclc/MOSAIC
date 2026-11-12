@@ -24,10 +24,18 @@ class AdBlockPolicyTest {
     }
 
     @Test
-    fun allowsGooglePlayerCompatibilityHostsOnlyOnYoutubePages() {
+    fun allowsGooglePlayerCompatibilityHostsOnlyInYoutubeContext() {
         assertFalse(AdBlockPolicy.shouldBlock("https://securepubads.g.doubleclick.net/tag", "www.youtube.com"))
         assertFalse(AdBlockPolicy.shouldBlock("https://pagead2.googlesyndication.com/pagead/js", "m.youtube.com"))
+        assertFalse(
+            AdBlockPolicy.shouldBlock(
+                "https://securepubads.g.doubleclick.net/tag",
+                "news.example",
+                "https://www.youtube.com/embed/abc",
+            ),
+        )
         assertTrue(AdBlockPolicy.shouldBlock("https://securepubads.g.doubleclick.net/tag", "open.spotify.com"))
+        assertTrue(AdBlockPolicy.shouldBlock("https://securepubads.g.doubleclick.net/tag", "news.example"))
     }
 
     @Test

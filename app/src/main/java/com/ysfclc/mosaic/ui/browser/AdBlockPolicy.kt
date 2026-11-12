@@ -38,13 +38,16 @@ object AdBlockPolicy {
         "googletagservices.com",
     )
 
-    fun shouldBlock(requestUrl: String, topLevelHost: String?): Boolean {
+    fun shouldBlock(requestUrl: String, topLevelHost: String?, referrerUrl: String? = null): Boolean {
         val requestHost = normalizeHost(runCatching { URI(requestUrl).host }.getOrNull()) ?: return false
-        val pageHost = normalizeHost(topLevelHost)
+        val contextHosts = listOfNotNull(
+            normalizeHost(topLevelHost),
+            normalizeHost(runCatching { URI(referrerUrl).host }.getOrNull()),
+        )
         val blockedDomain = blockedDomains.firstOrNull { matchesDomain(requestHost, it) } ?: return false
 
-        val isYoutubePage = pageHost != null && youtubePageDomains.any { matchesDomain(pageHost, it) }
-        if (isYoutubePage && youtubePlayerCompatibilityDomains.any { matchesDomain(requestHost, it) }) {
+        val isYoutubeContext = contextHosts.any { host -> youtubePageDomains.any { matchesDomain(host, it) } }
+        if (isYoutubeContext && youtubePlayerCompatibilityDomains.any { matchesDomain(requestHost, it) }) {
             return false
         }
 

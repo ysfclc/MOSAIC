@@ -59,7 +59,7 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 
 **Done this session**
 - Added the Vercel-hosted Android APK build path and created Vercel project mosaic-apk, linked to private repository ysfclc/MOSAIC.
-- Implemented the first P3-015 source-aware Browser filtering slice: removed blanket provider-page exemptions, blocked known third-party ad/tracker hosts on provider pages, and added a narrow YouTube-only Google player compatibility allowlist.
+- Implemented the first P3-015 source-aware Browser filtering slice: removed blanket provider-page exemptions, blocked known third-party ad/tracker hosts on provider pages, and added a narrow YouTube-only Google player compatibility allowlist that also recognizes an embedded YouTube frame's Referer context.
 - Added deterministic Android SDK license acceptance to the build script.
 - Saved Vercel project build settings (build command, install command, output directory and Node 22).
 

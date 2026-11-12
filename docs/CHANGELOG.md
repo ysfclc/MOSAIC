@@ -126,3 +126,10 @@
 ## 2026-11-12 — CI preflight retry
 
 - Latest branch workflow run #190 for commit `8cd744da9c8636f4478244868aec3415986b5d94` again failed in the preflight job with no steps; Android build/test jobs were skipped. The source-aware Kotlin tests remain unexecuted.
+
+
+## 2026-11-12 — Embedded YouTube compatibility context
+
+- Scoped the temporary Google player compatibility allowlist to either a YouTube top-level page or a request whose Referer is a YouTube page, so embedded YouTube players are not treated as ordinary third-party ad traffic.
+- Browser now passes the request Referer URL into the pure policy function; regression tests cover top-level, embedded-frame, Spotify and ordinary-page cases.
+- The Android test suite remains unexecuted because GitHub Actions preflight fails before runner assignment and Vercel's deployment API quota blocks a build.
