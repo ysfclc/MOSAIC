@@ -137,3 +137,13 @@
 - Latest workflow run #191 for commit `7ff0710c1730a1f49baa4199b1990bdb27eaa590` again failed before runner assignment; Android tests and APK build did not run.
 
 - Latest workflow run #192 for commit `8fce7d8bb800eed12e9e0b133ff06c8ae56ad22b` failed in preflight before runner assignment; no Kotlin/Gradle checks ran.
+
+
+## 2026-11-12 — Browser filter hardening and deployment diagnostics
+
+- `AdBlockPolicy` now explicitly ignores non-HTTP(S) request URLs before host matching.
+- Added regression cases for uppercase/trailing-dot normalization, strict domain suffix boundaries, lookalike YouTube Referer hosts and non-HTTP(S) schemes.
+- Added a Python source-contract test proving Browser passes both top-level host and Referer context into the source-aware policy.
+- Confirmed `mosaic-apk` is linked to the private MOSAIC repository. Deployment history still contains only the canceled production-target deployment; no Preview build exists and no APK is available.
+- GitHub Actions run #192 failed before any job steps/logs were created; Android tests/build were skipped. No test/build success is claimed.
+- The repository has no standalone `docs/RISKS.md`; `docs/SECURITY.md` and the State Ledger are the current security/risk references.
