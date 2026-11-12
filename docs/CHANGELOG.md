@@ -133,3 +133,5 @@
 - Scoped the temporary Google player compatibility allowlist to either a YouTube top-level page or a request whose Referer is a YouTube page, so embedded YouTube players are not treated as ordinary third-party ad traffic.
 - Browser now passes the request Referer URL into the pure policy function; regression tests cover top-level, embedded-frame, Spotify and ordinary-page cases.
 - The Android test suite remains unexecuted because GitHub Actions preflight fails before runner assignment and Vercel's deployment API quota blocks a build.
+
+- Latest workflow run #191 for commit `7ff0710c1730a1f49baa4199b1990bdb27eaa590` again failed before runner assignment; Android tests and APK build did not run.
