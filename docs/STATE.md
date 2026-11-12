@@ -14,7 +14,7 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 | Browser | 🟡 partial | Supporting WebView and direct HTTPS HTML5 audio/video handoff to Media3 exist; DRM/MSE/blob/cookie/header limitations remain; Browser-owned background playback not accepted. |
 | External media sessions | 🟡 partial | Explicit notification-listener access discovers Android sessions and exposes advertised actions; source app owns the stream. Named-app/Redmi behavior remains unverified. |
 | YouTube ad-skip helper | 🟡 partial | Opt-in YouTube-package-scoped accessibility helper is present and contract-checked; exact label variants/false positives require on-device testing. |
-| Ad Shield browser filtering | 🔴 broken against locked requirement | Conservative host filter exists, but blanket YouTube/Spotify page/asset and Google ad-infrastructure exclusions conflict with ADR-014/015 and PRODUCT_SPEC.md §11; P3-015 remains open. |
+| Ad Shield browser filtering | 🟡 partial | Removed whole-page YouTube/Spotify exemptions. Known third-party ad/tracker domains are blocked on provider pages; Google ad infrastructure is blocked by default with a narrow YouTube-page player-compatibility exception. New policy tests are committed but not yet executed; Redmi compatibility acceptance remains open. |
 | Ad Shield device DNS filter | 🟡 partial | Opt-in DNS-only local VPN, allowlist, status, notification Stop and DNS self-test exist; IPv4 UDP only, lifecycle/routing unit coverage is incomplete, and Redmi acceptance is pending. |
 | Named provider integrations | ⚪ not started / 🟡 partial | YouTube/Spotify/Facebook/Instagram remain targets; generic delegated MediaSession control exists, not native audio ingestion. |
 | Durable unified Library | ⚪ not started | Read-only local audio index exists; durable media identity, history, collections, resume/migrations remain TODO. |
@@ -24,11 +24,11 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 ## 3. Currently in flight
 - Continuity and requirements reconciliation — complete as a documentation change on branch `continuity/state-ledger-bootstrap-2026-11-12`; requires a successful CI run before merge.
 - Product/device acceptance — Redmi Note 12 Pro 5G Home/Explore/Player, external-session, native source and Ad Shield checks are still unrecorded.
-- Browser source-aware filtering — P3-015 remains TODO until provider exclusions are replaced by tested compatibility rules; no blind rule deletion.
+- Browser source-aware filtering — P3-015 is IN PROGRESS; whole-page provider exemptions are removed, with a narrow YouTube Google-player compatibility allowlist. New unit tests need a successful run and Redmi acceptance.
 - Native stream/feed and Browser handoff — source implementations and tests exist; real streams, feeds and browser media still need device acceptance.
 
 ## 4. Known gaps & stubs
-- `AdBlockPolicy.kt` still exempts YouTube/Spotify pages/assets and Google ad infrastructure; this conflicts with the locked no-blanket-exemption requirement. Existing tests assert the exemption. Resolve with source-aware compatibility rules and regression tests, not by blindly blocking provider/CDN hosts.
+- Browser filter policy now blocks known third-party ad/tracker hosts on YouTube/Spotify pages and blocks Google ad infrastructure by default. Only YouTube top-level pages retain a narrow Google player compatibility allowlist; verify on-device before narrowing it further.
 - Ad Shield service lifecycle, VPN revocation, ordinary-traffic routing, upstream timeout/recovery and named-app compatibility do not have complete unit coverage; physical acceptance checklist `docs/AD_SHIELD_DEVICE_ACCEPTANCE.md` is unsigned.
 - IPv4 UDP DNS interception does not cover DoH/custom DNS/IPv6 or same-host/in-stream advertising.
 - External YouTube/Spotify/Facebook/Instagram native playback is not demonstrated; external MediaSession control remains delegated to the source app.
@@ -49,7 +49,7 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 
 ## 6. Next three increments
 1. Validate the first Vercel Preview build end-to-end: source checks, Python tests, Android unit tests, lint, APK assembly, signing fingerprint, checksum and deployed download.
-2. Implement P3-015 as a narrow source-aware Browser filtering slice: define source/context-specific behavior, remove blanket exemptions only with compatibility evidence, and replace the tests that currently bless the exemption.
+2. Run the new P3-015 Browser policy tests and perform Redmi YouTube/Spotify compatibility checks; adjust the narrow Google-player allowlist only with evidence.
 3. Complete the Redmi Note 12 Pro 5G acceptance for local audio, HTTPS/HLS, podcast feed, Browser handoff, YouTube/Spotify/social sessions and Ad Shield; record per-source outcomes in `docs/PROVIDER_CAPABILITY_MATRIX.md` and `docs/AD_SHIELD_DEVICE_ACCEPTANCE.md`.
 
 ## 7. Open questions for the human
@@ -59,6 +59,7 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 
 **Done this session**
 - Added the Vercel-hosted Android APK build path and created Vercel project mosaic-apk, linked to private repository ysfclc/MOSAIC.
+- Implemented the first P3-015 source-aware Browser filtering slice: removed blanket provider-page exemptions, blocked known third-party ad/tracker hosts on provider pages, and added a narrow YouTube-only Google player compatibility allowlist.
 - Added deterministic Android SDK license acceptance to the build script.
 - Saved Vercel project build settings (build command, install command, output directory and Node 22).
 
@@ -67,18 +68,21 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 - scripts/vercel-build-apk.sh — Java 17/Android SDK bootstrap, source/Python/Android checks, lint, debug APK assembly, signing-certificate verification, checksum and static download page.
 - docs/VERCEL_APK_BUILD.md — build flow, artifact contract and release boundary.
 - docs/STATE.md, docs/CHANGELOG.md, README.md — updated build target and continuity.
+- AdBlockPolicy.kt, AdBlockPolicyTest.kt, BrowserScreen.kt — source-aware filter behavior, regression tests and truthful Browser status copy.
+- docs/SPEC.md, docs/TASKS.md, docs/PROVIDER_CAPABILITY_MATRIX.md — updated requirement evidence and P3-015 status.
 
 **Verified**
 - Vercel project created: mosaic-apk (prj_17TuuD9O7qZQcjqJoPTxlydWt0sV), linked to private repo; no existing Vercel project was modified.
 - Deployment dpl_AswuWhBgWLhh1NT4nid8Pb5Eh23X was canceled before build because its metadata unexpectedly reported production for the continuity branch. It never went live and produced no APK.
 - A direct Vercel deployment API request hit the Hobby team's api-deployments-free-per-day limit (100/day; retry after 24 hours). Vercel Sandbox v3 starts a 5-minute session, but Java/Gradle are not preinstalled; sandbox timeout extension attempts returned 400. No APK was built.
 - The Android build script now uses a finite 100-response SDK license input to avoid yes/SIGPIPE failure with pipefail.
+- P3-015 tests were authored and source-level policy reviewed, but no Kotlin/Gradle test execution is claimed because the Vercel deployment quota and GitHub Actions runner issue remain unresolved.
 - GitHub Actions branch runs remain blocked before runner assignment; no branch CI pass is claimed.
 
 **Not done / next**
-1. After the Vercel deployment quota clears, trigger a preview build from the latest branch commit and confirm its target is preview, not production.
+1. Restore a runnable Vercel build path after the deployment quota clears, ensure the target is Preview, and execute the new P3-015 unit tests as part of the Android build.
 2. Fix any build errors and verify APK signature, checksum and deployed download.
-3. Validate in-place installation on the Redmi Note 12 Pro 5G, then continue with P3-015 Browser source-aware filtering.
+3. Validate Browser YouTube/Spotify compatibility and in-place APK installation on the Redmi Note 12 Pro 5G.
 
 **Open questions**
 - Redmi Note 12 Pro 5G availability for hands-on acceptance; default assumption is unavailable.

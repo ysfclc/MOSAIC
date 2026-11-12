@@ -191,8 +191,11 @@ fun BrowserScreen(
             Column(modifier = Modifier.weight(1f)) {
                 Text("MOSAIC BROWSER", color = MosaicPalette.TextPrimary, fontSize = 16.sp)
                 Text(
-                    if (AdBlockPolicy.isProtectedProviderHost(pageHost)) "PROVIDER PLAYER · FILTER EXEMPT"
-                    else "AD/TRACKER FILTER · " + if (shieldEnabled) "ON" else "OFF",
+                    when {
+                        !shieldEnabled -> "AD/TRACKER FILTER · OFF"
+                        AdBlockPolicy.isProviderPage(pageHost) -> "SOURCE-AWARE FILTER · PROVIDER"
+                        else -> "AD/TRACKER FILTER · ON"
+                    },
                     color = MosaicPalette.Cyan,
                     fontSize = 9.sp,
                     letterSpacing = 1.sp,
@@ -286,7 +289,7 @@ fun BrowserScreen(
             if (loadError != null) Text("Load error", color = Color(0xFFFF9C9C), fontSize = 9.sp)
         }
         Text(
-            "Provider pages (including YouTube and Spotify) are deliberately exempt. This shield is not a universal or system-wide ad blocker.",
+            "Provider pages are filtered too. YouTube player-dependent Google ad infrastructure remains temporarily allowlisted; unrelated ad/tracker hosts are still blocked. This is not a universal or system-wide ad blocker.",
             color = MosaicPalette.TextMuted,
             fontSize = 9.sp,
             lineHeight = 13.sp,

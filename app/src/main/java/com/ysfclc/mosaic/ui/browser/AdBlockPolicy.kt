@@ -3,9 +3,12 @@ package com.ysfclc.mosaic.ui.browser
 import java.net.URI
 
 /**
- * Conservative request filter for MOSAIC's own browser.
- * It deliberately avoids Google ad infrastructure because those domains can
- * participate in YouTube player delivery. Provider pages/assets are exempt.
+ * Source-aware request filter for MOSAIC Browser.
+ *
+ * Known third-party ad/tracker hosts are filtered on provider pages too. The
+ * only temporary compatibility exception is Google's ad infrastructure on
+ * YouTube pages, which can participate in YouTube player delivery. This is
+ * deliberately narrower than exempting an entire provider page or its assets.
  */
 object AdBlockPolicy {
     private val blockedDomains = setOf(
@@ -15,26 +18,47 @@ object AdBlockPolicy {
         "pubmatic.com", "quantserve.com", "rubiconproject.com",
         "scorecardresearch.com", "serving-sys.com", "sharethrough.com",
         "smartadserver.com", "taboola.com", "yieldmo.com", "zedo.com",
+        "doubleclick.net", "googlesyndication.com", "googleadservices.com",
+        "googletagservices.com",
     )
 
-    private val protectedProviderDomains = setOf(
-        "youtube.com", "youtu.be", "youtube-nocookie.com", "ytimg.com",
-        "googlevideo.com", "spotify.com", "scdn.co", "spotifycdn.com",
+    private val providerPageDomains = setOf(
+        "youtube.com", "youtu.be", "youtube-nocookie.com", "spotify.com",
+    )
+
+    /**
+     * YouTube's player may depend on these Google endpoints. Keep this
+     * exception scoped to YouTube top-level pages; the same hosts are blocked
+     * on ordinary pages and Spotify pages.
+     */
+    private val youtubePlayerCompatibilityDomains = setOf(
+        "doubleclick.net", "googlesyndication.com", "googleadservices.com",
+        "googletagservices.com",
     )
 
     fun shouldBlock(requestUrl: String, topLevelHost: String?): Boolean {
-        val requestHost = runCatching { URI(requestUrl).host?.lowercase() }.getOrNull() ?: return false
-        val pageHost = topLevelHost?.lowercase().orEmpty()
-        if (isProtectedProviderHost(pageHost) || isProtectedProviderHost(requestHost)) return false
-        return blockedDomains.any { domain ->
-            requestHost == domain || requestHost.endsWith(".$domain")
+        val requestHost = normalizeHost(runCatching { URI(requestUrl).host }.getOrNull()) ?: return false
+        val pageHost = normalizeHost(topLevelHost)
+        val blockedDomain = blockedDomains.firstOrNull { matchesDomain(requestHost, it) } ?: return false
+
+        val isYoutubePage = pageHost != null && matchesDomain(pageHost, "youtube.com") ||
+            pageHost != null && matchesDomain(pageHost, "youtu.be") ||
+            pageHost != null && matchesDomain(pageHost, "youtube-nocookie.com")
+        if (isYoutubePage && youtubePlayerCompatibilityDomains.any { matchesDomain(requestHost, it) }) {
+            return false
         }
+
+        return matchesDomain(requestHost, blockedDomain)
     }
 
-    fun isProtectedProviderHost(host: String): Boolean {
-        val normalized = host.lowercase().removePrefix("www.")
-        return protectedProviderDomains.any { domain ->
-            normalized == domain || normalized.endsWith(".$domain")
-        }
+    fun isProviderPage(host: String): Boolean {
+        val normalized = normalizeHost(host) ?: return false
+        return providerPageDomains.any { matchesDomain(normalized, it) }
     }
+
+    private fun normalizeHost(host: String?): String? =
+        host?.trim()?.lowercase()?.trimEnd('.')?.removePrefix("www.")?.takeIf { it.isNotBlank() }
+
+    private fun matchesDomain(host: String, domain: String): Boolean =
+        host == domain || host.endsWith(".$domain")
 }

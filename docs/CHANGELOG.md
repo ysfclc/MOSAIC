@@ -106,3 +106,12 @@
 
 - Canceled the initial queued Vercel deployment before build because its metadata unexpectedly reported a production target for the continuity branch. It never went live and produced no APK.
 - The Hobby team's deployment API limit (100/day; retry after 24 hours) prevented creating a replacement preview deployment in this session. The next build must target Preview from the latest branch commit; production remains on main.
+
+
+## 2026-11-12 — Browser source-aware filtering increment
+
+- Removed the whole-page YouTube/Spotify filter exemption. Known third-party ad/tracker hosts are now filtered on provider pages too.
+- Added Google ad-infrastructure domains to the blocklist. A narrow compatibility exception remains only on YouTube top-level pages because the existing implementation documented a player-delivery dependency; the same hosts are blocked on ordinary and Spotify pages.
+- Replaced exemption tests with source-context regression cases for provider-page third-party filtering, YouTube compatibility, Google ad infrastructure, provider content/media hosts, unknown hosts and malformed URLs.
+- Updated Browser status text so provider pages are no longer labelled filter-exempt and the temporary YouTube compatibility exception is disclosed.
+- Kotlin/Gradle tests have not yet executed; Vercel deployment quota and GitHub Actions runner provisioning remain blockers. Physical Redmi compatibility testing is still required.
