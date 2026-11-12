@@ -41,14 +41,14 @@ object AdBlockPolicy {
         val pageHost = normalizeHost(topLevelHost)
         val blockedDomain = blockedDomains.firstOrNull { matchesDomain(requestHost, it) } ?: return false
 
-        val isYoutubePage = pageHost != null && matchesDomain(pageHost, "youtube.com") ||
-            pageHost != null && matchesDomain(pageHost, "youtu.be") ||
-            pageHost != null && matchesDomain(pageHost, "youtube-nocookie.com")
+        val isYoutubePage = pageHost != null && setOf(
+            "youtube.com", "youtu.be", "youtube-nocookie.com",
+        ).any { matchesDomain(pageHost, it) }
         if (isYoutubePage && youtubePlayerCompatibilityDomains.any { matchesDomain(requestHost, it) }) {
             return false
         }
 
-        return matchesDomain(requestHost, blockedDomain)
+        return true
     }
 
     fun isProviderPage(host: String): Boolean {
