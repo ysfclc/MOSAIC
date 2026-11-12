@@ -135,3 +135,5 @@
 - The Android test suite remains unexecuted because GitHub Actions preflight fails before runner assignment and Vercel's deployment API quota blocks a build.
 
 - Latest workflow run #191 for commit `7ff0710c1730a1f49baa4199b1990bdb27eaa590` again failed before runner assignment; Android tests and APK build did not run.
+
+- Latest workflow run #192 for commit `8fce7d8bb800eed12e9e0b133ff06c8ae56ad22b` failed in preflight before runner assignment; no Kotlin/Gradle checks ran.
