@@ -3,7 +3,7 @@
 **Product:** Source-first personal media operating system for Android  
 **Repository:** ysfclc/MOSAIC  
 **Package:** `com.ysfclc.mosaic`  
-**Status:** Source-first Home/Explore, central external-session Player and unified mini-player passed GitHub Actions run [42261337270](https://github.com/ysfclc/MOSAIC/actions/runs/42261337270) (build #174). Physical-device/source acceptance remains pending; see PROJECT_STATE.md.
+**Status:** Source-first Home/Explore, external-session Player focus and unified mini-player passed GitHub Actions run [42261946226](https://github.com/ysfclc/MOSAIC/actions/runs/42261946226) (build #177). Physical-device/source acceptance remains pending; see [docs/STATE.md](docs/STATE.md) for the current ledger.
 
 MOSAIC is a local-first personal media operating system for Android. It brings the media people already use into one coherent environment to discover, open, play, continue, organize and eventually understand across apps, websites and local sources. Cross-source background playback and broad ad/tracker protection are core pillars; YouTube, Spotify, Facebook, Instagram and other sources remain explicit integration targets. The current build is an early foundation, not universal source support.
 
@@ -70,7 +70,9 @@ See [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), [`docs/DECISIONS.md`](docs/D
 
 ## Project continuity
 
-- [`PROJECT_STATE.md`](PROJECT_STATE.md) is the session handoff file.
+- [`docs/STATE.md`](docs/STATE.md) is the canonical session ledger.
+- [`docs/SPEC.md`](docs/SPEC.md) maps product requirements to implementation, tests, documentation and status.
+- [`PROJECT_STATE.md`](PROJECT_STATE.md) is the legacy detailed handoff snapshot; reconcile it against the canonical ledger and current task/capability docs.
 - [`docs/TASKS.md`](docs/TASKS.md) is the source-of-truth task board.
 - [`docs/PHASES.md`](docs/PHASES.md) defines phase gates and sequencing.
 - [`notes/README.md`](notes/README.md) indexes GitHub ZIP import notes created by the workflow.

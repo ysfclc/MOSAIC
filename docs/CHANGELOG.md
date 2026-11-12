@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-11-12 — Continuity ledger and capability reconciliation
+
+- Added `docs/STATE.md` as the concise canonical session ledger and `docs/SPEC.md` as the requirement-ID traceability registry; `docs/PRODUCT_SPEC.md` remains the narrative product specification.
+- Reconciled `docs/TASKS.md` and `docs/PROVIDER_CAPABILITY_MATRIX.md` with the source snapshot: validated HTTPS/HLS streams, bounded RSS/Atom feed loading and queueing, direct HTTPS HTML5 Browser-to-Media3 handoff, the Media3 video surface, and delegated Android media sessions are represented as partial source capabilities, not device-accepted features.
+- Recorded the known mismatch between the locked source-aware filtering requirement (ADR-014/015, PRODUCT_SPEC.md §11) and current Browser policy/tests, which still preserve YouTube/Spotify and Google-ad-infrastructure exclusions. P3-015 remains open; no filtering behavior was changed in this documentation increment.
+- Baseline evidence: main commit `15e53c718db3c0e409324f36a0d5c00d16fddc3a`, GitHub Actions run [#177](https://github.com/ysfclc/MOSAIC/actions/runs/42261946226) passed the source verifier, 16 Python contract tests, Android unit tests, lint, APK assembly, signing/checksum checks and private prerelease publication.
+- Branch CI runs #178–#182 failed in preflight before any runner was assigned (`runner_id: 0`; no job steps executed); retry attempt 2 of #182 failed the same way. The Android build/test jobs were skipped. Therefore this documentation increment is **not CI-verified**; this is an Actions runner/preflight blocker, not an observed source/test failure.
+
 ## 2026-10-30 — Phase 1 source baseline
 
 - Established MOSAIC Android multi-module architecture and source adapter/capability contract.

@@ -1,4 +1,7 @@
-# MOSAIC project state — session handoff
+# MOSAIC project state — legacy detailed handoff
+
+> **Continuity update (2026-11-12):** the canonical session ledger is now [`docs/STATE.md`](docs/STATE.md), and [`docs/SPEC.md`](docs/SPEC.md) is the requirements traceability registry. This file is retained as a historical, detailed implementation handoff; some entries below predate the current source snapshot. For current status, use `docs/STATE.md`, `docs/TASKS.md` and `docs/PROVIDER_CAPABILITY_MATRIX.md` first.
+
 
 **Project:** MOSAIC — local-first personal media operating system  
 **Repository:** ysfclc/MOSAIC · **Branch:** main  
