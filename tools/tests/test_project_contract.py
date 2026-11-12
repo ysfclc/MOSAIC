@@ -62,6 +62,16 @@ class ProjectContractTests(unittest.TestCase):
         self.assertIn("matchesDomainBoundariesAndNormalizesRequestHosts", tests)
         self.assertIn("doesNotTrustLookalikeYoutubeReferrersForCompatibility", tests)
 
+    def test_ad_shield_validates_tunnel_lengths_and_system_dns_answers(self):
+        codec = (ROOT / "app/src/main/java/com/ysfclc/mosaic/adshield/DnsPacketCodec.kt").read_text(encoding="utf-8")
+        service = (ROOT / "app/src/main/java/com/ysfclc/mosaic/adshield/AdShieldVpnService.kt").read_text(encoding="utf-8")
+        tests = (ROOT / "app/src/test/java/com/ysfclc/mosaic/adshield/DnsPacketCodecTest.kt").read_text(encoding="utf-8")
+        self.assertIn("packetLength > packet.size", codec)
+        self.assertIn("if (length < 0) break", service)
+        self.assertIn("DnsPacketCodec.isMatchingResponse(query, answer)", service)
+        self.assertIn("rejectsPacketLengthOutsideBackingBuffer", tests)
+        self.assertIn("rejectsFragmentedAndInconsistentUdpPackets", tests)
+
     def test_external_media_controls_require_explicit_notification_access(self):
         manifest = (ROOT / "app/src/main/AndroidManifest.xml").read_text(encoding="utf-8")
         bridge = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/browser/ExternalMediaSessionBridge.kt").read_text(encoding="utf-8")
