@@ -22,9 +22,11 @@ object AdBlockPolicy {
         "googletagservices.com",
     )
 
-    private val providerPageDomains = setOf(
-        "youtube.com", "youtu.be", "youtube-nocookie.com", "spotify.com",
+    private val youtubePageDomains = setOf(
+        "youtube.com", "youtu.be", "youtube-nocookie.com",
     )
+
+    private val providerPageDomains = youtubePageDomains + "spotify.com"
 
     /**
      * YouTube's player may depend on these Google endpoints. Keep this
@@ -41,9 +43,7 @@ object AdBlockPolicy {
         val pageHost = normalizeHost(topLevelHost)
         val blockedDomain = blockedDomains.firstOrNull { matchesDomain(requestHost, it) } ?: return false
 
-        val isYoutubePage = pageHost != null && setOf(
-            "youtube.com", "youtu.be", "youtube-nocookie.com",
-        ).any { matchesDomain(pageHost, it) }
+        val isYoutubePage = pageHost != null && youtubePageDomains.any { matchesDomain(pageHost, it) }
         if (isYoutubePage && youtubePlayerCompatibilityDomains.any { matchesDomain(requestHost, it) }) {
             return false
         }

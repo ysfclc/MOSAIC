@@ -115,3 +115,9 @@
 - Replaced exemption tests with source-context regression cases for provider-page third-party filtering, YouTube compatibility, Google ad infrastructure, provider content/media hosts, unknown hosts and malformed URLs.
 - Updated Browser status text so provider pages are no longer labelled filter-exempt and the temporary YouTube compatibility exception is disclosed.
 - Kotlin/Gradle tests have not yet executed; Vercel deployment quota and GitHub Actions runner provisioning remain blockers. Physical Redmi compatibility testing is still required.
+
+
+## 2026-11-12 — Source-aware filter CI status
+
+- Latest branch workflow run #189 for commit `4961715e547ae7be2d38191e7eaf4ef2988816d8` failed in the preflight job before any steps ran; Android test/build jobs were skipped. The new Kotlin policy tests remain unexecuted.
+- Hoisted the YouTube page-domain compatibility set to a single immutable value rather than allocating it on each intercepted request.

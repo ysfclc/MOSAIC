@@ -19,7 +19,7 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 | Named provider integrations | ⚪ not started / 🟡 partial | YouTube/Spotify/Facebook/Instagram remain targets; generic delegated MediaSession control exists, not native audio ingestion. |
 | Durable unified Library | ⚪ not started | Read-only local audio index exists; durable media identity, history, collections, resume/migrations remain TODO. |
 | Documentation / traceability | 🟡 partial | Added this ledger and 11-row `docs/SPEC.md`; reconciled task/matrix/spec and updated README/legacy handoff. Branch CI has not executed tests/build due preflight runner assignment failure. |
-| CI / build pipeline | 🟡 partial | Vercel project `mosaic-apk` is linked to this private repository; Vercel build script/config are added on this branch. First Preview build is pending; no Vercel APK is verified yet. GitHub Actions runner preflight remains independently blocked. |
+| CI / build pipeline | 🟡 partial | Vercel project `mosaic-apk` is linked to this private repository; Vercel build script/config are added on this branch. Initial Vercel deployment was canceled before build after its unexpected production target; the 100/day deployment API limit blocks a replacement. No Vercel APK is verified yet. GitHub Actions runner preflight remains independently blocked. |
 
 ## 3. Currently in flight
 - Continuity and requirements reconciliation — complete as a documentation change on branch `continuity/state-ledger-bootstrap-2026-11-12`; requires a successful CI run before merge.
@@ -77,7 +77,7 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 - A direct Vercel deployment API request hit the Hobby team's api-deployments-free-per-day limit (100/day; retry after 24 hours). Vercel Sandbox v3 starts a 5-minute session, but Java/Gradle are not preinstalled; sandbox timeout extension attempts returned 400. No APK was built.
 - The Android build script now uses a finite 100-response SDK license input to avoid yes/SIGPIPE failure with pipefail.
 - P3-015 tests were authored and source-level policy reviewed, but no Kotlin/Gradle test execution is claimed because the Vercel deployment quota and GitHub Actions runner issue remain unresolved.
-- GitHub Actions branch runs remain blocked before runner assignment; no branch CI pass is claimed.
+- Latest GitHub Actions branch run #189 (commit 4961715e547ae7be2d38191e7eaf4ef2988816d8) failed in the preflight job before any build/test steps ran; downstream Android jobs were skipped. No branch CI pass is claimed.
 
 **Not done / next**
 1. Restore a runnable Vercel build path after the deployment quota clears, ensure the target is Preview, and execute the new P3-015 unit tests as part of the Android build.
