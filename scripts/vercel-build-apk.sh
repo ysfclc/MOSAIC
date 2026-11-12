@@ -46,7 +46,7 @@ if [[ ! -x "$CMDLINE_TOOLS/bin/sdkmanager" ]]; then
 fi
 
 SDKMANAGER="$CMDLINE_TOOLS/bin/sdkmanager"
-yes | "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --licenses >/dev/null
+printf 'y\n%.0s' {1..100} | "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --licenses >/dev/null
 "$SDKMANAGER" --sdk_root="$ANDROID_HOME" --install \
   "platform-tools" \
   "platforms;android-37.2" \
