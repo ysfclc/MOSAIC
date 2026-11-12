@@ -79,7 +79,7 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 **Verified**
 - Vercel project created: mosaic-apk (prj_17TuuD9O7qZQcjqJoPTxlydWt0sV), linked to private repo; no existing Vercel project was modified.
 - Deployment dpl_AswuWhBgWLhh1NT4nid8Pb5Eh23X was canceled before build because its metadata unexpectedly reported production for the continuity branch. It never went live and produced no APK.
-- A direct Vercel deployment API request hit the Hobby team's api-deployments-free-per-day limit (100/day; retry after 24 hours). Vercel Sandbox v3 starts a 5-minute session, but Java/Gradle are not preinstalled; sandbox timeout extension attempts returned 400. No APK was built.
+- A direct Vercel deployment API request hit the Hobby team's api-deployments-free-per-day limit (100/day; retry after 24 hours). The existing `mosaic-apk-builder` Sandbox has one 829,834,562-byte snapshot; its private Git clone attempt failed because the sandbox has no repository credentials, and Java/Gradle were not preinstalled. Creating a new V4 Sandbox returned 402 (`Snapshots Storage` Hobby limit exceeded). No snapshot was deleted and no plan upgrade was attempted. No APK was built.
 - The Android build script now uses a finite 100-response SDK license input to avoid yes/SIGPIPE failure with pipefail.
 - P3-015 Kotlin tests and the Python Browser integration contract were expanded and source-reviewed; none were executed because the Vercel deployment quota and GitHub Actions runner issue remain unresolved.
 - Ad Shield packet codec tests and Python source-contract coverage were expanded; none were executed.
