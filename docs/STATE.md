@@ -14,7 +14,7 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 | Browser | 🟡 partial | Supporting WebView and direct HTTPS HTML5 audio/video handoff to Media3 exist; DRM/MSE/blob/cookie/header limitations remain; Browser-owned background playback not accepted. |
 | External media sessions | 🟡 partial | Explicit notification-listener access discovers Android sessions and exposes advertised actions; source app owns the stream. Named-app/Redmi behavior remains unverified. |
 | YouTube ad-skip helper | 🟡 partial | Opt-in YouTube-package-scoped accessibility helper is present and contract-checked; exact label variants/false positives require on-device testing. |
-| Ad Shield browser filtering | 🟡 partial | Removed whole-page YouTube/Spotify exemptions. Known third-party ad/tracker domains are blocked on provider pages; Google ad infrastructure is blocked by default with a narrow YouTube-page player-compatibility exception. New policy tests are committed but not yet executed; Redmi compatibility acceptance remains open. |
+| Ad Shield browser filtering | 🟡 partial | Removed whole-page YouTube/Spotify exemptions. Known third-party ad/tracker domains are blocked on provider pages; Google ad infrastructure is blocked by default with a narrow YouTube top-level-page or embedded-frame Referer compatibility exception. New policy tests are committed but not yet executed; Redmi compatibility acceptance remains open. |
 | Ad Shield device DNS filter | 🟡 partial | Opt-in DNS-only local VPN, allowlist, status, notification Stop and DNS self-test exist; IPv4 UDP only, lifecycle/routing unit coverage is incomplete, and Redmi acceptance is pending. |
 | Named provider integrations | ⚪ not started / 🟡 partial | YouTube/Spotify/Facebook/Instagram remain targets; generic delegated MediaSession control exists, not native audio ingestion. |
 | Durable unified Library | ⚪ not started | Read-only local audio index exists; durable media identity, history, collections, resume/migrations remain TODO. |
@@ -24,7 +24,7 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 ## 3. Currently in flight
 - Continuity and requirements reconciliation — complete as a documentation change on branch `continuity/state-ledger-bootstrap-2026-11-12`; requires a successful CI run before merge.
 - Product/device acceptance — Redmi Note 12 Pro 5G Home/Explore/Player, external-session, native source and Ad Shield checks are still unrecorded.
-- Browser source-aware filtering — P3-015 is IN PROGRESS; whole-page provider exemptions are removed, with a narrow YouTube Google-player compatibility allowlist. New unit tests need a successful run and Redmi acceptance.
+- Browser source-aware filtering — P3-015 is IN PROGRESS; whole-page provider exemptions are removed, with a narrow YouTube top-level/Referer Google-player compatibility allowlist. New unit tests need a successful run and Redmi acceptance.
 - Native stream/feed and Browser handoff — source implementations and tests exist; real streams, feeds and browser media still need device acceptance.
 
 ## 4. Known gaps & stubs

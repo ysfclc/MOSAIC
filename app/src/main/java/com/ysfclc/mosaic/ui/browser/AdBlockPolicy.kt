@@ -42,7 +42,7 @@ object AdBlockPolicy {
         val requestHost = normalizeHost(runCatching { URI(requestUrl).host }.getOrNull()) ?: return false
         val contextHosts = listOfNotNull(
             normalizeHost(topLevelHost),
-            normalizeHost(runCatching { URI(referrerUrl).host }.getOrNull()),
+            normalizeHost(referrerUrl?.let { url -> runCatching { URI(url).host }.getOrNull() }),
         )
         val blockedDomain = blockedDomains.firstOrNull { matchesDomain(requestHost, it) } ?: return false
 
