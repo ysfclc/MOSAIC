@@ -44,7 +44,7 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 - Lint: `./gradlew :app:lintDebug`.
 - Python checks: `python3 tools/verify_source.py` and `python3 -m unittest discover -s tools/tests -v`.
 - Expected APK: `app/build/outputs/apk/debug/app-debug.apk`. CI APKs use a persistent development signing identity, not a production release key.
-- Vercel APK build: `vercel.json` invokes `scripts/vercel-build-apk.sh`; it installs Java 17 and Android SDK, runs checks/tests/lint/assemble, verifies the existing development signing identity and publishes the APK in `dist/`. The first deployment remains queued with no build logs. A Vercel API create-deployment request was rejected with api-deployments-free-per-day (100/day; retry after 24 hours). No APK is produced or verified yet.
+- Vercel APK build: `vercel.json` invokes `scripts/vercel-build-apk.sh`; it installs Java 17 and Android SDK, runs checks/tests/lint/assemble, verifies the existing development signing identity and publishes the APK in `dist/`. The first deployment was canceled before build after its unexpected production target was detected. A Vercel API create-deployment request was rejected with api-deployments-free-per-day (100/day; retry after 24 hours). No APK is produced or verified yet.
 - Vercel project: `mosaic-apk` (`prj_17TuuD9O7qZQcjqJoPTxlydWt0sV`), linked to `ysfclc/MOSAIC`; production branch is `main`. No production deployment was created in this session.
 
 ## 6. Next three increments
@@ -70,14 +70,14 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 
 **Verified**
 - Vercel project created: mosaic-apk (prj_17TuuD9O7qZQcjqJoPTxlydWt0sV), linked to private repo; no existing Vercel project was modified.
-- Vercel deployment dpl_AswuWhBgWLhh1NT4nid8Pb5Eh23X exists for commit c946457f184d4a2777416f872014106d5a109e2d, but remains QUEUED; it has no build events and is not live. Metadata labels it production although its Git ref is the continuity branch. Do not treat it as a release.
+- Deployment dpl_AswuWhBgWLhh1NT4nid8Pb5Eh23X was canceled before build because its metadata unexpectedly reported production for the continuity branch. It never went live and produced no APK.
 - A direct Vercel deployment API request hit the Hobby team's api-deployments-free-per-day limit (100/day; retry after 24 hours). Vercel Sandbox v3 starts a 5-minute session, but Java/Gradle are not preinstalled; sandbox timeout extension attempts returned 400. No APK was built.
 - The Android build script now uses a finite 100-response SDK license input to avoid yes/SIGPIPE failure with pipefail.
 - GitHub Actions branch runs remain blocked before runner assignment; no branch CI pass is claimed.
 
 **Not done / next**
-1. Recheck the queued Vercel deployment after the platform deployment quota/queue clears; ensure the target is safe, then inspect build logs.
-2. If Vercel starts the build, fix environment/build errors and verify APK signature, checksum and download.
+1. After the Vercel deployment quota clears, trigger a preview build from the latest branch commit and confirm its target is preview, not production.
+2. Fix any build errors and verify APK signature, checksum and deployed download.
 3. Validate in-place installation on the Redmi Note 12 Pro 5G, then continue with P3-015 Browser source-aware filtering.
 
 **Open questions**
@@ -85,7 +85,7 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 
 **Risks / landmines**
 - No APK from this Vercel pipeline exists yet; do not present any earlier APK as this build.
-- The first Vercel deployment is queued and its metadata unexpectedly says production for a continuity-branch commit. It is not live; inspect target before promotion or release.
+- The first deployment was canceled because Vercel reported a production target for a continuity-branch commit. Ensure the next deployment is preview and production remains on main.
 - The APK is a development-signed debug build, not a production release.
 - The existing signing identity file is in the private repository; keep the repository private and plan a controlled migration to an encrypted Vercel secret before any public exposure.
 - Named provider playback and physical-device behavior remain unproven; delegated external controls must not be described as native playback.

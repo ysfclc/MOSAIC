@@ -29,4 +29,4 @@ The APK uses the existing persistent development signing identity so it can upda
 
 ## Current setup status
 
-The Vercel project was created and linked without creating a deployment. The first deployment is the acceptance test for this pipeline. The initial deployment record is queued and its metadata currently reports a production target for the continuity branch; it is not live and must be checked before release. Do not describe the pipeline as verified until Vercel build logs show all checks passing and the deployed APK download is validated.
+The Vercel project was created and linked without creating a deployment. The first deployment is the acceptance test for this pipeline. The initial deployment was canceled before build because its metadata reported a production target for the continuity branch. The next deployment must be a Preview build from the latest branch commit; production remains on main. Do not describe the pipeline as verified until Vercel build logs show all checks passing and the deployed APK download is validated.

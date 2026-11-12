@@ -100,3 +100,9 @@
 - Saved Vercel project build settings for mosaic-apk (build command, install command, dist output and Node 22).
 - Vercel deployment dpl_AswuWhBgWLhh1NT4nid8Pb5Eh23X for commit c946457f184d4a2777416f872014106d5a109e2d remains queued with no build events and is not live. Its metadata reports a production target for a continuity-branch commit; this must be resolved before release.
 - The Vercel API deployment limit (api-deployments-free-per-day, 100/day, retry after 24 hours) blocked a direct deployment request. No APK has been built or verified by this pipeline.
+
+
+## 2026-11-12 — Vercel deployment safety gate
+
+- Canceled the initial queued Vercel deployment before build because its metadata unexpectedly reported a production target for the continuity branch. It never went live and produced no APK.
+- The Hobby team's deployment API limit (100/day; retry after 24 hours) prevented creating a replacement preview deployment in this session. The next build must target Preview from the latest branch commit; production remains on main.
