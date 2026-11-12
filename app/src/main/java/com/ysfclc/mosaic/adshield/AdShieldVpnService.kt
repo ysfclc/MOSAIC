@@ -61,6 +61,8 @@ class AdShieldVpnService : VpnService() {
 
     private fun startShield() {
         if (isRunning) return
+        // Clear stale persisted state before any startup path can fail.
+        AdShieldState.setRunning(this, false)
         if (VpnService.prepare(this) != null) {
             AdShieldState.setError(this, "Android VPN permission has not been granted.")
             stopSelf()
