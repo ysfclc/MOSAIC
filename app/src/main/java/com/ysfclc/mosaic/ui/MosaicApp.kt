@@ -388,6 +388,15 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
                         onScan = requestScan,
                         onOpenFile = openFile,
                         onPlay = playTrack,
+                        recentHistory = recentHistory,
+                        onPlayHistory = { entry ->
+                            playback.playUri(Uri.parse(entry.uri), entry.title, entry.mimeType, entry.resumePositionMs)
+                            destination = Destination.PLAYER
+                        },
+                        onClearHistory = {
+                            historyStore.clear()
+                            recentHistory = emptyList()
+                        },
                     )
                     Destination.PLAYER -> PlayerScreen(
                         controller = controller,
@@ -879,6 +888,9 @@ private fun LibraryScreen(
     onScan: () -> Unit,
     onOpenFile: () -> Unit,
     onPlay: (Int) -> Unit,
+    recentHistory: List<PlaybackHistoryEntry>,
+    onPlayHistory: (PlaybackHistoryEntry) -> Unit,
+    onClearHistory: () -> Unit,
 ) {
     var query by remember { mutableStateOf("") }
     val filtered = remember(tracks, query) {
@@ -924,21 +936,64 @@ private fun LibraryScreen(
             Spacer(Modifier.weight(1f))
             Text("LOCAL · READ ONLY", color = MosaicPalette.Cyan.copy(alpha = .8f), fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = .8.sp)
         }
-        if (filtered.isEmpty()) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                EmptyLibraryState(
-                    hasPermission = hasPermission,
-                    indexing = indexing,
-                    onScan = onScan,
-                    onOpenFile = onOpenFile,
-                )
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(7.dp),
+        ) {
+            if (recentHistory.isNotEmpty()) {
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 12.dp, bottom = 8.dp)) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Text("RECENTLY PLAYED", color = MosaicPalette.TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, letterSpacing = .5.sp)
+                            Spacer(Modifier.weight(1f))
+                            Text(
+                                "CLEAR",
+                                color = MosaicPalette.TextMuted,
+                                fontSize = 8.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp,
+                                modifier = Modifier.clickable(onClick = onClearHistory).padding(8.dp),
+                            )
+                        }
+                        recentHistory.take(10).forEach { entry ->
+                            Surface(
+                                onClick = { onPlayHistory(entry) },
+                                color = MosaicPalette.SurfaceGlass,
+                                shape = RoundedCornerShape(13.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = .06f)),
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Row(Modifier.padding(horizontal = 11.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.MusicNote, contentDescription = null, tint = MosaicPalette.Cyan, modifier = Modifier.size(17.dp))
+                                    Spacer(Modifier.width(9.dp))
+                                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                        Text(entry.title, color = MosaicPalette.TextPrimary, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Text(entry.creator ?: "Recent media", color = MosaicPalette.TextMuted, fontSize = 8.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    }
+                                    if (entry.resumePositionMs > 0L) {
+                                        Text("RESUME", color = MosaicPalette.Cyan, fontSize = 7.sp, fontWeight = FontWeight.Bold, letterSpacing = .6.sp)
+                                    } else {
+                                        Icon(Icons.Default.PlayArrow, contentDescription = "Play ${entry.title}", tint = MosaicPalette.Cyan, modifier = Modifier.size(17.dp))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 18.dp),
-                verticalArrangement = Arrangement.spacedBy(7.dp),
-            ) {
+            if (filtered.isEmpty()) {
+                item {
+                    Box(Modifier.fillMaxWidth().height(240.dp), contentAlignment = Alignment.Center) {
+                        EmptyLibraryState(
+                            hasPermission = hasPermission,
+                            indexing = indexing,
+                            onScan = onScan,
+                            onOpenFile = onOpenFile,
+                        )
+                    }
+                }
+            } else {
                 itemsIndexed(filtered, key = { _, item -> item.id }) { index, item ->
                     val sourceIndex = tracks.indexOfFirst { it.id == item.id }.coerceAtLeast(0)
                     MediaTrackRow(item = item, index = index + 1, onClick = { onPlay(sourceIndex) })
