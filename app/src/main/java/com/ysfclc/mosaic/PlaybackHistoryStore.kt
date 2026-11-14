@@ -16,6 +16,7 @@ data class PlaybackHistoryEntry(
     val uri: String,
     val mimeType: String?,
     val playedAtEpochMs: Long,
+    val resumePositionMs: Long = 0L,
 )
 
 object PlaybackHistoryCodec {
@@ -31,13 +32,14 @@ object PlaybackHistoryCodec {
                 entry.uri,
                 entry.mimeType.orEmpty(),
                 entry.playedAtEpochMs.toString(),
+                entry.resumePositionMs.coerceAtLeast(0L).toString(),
             ).joinToString(FIELD_SEPARATOR, transform = ::encodeField)
         }
 
     fun decode(raw: String): List<PlaybackHistoryEntry> =
         raw.lineSequence().mapNotNull { line ->
             val fields = line.split(FIELD_SEPARATOR)
-            if (fields.size != 6) return@mapNotNull null
+            if (fields.size !in 6..7) return@mapNotNull null
             runCatching {
                 val decoded = fields.map(::decodeField)
                 PlaybackHistoryEntry(
@@ -47,6 +49,7 @@ object PlaybackHistoryCodec {
                     uri = decoded[3],
                     mimeType = decoded[4].ifBlank { null },
                     playedAtEpochMs = decoded[5].toLong(),
+                    resumePositionMs = decoded.getOrNull(6)?.toLong()?.coerceAtLeast(0L) ?: 0L,
                 ).takeIf { it.uri.isNotBlank() && it.playedAtEpochMs >= 0L }
             }.getOrNull()
         }.toList().distinctBy { it.mediaId.ifBlank { it.uri } }.take(50)
@@ -68,6 +71,14 @@ class PlaybackHistoryStore(context: Context) {
     fun record(entry: PlaybackHistoryEntry) {
         val updated = (listOf(entry) + load().filterNot { it.mediaId == entry.mediaId || it.uri == entry.uri }).take(50)
         preferences.edit().putString(KEY_ENTRIES, PlaybackHistoryCodec.encode(updated)).apply()
+    }
+
+    fun updateProgress(mediaId: String, uri: String, positionMs: Long) {
+        val current = load()
+        val updated = current.map { entry ->
+            if (entry.mediaId == mediaId || entry.uri == uri) entry.copy(resumePositionMs = positionMs.coerceAtLeast(0L)) else entry
+        }
+        if (updated != current) preferences.edit().putString(KEY_ENTRIES, PlaybackHistoryCodec.encode(updated)).apply()
     }
 
     companion object {
