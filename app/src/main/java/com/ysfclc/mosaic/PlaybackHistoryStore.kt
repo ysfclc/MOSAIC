@@ -23,7 +23,7 @@ object PlaybackHistoryCodec {
     private const val RECORD_SEPARATOR = "\n"
 
     fun encode(entries: List<PlaybackHistoryEntry>): String =
-        entries.take(50).joinToString(RECORD_SEPARATOR) { entry ->
+        entries.distinctBy { it.mediaId.ifBlank { it.uri } }.take(50).joinToString(RECORD_SEPARATOR) { entry ->
             listOf(
                 entry.mediaId,
                 entry.title,
