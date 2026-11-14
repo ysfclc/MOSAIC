@@ -73,6 +73,10 @@ class PlaybackHistoryStore(context: Context) {
         preferences.edit().putString(KEY_ENTRIES, PlaybackHistoryCodec.encode(updated)).apply()
     }
 
+    fun clear() {
+        preferences.edit().remove(KEY_ENTRIES).apply()
+    }
+
     fun updateProgress(mediaId: String, uri: String, positionMs: Long) {
         val current = load()
         val updated = current.map { entry ->
