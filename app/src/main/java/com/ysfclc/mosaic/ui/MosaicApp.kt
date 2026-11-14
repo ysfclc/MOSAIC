@@ -187,7 +187,7 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
     val recordHistory = remember(historyStore) {
         { item: MediaItem? ->
             val mediaUri = item?.localConfiguration?.uri
-            if (item != null && mediaUri != null) {
+            if (item != null && mediaUri != null && mediaUri.encodedQuery.isNullOrBlank() && mediaUri.encodedFragment.isNullOrBlank() && !mediaUri.authority.orEmpty().contains('@')) {
                 val metadata = item.mediaMetadata
                 historyStore.record(
                     PlaybackHistoryEntry(
@@ -244,9 +244,12 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
         val listener = object : Player.Listener {
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                 playerRevision++
-                recordHistory(mediaItem)
+                if (controller?.isPlaying == true) recordHistory(mediaItem)
             }
-            override fun onIsPlayingChanged(isPlaying: Boolean) { playerRevision++ }
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                playerRevision++
+                if (isPlaying) recordHistory(controller?.currentMediaItem)
+            }
             override fun onPlaybackStateChanged(playbackState: Int) { playerRevision++ }
             override fun onMediaMetadataChanged(mediaMetadata: androidx.media3.common.MediaMetadata) { playerRevision++ }
             override fun onVideoSizeChanged(videoSize: VideoSize) { playerRevision++ }
@@ -256,7 +259,7 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
     }
 
     LaunchedEffect(controller) {
-        controller?.currentMediaItem?.let(recordHistory)
+        if (controller?.isPlaying == true) recordHistory(controller?.currentMediaItem)
         while (controller != null) {
             if (controller?.isPlaying == true) playerRevision++
             delay(800)
