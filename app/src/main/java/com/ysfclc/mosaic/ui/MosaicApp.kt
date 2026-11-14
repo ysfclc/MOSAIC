@@ -204,6 +204,20 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
         }
     }
 
+    val saveProgress = remember(historyStore) {
+        { item: MediaItem? ->
+            val mediaUri = item?.localConfiguration?.uri
+            if (item != null && mediaUri != null && mediaUri.encodedQuery.isNullOrBlank() && mediaUri.encodedFragment.isNullOrBlank() && !mediaUri.authority.orEmpty().contains('@')) {
+                historyStore.updateProgress(
+                    item.mediaId.ifBlank { mediaUri.toString() },
+                    mediaUri.toString(),
+                    controller?.currentPosition ?: 0L,
+                )
+                recentHistory = historyStore.load()
+            }
+        }
+    }
+
     val permissionName = if (Build.VERSION.SDK_INT >= 33) {
         Manifest.permission.READ_MEDIA_AUDIO
     } else {
@@ -248,7 +262,7 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
             }
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 playerRevision++
-                if (isPlaying) recordHistory(controller?.currentMediaItem)
+                if (isPlaying) recordHistory(controller?.currentMediaItem) else saveProgress(controller?.currentMediaItem)
             }
             override fun onPlaybackStateChanged(playbackState: Int) { playerRevision++ }
             override fun onMediaMetadataChanged(mediaMetadata: androidx.media3.common.MediaMetadata) { playerRevision++ }
@@ -260,8 +274,16 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
 
     LaunchedEffect(controller) {
         if (controller?.isPlaying == true) recordHistory(controller?.currentMediaItem)
+        var lastProgressCheckpoint = 0L
         while (controller != null) {
-            if (controller?.isPlaying == true) playerRevision++
+            if (controller?.isPlaying == true) {
+                playerRevision++
+                val now = System.currentTimeMillis()
+                if (now - lastProgressCheckpoint >= 10_000L) {
+                    saveProgress(controller?.currentMediaItem)
+                    lastProgressCheckpoint = now
+                }
+            }
             delay(800)
         }
     }
@@ -345,7 +367,7 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
                         onOpenSource = openExternalSource,
                         onResume = { controller?.play() },
                         onPlayHistory = { entry ->
-                            playback.playUri(Uri.parse(entry.uri), entry.title, entry.mimeType)
+                            playback.playUri(Uri.parse(entry.uri), entry.title, entry.mimeType, entry.resumePositionMs)
                             destination = Destination.PLAYER
                         },
                     )
