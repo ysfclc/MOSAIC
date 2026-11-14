@@ -184,21 +184,23 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
     var playerRevision by remember { mutableIntStateOf(0) }
     var recentHistory by remember { mutableStateOf(historyStore.load()) }
 
-    val recordHistory: (MediaItem?) -> Unit = { item ->
-        val mediaUri = item?.localConfiguration?.uri
-        if (item != null && mediaUri != null) {
-            val metadata = item.mediaMetadata
-            historyStore.record(
-                PlaybackHistoryEntry(
-                    mediaId = item.mediaId.ifBlank { mediaUri.toString() },
-                    title = metadata.title?.toString()?.takeIf(String::isNotBlank) ?: mediaUri.lastPathSegment ?: "Untitled media",
-                    creator = metadata.artist?.toString()?.takeIf(String::isNotBlank),
-                    uri = mediaUri.toString(),
-                    mimeType = item.localConfiguration?.mimeType,
-                    playedAtEpochMs = System.currentTimeMillis(),
-                ),
-            )
-            recentHistory = historyStore.load()
+    val recordHistory = remember(historyStore) {
+        { item: MediaItem? ->
+            val mediaUri = item?.localConfiguration?.uri
+            if (item != null && mediaUri != null) {
+                val metadata = item.mediaMetadata
+                historyStore.record(
+                    PlaybackHistoryEntry(
+                        mediaId = item.mediaId.ifBlank { mediaUri.toString() },
+                        title = metadata.title?.toString()?.takeIf(String::isNotBlank) ?: mediaUri.lastPathSegment ?: "Untitled media",
+                        creator = metadata.artist?.toString()?.takeIf(String::isNotBlank),
+                        uri = mediaUri.toString(),
+                        mimeType = item.localConfiguration?.mimeType,
+                        playedAtEpochMs = System.currentTimeMillis(),
+                    ),
+                )
+                recentHistory = historyStore.load()
+            }
         }
     }
 
