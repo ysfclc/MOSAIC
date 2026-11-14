@@ -1,5 +1,5 @@
 # State Ledger
-_Last updated: 2026-11-12 by ChatGPT GPT-6 — session 4 (Browser and DNS filter hardening; Vercel build-route diagnostics)_
+_Last updated: 2026-11-14 by ChatGPT GPT-6 — playback history first vertical slice; public GitHub Actions build recovery_
 
 ## 1. Product snapshot
 MOSAIC is a local-first native Android personal media operating system. It unifies discovery, source access, playback continuity, a durable personal library and ad/tracker protection across local files, browser media, streams, podcasts/radio and third-party apps. The two primary pillars are cross-source background playback/control and broad ad/tracker blocking. Completion requires source-by-source real-device evidence, honest playback-ownership labels, measured filtering coverage/limits and a reliable unified media experience; CI success alone is not product acceptance. Canonical north star: `docs/MOSAIC_PRODUCT_VISION.md`; narrative requirements: `docs/PRODUCT_SPEC.md`; requirement/test traceability: `docs/SPEC.md`; architecture constraints: `docs/DECISIONS.md`.
@@ -17,12 +17,12 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 | Ad Shield browser filtering | 🟡 partial | Removed whole-page YouTube/Spotify exemptions. Known third-party ad/tracker domains are blocked on provider pages; Google ad infrastructure is blocked by default with a narrow YouTube top-level-page or embedded-frame Referer compatibility exception. New policy tests cover HTTP(S)-only filtering, domain boundaries, lookalike Referer rejection and provider compatibility, but are not yet executed; Redmi compatibility acceptance remains open. |
 | Ad Shield device DNS filter | 🟡 partial | Opt-in DNS-only local VPN, allowlist, status, notification Stop and DNS self-test exist. Packet parsing now guards backing-buffer lengths, the tunnel loop stops on EOF, and system-resolver replies are checked against the query; tests are committed but not executed. IPv4 UDP only, lifecycle/routing coverage and Redmi acceptance remain open. |
 | Named provider integrations | ⚪ not started / 🟡 partial | YouTube/Spotify/Facebook/Instagram remain targets; generic delegated MediaSession control exists, not native audio ingestion. |
-| Durable unified Library | ⚪ not started | Read-only local audio index exists; durable media identity, history, collections, resume/migrations remain TODO. |
+| Durable unified Library | 🟡 partial | Read-only local audio index plus first local playback-history slice (up to 50 safe references, Home resume entry points); durable identity, queue/resume positions, collections and migrations remain open. |
 | Documentation / traceability | 🟡 partial | Added this ledger and 11-row `docs/SPEC.md`; reconciled task/matrix/spec and updated README/legacy handoff. Branch CI has not executed tests/build due preflight runner assignment failure. |
-| CI / build pipeline | 🟡 partial | Vercel project `mosaic-apk` is linked to this private repository and Preview deployments are explicitly enabled. Git pushes have not produced a Preview deployment; the only deployment was canceled before build after its unexpected production target. REST deployment creation hit the 100/day quota, and Vercel Sandbox creation is blocked by Hobby snapshot-storage limits. No Vercel APK is verified yet. GitHub Actions preflight also fails before job steps. |
+| CI / build pipeline | 🟡 partial | Repository is public. GitHub Actions direct-build run #194 completed successfully on the active continuity branch, including source checks, Python tests, Android unit tests, lint, APK assembly, signing and checksum verification. Current playback-history increment is building in run #201. Vercel is not the active APK path. The development signing key remains exposed in the public repository and needs a controlled migration to GitHub Actions Secrets. |
 
 ## 3. Currently in flight
-- Continuity and requirements reconciliation — complete as a documentation change on branch `continuity/state-ledger-bootstrap-2026-11-12`; requires a successful CI run before merge.
+- Playback history first vertical slice — implemented locally on branch `continuity/state-ledger-bootstrap-2026-11-12`; CI run #201 is pending. It records actual MOSAIC-owned URI playback only, skips URLs with query/fragment/userinfo, and exposes recent items on Home.
 - Product/device acceptance — Redmi Note 12 Pro 5G Home/Explore/Player, external-session, native source and Ad Shield checks are still unrecorded.
 - Browser source-aware filtering — P3-015 is IN PROGRESS; whole-page provider exemptions are removed, with a narrow YouTube top-level/Referer Google-player compatibility allowlist. New unit tests need a successful run and Redmi acceptance.
 - Native stream/feed and Browser handoff — source implementations and tests exist; real streams, feeds and browser media still need device acceptance.
@@ -34,7 +34,7 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 - IPv4 UDP DNS interception does not cover DoH/custom DNS/IPv6 or same-host/in-stream advertising.
 - External YouTube/Spotify/Facebook/Instagram native playback is not demonstrated; external MediaSession control remains delegated to the source app.
 - Browser handoff cannot transfer DRM, MSE/blob, protected or cookie/header-dependent media; this is not general website extraction.
-- Durable unified library (identity, history, queue persistence, collections, resume and migrations) remains unimplemented.
+- Durable unified library remains incomplete: recent playback references are now persisted locally, but stable cross-source identity, persistent queue, resume positions, collections, Room/schema migrations and full Library integration are not implemented.
 - No physical-device/ADB acceptance evidence is available in this session.
 
 ## 5. Environment & how to run
@@ -115,4 +115,17 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 - APK SHA-256: `ee537cadfa063f9b1736f1e48119c853b1c80a979a61dc90338307011605639d`.
 - Artifact: `MOSAIC-Android-debug-APK` (GitHub artifact ID `14131795848`; expires 2026-11-28).
 - Security follow-up: the persistent development signing key is present in the now-public repository. It is not a production key; move it to GitHub Actions Secrets and rotate it before treating future public builds as trusted releases. Rotation requires a one-time signer migration for existing installs.
+- No physical Redmi device acceptance is claimed.
+
+
+## 2026-11-14 — playback history first vertical slice
+
+- Added `PlaybackHistoryStore` in the app's private SharedPreferences. It stores up to 50 media references/metadata entries, not media bytes.
+- History is recorded only when MOSAIC's own Media3 session is actively playing. External app sessions are not misrepresented as MOSAIC-owned history.
+- Entries with URL query strings, fragments or userinfo are intentionally excluded so signed URLs and obvious embedded credentials are not persisted.
+- Home now displays the four most recent entries with one-tap playback.
+- Added codec tests for Unicode and optional metadata round-trip, malformed-row tolerance, deduplication and the 50-entry cap.
+- Task P2-002 is IN PROGRESS; durable queue/resume, unified identity, collections, Room migrations and Library integration remain open.
+- Code commits: `8c4697a` (store), `5689057` (codec tests), `114941f` (Home UI), `5be23e2` (active-playback and URL-safety guard).
+- Current verification: GitHub Actions run [#201](https://github.com/ysfclc/MOSAIC/actions/runs/43651206944) is pending; do not claim tests/build pass until it completes.
 - No physical Redmi device acceptance is claimed.
