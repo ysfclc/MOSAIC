@@ -101,3 +101,8 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 - The APK is a development-signed debug build, not a production release.
 - The existing signing identity file is in the private repository; keep the repository private and plan a controlled migration to an encrypted Vercel secret before any public exposure.
 - Named provider playback and physical-device behavior remain unproven; delegated external controls must not be described as native playback.
+
+
+## 2026-11-14 — public GitHub Actions build retry
+
+The repository is public. Retried the latest continuity-branch preflight job after the prior run failed before runner steps. A fresh full workflow run is required to execute source checks, Android tests, lint and APK assembly against this branch; record the resulting run and artifact evidence here.
