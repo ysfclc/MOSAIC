@@ -22,7 +22,7 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 | CI / build pipeline | 🟡 partial | Repository is public. GitHub Actions direct-build run #194 completed successfully on the active continuity branch, including source checks, Python tests, Android unit tests, lint, APK assembly, signing and checksum verification. Playback-history increment passed full GitHub Actions run #204, including tests, lint, APK build, signing and checksum verification. Vercel is not the active APK path. The development signing key remains exposed in the public repository and needs a controlled migration to GitHub Actions Secrets. |
 
 ## 3. Currently in flight
-- Playback history first vertical slice — implemented locally on branch `continuity/state-ledger-bootstrap-2026-11-12`; CI run #201 is pending. It records actual MOSAIC-owned URI playback only, skips URLs with query/fragment/userinfo, and exposes recent items on Home.
+- Playback history first vertical slice — implemented on branch `continuity/state-ledger-bootstrap-2026-11-12`; full CI run #204 passed. It records actual MOSAIC-owned URI playback only, skips URLs with query/fragment/userinfo, and exposes recent items on Home.
 - Product/device acceptance — Redmi Note 12 Pro 5G Home/Explore/Player, external-session, native source and Ad Shield checks are still unrecorded.
 - Browser source-aware filtering — P3-015 is IN PROGRESS; whole-page provider exemptions are removed, with a narrow YouTube top-level/Referer Google-player compatibility allowlist. New unit tests need a successful run and Redmi acceptance.
 - Native stream/feed and Browser handoff — source implementations and tests exist; real streams, feeds and browser media still need device acceptance.
@@ -99,7 +99,7 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 - No APK from this Vercel pipeline exists yet; do not present any earlier APK as this build.
 - The first deployment was canceled because Vercel reported a production target for a continuity-branch commit. Ensure the next deployment is preview and production remains on main.
 - The APK is a development-signed debug build, not a production release.
-- The existing signing identity file is in the private repository; keep the repository private and plan a controlled migration to an encrypted Vercel secret before any public exposure.
+- The persistent development signing key is exposed in the public repository. Move it to GitHub Actions Secrets and rotate it before treating future public builds as trusted releases; plan the one-time signer migration so ordinary updates do not unexpectedly fail.
 - Named provider playback and physical-device behavior remain unproven; delegated external controls must not be described as native playback.
 
 
