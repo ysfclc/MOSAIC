@@ -109,6 +109,8 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import androidx.media3.session.MediaController
 import com.ysfclc.mosaic.core.design.MosaicPalette
+import com.ysfclc.mosaic.PlaybackHistoryEntry
+import com.ysfclc.mosaic.PlaybackHistoryStore
 import com.ysfclc.mosaic.core.library.MediaStoreCatalog
 import com.ysfclc.mosaic.core.media.MediaItemRecord
 import com.ysfclc.mosaic.core.media.PlaybackConnection
@@ -137,6 +139,7 @@ private enum class Destination(val title: String) {
 fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Unit = {}) {
     val context = LocalContext.current
     val catalog = remember(context) { MediaStoreCatalog(context.applicationContext) }
+    val historyStore = remember(context) { PlaybackHistoryStore(context.applicationContext) }
     val playback = remember(context) { PlaybackConnection(context.applicationContext) }
     val controller by playback.controller.collectAsState()
     val connectionError by playback.connectionError.collectAsState()
@@ -179,6 +182,25 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
     var audioPermission by remember { mutableStateOf(hasAudioPermission(context)) }
     var scanCounter by remember { mutableIntStateOf(0) }
     var playerRevision by remember { mutableIntStateOf(0) }
+    var recentHistory by remember { mutableStateOf(historyStore.load()) }
+
+    val recordHistory: (MediaItem?) -> Unit = { item ->
+        val mediaUri = item?.localConfiguration?.uri
+        if (item != null && mediaUri != null) {
+            val metadata = item.mediaMetadata
+            historyStore.record(
+                PlaybackHistoryEntry(
+                    mediaId = item.mediaId.ifBlank { mediaUri.toString() },
+                    title = metadata.title?.toString()?.takeIf(String::isNotBlank) ?: mediaUri.lastPathSegment ?: "Untitled media",
+                    creator = metadata.artist?.toString()?.takeIf(String::isNotBlank),
+                    uri = mediaUri.toString(),
+                    mimeType = item.localConfiguration?.mimeType,
+                    playedAtEpochMs = System.currentTimeMillis(),
+                ),
+            )
+            recentHistory = historyStore.load()
+        }
+    }
 
     val permissionName = if (Build.VERSION.SDK_INT >= 33) {
         Manifest.permission.READ_MEDIA_AUDIO
@@ -215,10 +237,13 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
         }
     }
 
-    DisposableEffect(controller) {
+    DisposableEffect(controller, recordHistory) {
         if (controller == null) return@DisposableEffect onDispose { }
         val listener = object : Player.Listener {
-            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) { playerRevision++ }
+            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                playerRevision++
+                recordHistory(mediaItem)
+            }
             override fun onIsPlayingChanged(isPlaying: Boolean) { playerRevision++ }
             override fun onPlaybackStateChanged(playbackState: Int) { playerRevision++ }
             override fun onMediaMetadataChanged(mediaMetadata: androidx.media3.common.MediaMetadata) { playerRevision++ }
@@ -229,6 +254,7 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
     }
 
     LaunchedEffect(controller) {
+        controller?.currentMediaItem?.let(recordHistory)
         while (controller != null) {
             if (controller?.isPlaying == true) playerRevision++
             delay(800)
@@ -300,6 +326,7 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
                         indexing = indexing,
                         hasPermission = audioPermission,
                         nowPlaying = hasNowPlaying,
+                        recentHistory = recentHistory,
                         currentTitle = currentTitle,
                         currentArtist = currentArtist,
                         externalSessionCount = externalSessions.size,
@@ -312,6 +339,10 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
                         onOpenShield = { destination = Destination.SHIELD },
                         onOpenSource = openExternalSource,
                         onResume = { controller?.play() },
+                        onPlayHistory = { entry ->
+                            playback.playUri(Uri.parse(entry.uri), entry.title, entry.mimeType)
+                            destination = Destination.PLAYER
+                        },
                     )
                     Destination.EXPLORE -> ExploreScreen(
                         onOpenSource = openExternalSource,
@@ -484,6 +515,7 @@ private fun HomeScreen(
     indexing: Boolean,
     hasPermission: Boolean,
     nowPlaying: Boolean,
+    recentHistory: List<PlaybackHistoryEntry>,
     currentTitle: String,
     currentArtist: String,
     externalSessionCount: Int,
@@ -496,6 +528,7 @@ private fun HomeScreen(
     onOpenShield: () -> Unit,
     onOpenSource: (String) -> Unit,
     onResume: () -> Unit,
+    onPlayHistory: (PlaybackHistoryEntry) -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -517,6 +550,32 @@ private fun HomeScreen(
                 onPrimary = if (nowPlaying) onResume else onExplore,
                 onSecondary = onOpenPlayer,
             )
+        }
+        item {
+            if (recentHistory.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    SectionHeading("PICK UP WHERE YOU LEFT OFF", "RECENTLY PLAYED")
+                    recentHistory.take(4).forEach { entry ->
+                        Surface(
+                            onClick = { onPlayHistory(entry) },
+                            color = MosaicPalette.SurfaceGlass,
+                            shape = RoundedCornerShape(14.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = .07f)),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Row(Modifier.padding(horizontal = 12.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.MusicNote, contentDescription = null, tint = MosaicPalette.Cyan, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(10.dp))
+                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Text(entry.title, color = MosaicPalette.TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(entry.creator ?: "Saved playback reference", color = MosaicPalette.TextMuted, fontSize = 9.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+                                Icon(Icons.Default.PlayArrow, contentDescription = "Play ${entry.title}", tint = MosaicPalette.Cyan, modifier = Modifier.size(18.dp))
+                            }
+                        }
+                    }
+                }
+            }
         }
         item {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
