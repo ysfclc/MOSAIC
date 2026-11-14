@@ -185,7 +185,7 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
     var recentHistory by remember { mutableStateOf(historyStore.load()) }
 
     val recordHistory = remember(historyStore) {
-        { item: MediaItem? ->
+        { item: MediaItem?, positionMs: Long ->
             val mediaUri = item?.localConfiguration?.uri
             if (item != null && mediaUri != null && mediaUri.encodedQuery.isNullOrBlank() && mediaUri.encodedFragment.isNullOrBlank() && !mediaUri.authority.orEmpty().contains('@')) {
                 val metadata = item.mediaMetadata
@@ -197,6 +197,7 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
                         uri = mediaUri.toString(),
                         mimeType = item.localConfiguration?.mimeType,
                         playedAtEpochMs = System.currentTimeMillis(),
+                        resumePositionMs = positionMs.coerceAtLeast(0L),
                     ),
                 )
                 recentHistory = historyStore.load()
@@ -258,11 +259,11 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
         val listener = object : Player.Listener {
             override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
                 playerRevision++
-                if (controller?.isPlaying == true) recordHistory(mediaItem)
+                if (controller?.isPlaying == true) recordHistory(mediaItem, controller?.currentPosition ?: 0L)
             }
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 playerRevision++
-                if (isPlaying) recordHistory(controller?.currentMediaItem) else saveProgress(controller?.currentMediaItem, controller?.currentPosition ?: 0L)
+                if (isPlaying) recordHistory(controller?.currentMediaItem, controller?.currentPosition ?: 0L) else saveProgress(controller?.currentMediaItem, controller?.currentPosition ?: 0L)
             }
             override fun onPlaybackStateChanged(playbackState: Int) { playerRevision++ }
             override fun onMediaMetadataChanged(mediaMetadata: androidx.media3.common.MediaMetadata) { playerRevision++ }
@@ -273,7 +274,7 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
     }
 
     LaunchedEffect(controller) {
-        if (controller?.isPlaying == true) recordHistory(controller?.currentMediaItem)
+        if (controller?.isPlaying == true) recordHistory(controller?.currentMediaItem, controller?.currentPosition ?: 0L)
         var lastProgressCheckpoint = 0L
         while (controller != null) {
             if (controller?.isPlaying == true) {
