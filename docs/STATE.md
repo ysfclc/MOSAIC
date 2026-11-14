@@ -103,6 +103,16 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 - Named provider playback and physical-device behavior remain unproven; delegated external controls must not be described as native playback.
 
 
-## 2026-11-14 — public GitHub Actions build retry
+## 2026-11-14 — successful public GitHub Actions APK build
 
-The repository is public. Retried the latest continuity-branch preflight job after the prior run failed before runner steps. A fresh full workflow run is required to execute source checks, Android tests, lint and APK assembly against this branch; record the resulting run and artifact evidence here.
+- Repository visibility: public.
+- Built branch: `continuity/state-ledger-bootstrap-2026-11-12`.
+- Source commit: `8fce7d8bb800eed12e9e0b133ff06c8ae56ad22b`.
+- Workflow run: [#192, attempt 2](https://github.com/ysfclc/MOSAIC/actions/runs/43300807250) — SUCCESS.
+- Source verification, Python contract tests, Android unit tests, lint, debug APK assembly, APK signature verification and SHA-256 verification passed.
+- APK release: [MOSAIC development build #192](https://github.com/ysfclc/MOSAIC/releases/tag/mosaic-dev-build-192).
+- APK size: 22,990,870 bytes.
+- APK SHA-256: `ee537cadfa063f9b1736f1e48119c853b1c80a979a61dc90338307011605639d`.
+- Artifact: `MOSAIC-Android-debug-APK` (GitHub artifact ID `14131795848`; expires 2026-11-28).
+- Security follow-up: the persistent development signing key is present in the now-public repository. It is not a production key; move it to GitHub Actions Secrets and rotate it before treating future public builds as trusted releases. Rotation requires a one-time signer migration for existing installs.
+- No physical Redmi device acceptance is claimed.
