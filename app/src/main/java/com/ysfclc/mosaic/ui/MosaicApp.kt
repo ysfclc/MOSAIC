@@ -205,13 +205,13 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
     }
 
     val saveProgress = remember(historyStore) {
-        { item: MediaItem? ->
+        { item: MediaItem?, positionMs: Long ->
             val mediaUri = item?.localConfiguration?.uri
             if (item != null && mediaUri != null && mediaUri.encodedQuery.isNullOrBlank() && mediaUri.encodedFragment.isNullOrBlank() && !mediaUri.authority.orEmpty().contains('@')) {
                 historyStore.updateProgress(
                     item.mediaId.ifBlank { mediaUri.toString() },
                     mediaUri.toString(),
-                    controller?.currentPosition ?: 0L,
+                    positionMs,
                 )
                 recentHistory = historyStore.load()
             }
@@ -262,7 +262,7 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
             }
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 playerRevision++
-                if (isPlaying) recordHistory(controller?.currentMediaItem) else saveProgress(controller?.currentMediaItem)
+                if (isPlaying) recordHistory(controller?.currentMediaItem) else saveProgress(controller?.currentMediaItem, controller?.currentPosition ?: 0L)
             }
             override fun onPlaybackStateChanged(playbackState: Int) { playerRevision++ }
             override fun onMediaMetadataChanged(mediaMetadata: androidx.media3.common.MediaMetadata) { playerRevision++ }
@@ -280,7 +280,7 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
                 playerRevision++
                 val now = System.currentTimeMillis()
                 if (now - lastProgressCheckpoint >= 10_000L) {
-                    saveProgress(controller?.currentMediaItem)
+                    saveProgress(controller?.currentMediaItem, controller?.currentPosition ?: 0L)
                     lastProgressCheckpoint = now
                 }
             }
