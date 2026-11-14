@@ -119,3 +119,8 @@ P3-007 Player controls and the first P3-008 Ad Shield slice are both CI-verified
 - Never mark a source or ad-filter capability DONE without real evidence.
 - Never claim a build or device test that was not run.
 - Keep work in small, independently verifiable steps; no unrelated redesign or ZIP handoff unless requested.
+
+
+## 2026-11-14 public-repository build request
+
+The repository is now public. A direct GitHub Actions Android build was triggered by this handoff update so the current `main` source can be verified and a fresh debug APK published. Record the resulting workflow run, APK artifact/release URL, checksum and any failures here after CI completes.
