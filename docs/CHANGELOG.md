@@ -180,3 +180,11 @@
 - Added 15/30/45/60/90-minute sleep timer choices and a cancel control. The timer stores a local wall-clock deadline in app-private preferences; the Media3 PlaybackService checks expiry and pauses only MOSAIC-owned playback, preserving the queue and resume position. The deadline remains available across service/process recreation.
 - Added `PlaybackSleepTimerPolicyTest` for deadline calculation, invalid/bounded durations, remaining-time clamping and expiry, plus a Python project-contract test for Player/service wiring.
 - Verification: GitHub Actions run [#234](https://github.com/ysfclc/MOSAIC/actions/runs/43686229960) passed source verification, Python tests, Android unit tests, lint, APK assembly, persistent signer verification and checksum. Code commit `b78dd47997864018e46b31f694cf72f3764a981b`. Release: [mosaic-dev-build-234](https://github.com/ysfclc/MOSAIC/releases/tag/mosaic-dev-build-234); APK size 23,040,022 bytes; APK SHA-256 `de2ff98f4d32e66e667616ed55a716b7c8abfc9b423df58be3234ce4c91d701a`; artifact ID `14150063606` (expires 2026-11-29). Physical Redmi timer/screen-off acceptance remains open.
+
+
+## 2026-11-15 — Source-scoped media identity and Room model design
+
+- Added `MediaIdentity`, a versioned, provider-neutral identity format that namespaces source-local item IDs and safely encodes Unicode/delimiter characters. Identical local IDs from different sources no longer collide.
+- Wired stable IDs into `MediaItemFactory`, `LocalMediaSourceAdapter.resolve`, and `PlaybackConnection.playUri`; resuming a history entry now preserves its existing media ID.
+- Added `MediaIdentityTest` for source collision isolation, Unicode round-trip, incomplete-ID rejection and malformed identifiers, plus a Python source-contract test for playback/resolution wiring. CI verification is pending.
+- Designed the Room-backed Library schema, source/location separation, collections/membership, playback history/queue, safe-locator policy and idempotent SharedPreferences import in `docs/LIBRARY_DATA_MODEL.md`. Locked the shared persistence module boundary and non-destructive migration rules in ADR-017. No Room database or migration has been implemented yet.
