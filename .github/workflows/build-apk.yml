@@ -442,6 +442,7 @@ jobs:
           set -euo pipefail
           cd "$GITHUB_WORKSPACE"
           ./gradlew --no-daemon --stacktrace -PmosaicVersionCode="$GITHUB_RUN_NUMBER" \
+            :core:persistence:testDebugUnitTest \
             :core:media:testDebugUnitTest \
             :app:testDebugUnitTest \
             :app:lintDebug \
@@ -791,7 +792,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          ./gradlew --no-daemon --stacktrace -PmosaicVersionCode="$GITHUB_RUN_NUMBER" :core:media:testDebugUnitTest :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+          ./gradlew --no-daemon --stacktrace -PmosaicVersionCode="$GITHUB_RUN_NUMBER" :core:persistence:testDebugUnitTest \
+            :core:media:testDebugUnitTest :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
 
       - name: Verify APK and calculate checksum
         shell: bash
@@ -839,6 +841,9 @@ jobs:
           path: |
             app/build/reports/**
             app/build/test-results/**
+            core/persistence/build/reports/**
+            core/persistence/build/test-results/**
+            core/persistence/schemas/**
             core/media/build/reports/**
             core/media/build/test-results/**
           if-no-files-found: warn
