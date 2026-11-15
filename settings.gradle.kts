@@ -15,4 +15,4 @@ dependencyResolutionManagement {
 }
 
 rootProject.name = "MOSAIC"
-include(":app", ":core:media", ":core:library", ":core:design")
+include(":app", ":core:media", ":core:library", ":core:design", ":core:persistence")
