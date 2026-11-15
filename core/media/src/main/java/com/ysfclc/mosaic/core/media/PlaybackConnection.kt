@@ -66,11 +66,11 @@ class PlaybackConnection(context: Context) {
         }
     }
 
-    fun playUri(uri: Uri, title: String, mimeType: String? = null, startPositionMs: Long = 0L) {
+    fun playUri(uri: Uri, title: String, mimeType: String? = null, startPositionMs: Long = 0L, mediaId: String? = null) {
         dispatch { activeController ->
             val metadata = MediaMetadata.Builder().setTitle(title).build()
             val item = MediaItem.Builder()
-                .setMediaId(uri.toString())
+                .setMediaId(mediaId?.takeIf(String::isNotBlank) ?: uri.toString())
                 .setUri(uri)
                 .apply { mimeType?.let { setMimeType(it) } }
                 .setMediaMetadata(metadata)
