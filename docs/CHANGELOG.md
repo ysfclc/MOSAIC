@@ -211,3 +211,15 @@
 - Published [mosaic-dev-build-282](https://github.com/ysfclc/MOSAIC/releases/tag/mosaic-dev-build-282).
 - APK SHA-256: `de58314ca0faa49305f441318a4908f1d1a4daae9c13650f5d1ce656f47cb955`.
 - The generated Room v1 schema is preserved in the CI report artifact but is not yet committed under `core/persistence/schemas`. Room-backed production reads/writes and physical-device/process-death acceptance remain open.
+
+## 2026-11-15 — Source-neutral Room LibraryRepository
+
+- Added a provider-neutral `LibraryRepository` that accepts any `MediaSourceAdapter`, assigns stable source-scoped identities, persists media metadata and safe locations, and exposes visible records through a Room item/location relation.
+- Signed, credential-bearing, query-string and otherwise unsafe locators are not persisted. Items with no safe location remain metadata-only and are not exposed as playable records.
+- Source sync preserves user-owned bookmark, resume-position and last-played state when provider metadata changes.
+- Batched source lookups and writes in groups of 400 to stay below conservative SQLite bind-variable limits for large libraries.
+- Added Robolectric runtime coverage for generic adapter sync, stable IDs across source namespaces, safe-locator rejection, and preservation of user state. The existing Room migration and parent-relation tests remain active.
+- CI run [#290](https://github.com/ysfclc/MOSAIC/actions/runs/43731295535) passed 58 tests with zero failures/errors, lint, APK assembly, signing and checksum verification.
+- Published [mosaic-dev-build-290](https://github.com/ysfclc/MOSAIC/releases/tag/mosaic-dev-build-290).
+- APK SHA-256: `9ac612ff2cd19afdd73533b96bc0ede283a4f18be6cea75539c36644922a63f7`.
+- The repository is not yet wired into the Library UI; stale-item reconciliation and Room production cutover remain open.
