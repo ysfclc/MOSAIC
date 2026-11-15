@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.ysfclc.mosaic.core.library.LibraryRepository
+import com.ysfclc.mosaic.core.media.MediaBrowseResult
 import com.ysfclc.mosaic.core.media.MediaIdentity
 import com.ysfclc.mosaic.core.media.MediaItemRecord
 import com.ysfclc.mosaic.core.media.MediaKind
@@ -58,8 +59,12 @@ class LibraryRepositoryTest {
                     capabilities = SourceCapabilities.LOCAL_MEDIA,
                 )
                 var records: List<MediaItemRecord> = listOf(initialRecord)
+                var completeSnapshot: Boolean = true
 
                 override suspend fun browse(query: String): List<MediaItemRecord> = records
+
+                override suspend fun browseSnapshot(query: String): MediaBrowseResult =
+                    MediaBrowseResult(records, isCompleteSnapshot = completeSnapshot)
 
                 override suspend fun resolve(mediaId: String): ResolvedMediaSource? = null
             }
@@ -92,6 +97,29 @@ class LibraryRepositoryTest {
             assertEquals(34_500L, updated?.resumePositionMs)
             assertEquals(61_000L, updated?.lastPlayedAtEpochMs)
             assertEquals("content://media/external/audio/media/142", database.mediaLocations().locationsFor(stableId).single().uri)
+
+            // A partial/permission-denied browse must not make unseen records disappear.
+            adapter.records = emptyList()
+            adapter.completeSnapshot = false
+            assertEquals(0, repository.sync(adapter, nowEpochMs = 75_000L))
+            assertEquals("AVAILABLE", database.mediaItems().findById(stableId)?.availability)
+            assertEquals(1, database.mediaLocations().locationsFor(stableId).size)
+
+            // Only an explicitly complete source snapshot can mark old records missing.
+            adapter.completeSnapshot = true
+            assertEquals(0, repository.sync(adapter, nowEpochMs = 76_000L))
+            assertEquals("MISSING", database.mediaItems().findById(stableId)?.availability)
+            assertTrue(database.mediaLocations().locationsFor(stableId).isEmpty())
+            assertTrue(repository.observeVisible().first().isEmpty())
+
+            // A later complete snapshot can restore the same stable item identity.
+            adapter.records = listOf(adapter.records.firstOrNull() ?: initialRecord.copy(
+                title = "Updated title",
+                creator = "Updated artist",
+                uri = "content://media/external/audio/media/142",
+            ))
+            assertEquals(1, repository.sync(adapter, nowEpochMs = 77_000L))
+            assertEquals("AVAILABLE", database.mediaItems().findById(stableId)?.availability)
 
             // Signed/ephemeral URLs may contribute metadata but are never persisted as locations.
             val signedRecord = adapter.records.single().copy(
