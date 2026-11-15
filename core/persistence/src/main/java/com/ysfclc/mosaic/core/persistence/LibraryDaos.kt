@@ -79,6 +79,9 @@ interface PlaybackHistoryDao {
     @Query("SELECT * FROM playback_history ORDER BY playedAtEpochMs DESC LIMIT :limit")
     suspend fun recent(limit: Int): List<PlaybackHistoryEntity>
 
+    @Query("DELETE FROM playback_history")
+    suspend fun clearAll()
+
     @Query("DELETE FROM playback_history WHERE playedAtEpochMs < :cutoffEpochMs")
     suspend fun pruneBefore(cutoffEpochMs: Long)
 }
@@ -94,6 +97,9 @@ interface PlaybackQueueDao {
     @Query("DELETE FROM playback_queue_entries WHERE queueId = :queueId")
     suspend fun clearEntries(queueId: String)
 
+    @Query("DELETE FROM playback_queue_state WHERE queueId = :queueId")
+    suspend fun clearState(queueId: String)
+
     @Query("SELECT * FROM playback_queue_state WHERE queueId = :queueId LIMIT 1")
     suspend fun state(queueId: String): PlaybackQueueStateEntity?
 
@@ -105,6 +111,12 @@ interface PlaybackQueueDao {
         saveState(state)
         clearEntries(state.queueId)
         if (entries.isNotEmpty()) insertEntries(entries)
+    }
+
+    @Transaction
+    suspend fun clearQueue(queueId: String) {
+        clearEntries(queueId)
+        clearState(queueId)
     }
 }
 
