@@ -110,6 +110,7 @@ import androidx.media3.ui.PlayerView
 import androidx.media3.session.MediaController
 import com.ysfclc.mosaic.core.design.MosaicPalette
 import com.ysfclc.mosaic.PlaybackHistoryEntry
+import com.ysfclc.mosaic.LegacyPreferencesImporter
 import com.ysfclc.mosaic.PlaybackHistoryStore
 import com.ysfclc.mosaic.core.library.MediaStoreCatalog
 import com.ysfclc.mosaic.core.media.MediaItemRecord
@@ -166,6 +167,14 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
         mutableStateOf(podcastFeedPreferences.getStringSet("saved_urls", emptySet()).orEmpty().toList().sorted())
     }
     val coroutineScope = rememberCoroutineScope()
+
+    LaunchedEffect(context) {
+        runCatching {
+            LegacyPreferencesImporter(context.applicationContext).importIfNeeded()
+        }.onFailure { error ->
+            android.util.Log.w("MOSAIC", "Legacy playback import deferred; it will retry on a later launch.", error)
+        }
+    }
 
     LaunchedEffect(context) {
         while (isActive) {
