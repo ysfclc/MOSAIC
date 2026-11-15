@@ -18,7 +18,7 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 | Ad Shield device DNS filter | 🟡 partial | Opt-in DNS-only local VPN, allowlist, status, notification Stop and DNS self-test exist. Packet parsing now guards backing-buffer lengths, the tunnel loop stops on EOF, and system-resolver replies are checked against the query; tests are committed but not executed. IPv4 UDP only, lifecycle/routing coverage and Redmi acceptance remain open. |
 | Named provider integrations | ⚪ not started / 🟡 partial | YouTube/Spotify/Facebook/Instagram remain targets; generic delegated MediaSession control exists, not native audio ingestion. |
 | Durable unified Library | 🟡 partial | Read-only local audio index plus local playback history/resume (up to 50 safe references, Home resume entry points, 10-second/pause checkpoints); Library has Recent and clear-history controls; CI run #212 passed. Media3 now snapshots up to 100 safe native queue entries, current item and position and restores the queue paused after service restart; new codec tests are awaiting CI. Stable identity, collections and Room migrations remain open. |
-| Documentation / traceability | 🟡 partial | Added this ledger and 11-row `docs/SPEC.md`; reconciled task/matrix/spec and updated README/legacy handoff. Branch CI has not executed tests/build due preflight runner assignment failure. |
+| Documentation / traceability | 🟡 partial | Added this ledger and 11-row `docs/SPEC.md`; reconciled task/matrix/spec and updated README/legacy handoff. The queue implementation passed run #220 through source verification, Python tests, Android unit tests, lint, APK assembly, signing and checksum; the final selected-item position correction is being verified in run #226. |
 | CI / build pipeline | 🟡 partial | Repository is public. GitHub Actions direct-build run #194 completed successfully on the active continuity branch, including source checks, Python tests, Android unit tests, lint, APK assembly, signing and checksum verification. Playback-history, resume and Library Recent/clear increment passed GitHub Actions run #212, including tests, lint, APK build, signing and checksum verification. The subsequent native queue persistence increment is committed on the continuity branch and awaits its own CI result. Vercel is not the active APK path. The development signing key remains exposed in the public repository and needs a controlled migration to GitHub Actions Secrets. |
 
 ## 3. Currently in flight
@@ -50,9 +50,9 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 - Vercel project: `mosaic-apk` (`prj_17TuuD9O7qZQcjqJoPTxlydWt0sV`), linked to `ysfclc/MOSAIC`; production branch is `main`. No production deployment was created in this session.
 
 ## 6. Next three increments
-1. Trigger and validate a Vercel Preview build from the current branch after the deployment API quota clears; confirm the build runs source checks, Python tests, Android unit tests, lint, APK assembly, signing fingerprint and checksum.
-2. Run the expanded P3-015 Browser policy tests in the Vercel build and perform Redmi YouTube/Spotify compatibility checks; adjust the narrow Google-player allowlist only with evidence.
-3. Complete the Redmi Note 12 Pro 5G acceptance for local audio, HTTPS/HLS, podcast feed, Browser handoff, YouTube/Spotify/social sessions and Ad Shield; record per-source outcomes in `docs/PROVIDER_CAPABILITY_MATRIX.md` and `docs/AD_SHIELD_DEVICE_ACCEPTANCE.md`.
+1. Finish CI verification of the final queue-snapshot revision, then install its signed APK over the previous MOSAIC build.
+2. On the Redmi Note 12 Pro 5G, test app-process death, service recreation, restored queue/current position, SAF URI permissions, screen-off playback and lock-screen/Bluetooth controls; record actual outcomes.
+3. Design and implement the Room-backed unified Library identity/collections model with explicit migrations and provenance, without moving or duplicating original media.
 
 ## 7. Open questions for the human
 - [ ] Is the Redmi Note 12 Pro 5G available for hands-on acceptance? Assume unavailable until confirmed; do not claim device acceptance without recorded results.
