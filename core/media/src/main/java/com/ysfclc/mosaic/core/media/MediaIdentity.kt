@@ -22,8 +22,10 @@ object MediaIdentity {
         stableId(record.sourceId, record.id.ifBlank { record.uri })
 
     fun stableId(sourceId: String, sourceItemId: String): String {
-        val safeSourceId = sourceId.trim().ifBlank { "unspecified" }
-        val safeItemId = sourceItemId.trim().ifBlank { "unspecified-item" }
+        val safeSourceId = sourceId.trim()
+        val safeItemId = sourceItemId.trim()
+        require(safeSourceId.isNotBlank()) { "A media source ID is required for stable identity." }
+        require(safeItemId.isNotBlank()) { "A source item ID is required for stable identity." }
         return "$PREFIX:${encode(safeSourceId)}:${encode(safeItemId)}"
     }
 
