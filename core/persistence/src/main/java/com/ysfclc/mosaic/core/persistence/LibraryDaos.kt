@@ -5,14 +5,15 @@ import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
 import androidx.room.Transaction
+import androidx.room.Upsert
 import kotlinx.coroutines.flow.Flow
 
 @Dao
 interface MediaItemDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun upsert(item: MediaItemEntity)
 
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun upsertAll(items: List<MediaItemEntity>)
 
     @Query("SELECT * FROM media_items WHERE mediaId = :mediaId LIMIT 1")
@@ -48,7 +49,7 @@ interface MediaLocationDao {
 
 @Dao
 interface MediaCollectionDao {
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    @Upsert
     suspend fun upsert(collection: MediaCollectionEntity)
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
