@@ -223,3 +223,13 @@
 - Published [mosaic-dev-build-290](https://github.com/ysfclc/MOSAIC/releases/tag/mosaic-dev-build-290).
 - APK SHA-256: `9ac612ff2cd19afdd73533b96bc0ede283a4f18be6cea75539c36644922a63f7`.
 - The repository is not yet wired into the Library UI; stale-item reconciliation and Room production cutover remain open.
+
+## 2026-11-15 — Room-backed Library UI cutover
+
+- Home and Library now observe the source-neutral Room-backed `LibraryRepository` rather than relying on a transient MediaStore scan list.
+- The app refreshes the Room index through `LocalMediaSourceAdapter`; the generic repository owns stable identity, safe locator filtering, batched writes and preservation of bookmark/resume/last-played state.
+- Added a source contract ensuring the UI reads the Room flow and invokes the adapter-based sync path.
+- CI run [#292](https://github.com/ysfclc/MOSAIC/actions/runs/43731948979) passed 58 tests with zero failures/errors, lint, APK assembly, signing and checksum verification.
+- Published [mosaic-dev-build-292](https://github.com/ysfclc/MOSAIC/releases/tag/mosaic-dev-build-292).
+- APK SHA-256: `6e18bb25e61285a80379b28449d3fb33a253a1982743ad0848b699e0e1358795`.
+- The Room v1 schema is still generated in CI but not committed. Permission-safe full-snapshot reconciliation, stale-item handling, playback history/queue/timer cutover and physical device acceptance remain open.
