@@ -58,6 +58,7 @@ class PlaybackQueueCodecTest {
 
         assertNotNull(decoded)
         assertEquals("three", decoded!!.items[decoded.currentIndex].mediaId)
+        assertEquals(0L, decoded.positionMs)
     }
 
     @Test
