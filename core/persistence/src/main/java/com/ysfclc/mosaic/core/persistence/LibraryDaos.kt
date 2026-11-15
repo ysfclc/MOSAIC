@@ -41,9 +41,6 @@ interface MediaItemDao {
     @Query("UPDATE media_items SET isBookmarked = :bookmarked, updatedAtEpochMs = :updatedAtEpochMs WHERE mediaId = :mediaId")
     suspend fun updateBookmark(mediaId: String, bookmarked: Boolean, updatedAtEpochMs: Long)
 
-    @Query("UPDATE media_items SET availability = 'MISSING', updatedAtEpochMs = :updatedAtEpochMs WHERE sourceId = :sourceId AND sourceItemId NOT IN (:sourceItemIds)")
-    suspend fun markMissingExcept(sourceId: String, sourceItemIds: List<String>, updatedAtEpochMs: Long)
-
     @Query("UPDATE media_items SET availability = 'MISSING', updatedAtEpochMs = :updatedAtEpochMs WHERE sourceId = :sourceId")
     suspend fun markAllMissing(sourceId: String, updatedAtEpochMs: Long)
 }
@@ -65,8 +62,8 @@ interface MediaLocationDao {
     @Query("DELETE FROM media_locations WHERE mediaId = :mediaId")
     suspend fun clearForMedia(mediaId: String)
 
-    @Query("DELETE FROM media_locations WHERE mediaId IN (SELECT mediaId FROM media_items WHERE sourceId = :sourceId AND sourceItemId NOT IN (:sourceItemIds))")
-    suspend fun clearForMissingSourceItems(sourceId: String, sourceItemIds: List<String>)
+    @Query("DELETE FROM media_locations WHERE mediaId IN (SELECT mediaId FROM media_items WHERE sourceId = :sourceId AND availability = 'MISSING')")
+    suspend fun clearForMissingSourceItems(sourceId: String)
 
     @Query("DELETE FROM media_locations WHERE sourceId = :sourceId")
     suspend fun clearForSource(sourceId: String)
