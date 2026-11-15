@@ -161,6 +161,22 @@ class ProjectContractTests(unittest.TestCase):
         self.assertIn("mediaId: String? = null", connection)
         self.assertIn("entry.resumePositionMs, entry.mediaId", app)
 
+    def test_room_persistence_module_exports_non_destructive_schema_and_daos(self):
+        settings = (ROOT / "settings.gradle.kts").read_text(encoding="utf-8")
+        database = (ROOT / "core/persistence/src/main/java/com/ysfclc/mosaic/core/persistence/MosaicDatabase.kt").read_text(encoding="utf-8")
+        entities = (ROOT / "core/persistence/src/main/java/com/ysfclc/mosaic/core/persistence/LibraryEntities.kt").read_text(encoding="utf-8")
+        daos = (ROOT / "core/persistence/src/main/java/com/ysfclc/mosaic/core/persistence/LibraryDaos.kt").read_text(encoding="utf-8")
+        build = (ROOT / "core/persistence/build.gradle.kts").read_text(encoding="utf-8")
+        workflow = (ROOT / ".github/workflows/build-apk.yml").read_text(encoding="utf-8")
+        self.assertIn(":core:persistence", settings)
+        self.assertIn("version = 1", database)
+        self.assertIn("exportSchema = true", database)
+        self.assertIn("MediaCollectionItemEntity", entities)
+        self.assertIn("suspend fun replaceQueue", daos)
+        self.assertIn("room.schemaLocation", build)
+        self.assertIn(":core:persistence:testDebugUnitTest", workflow)
+        self.assertNotIn("fallbackToDestructiveMigration", database)
+
     def test_podcast_feed_subscriptions_are_saved_on_device(self):
         app = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/MosaicApp.kt").read_text(encoding="utf-8")
         self.assertIn('getSharedPreferences("mosaic_podcast_feeds"', app)
