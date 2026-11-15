@@ -28,7 +28,7 @@ class LibraryRepository(
 ) {
     fun observeVisible(): Flow<List<MediaItemRecord>> =
         database.mediaItems().observeVisibleWithLocations().map { items ->
-            items.mapNotNull(MediaItemWithLocations::toMediaRecord)
+            items.mapNotNull { it.toMediaRecord() }
         }
 
     suspend fun sync(adapter: MediaSourceAdapter, query: String = "", nowEpochMs: Long = System.currentTimeMillis()): Int {
