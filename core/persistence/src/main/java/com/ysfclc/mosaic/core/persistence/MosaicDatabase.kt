@@ -14,6 +14,7 @@ import androidx.room.RoomDatabase
         PlaybackHistoryEntity::class,
         PlaybackQueueStateEntity::class,
         PlaybackQueueEntryEntity::class,
+        PlaybackTimerStateEntity::class,
         MigrationMarkerEntity::class,
     ],
     version = 1,
@@ -25,6 +26,7 @@ abstract class MosaicDatabase : RoomDatabase() {
     abstract fun collections(): MediaCollectionDao
     abstract fun playbackHistory(): PlaybackHistoryDao
     abstract fun playbackQueue(): PlaybackQueueDao
+    abstract fun playbackTimer(): PlaybackTimerDao
     abstract fun migrationMarkers(): MigrationMarkerDao
 }
 
