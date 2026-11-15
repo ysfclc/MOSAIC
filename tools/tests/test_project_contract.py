@@ -217,6 +217,12 @@ class ProjectContractTests(unittest.TestCase):
         self.assertIn("isBookmarked = existing?.isBookmarked ?: false", repository)
         self.assertIn("locationsForMediaIds", repository)
         self.assertIn(".chunked(QUERY_CHUNK_SIZE)", repository)
+        self.assertIn("reconcileMissing = query.isBlank() && result.isCompleteSnapshot", repository)
+        self.assertIn("markAllMissing", repository)
+        self.assertIn("clearForMissingSourceItems", repository)
+        media_store = (ROOT / "core/library/src/main/java/com/ysfclc/mosaic/core/library/MediaStoreCatalog.kt").read_text(encoding="utf-8")
+        self.assertIn("browseSnapshot(query: String): MediaBrowseResult", media_store)
+        self.assertIn("isCompleteSnapshot = completeSnapshot", media_store)
         self.assertIn("syncsAnyAdapterPreservesUserStateAndRejectsEphemeralLocations", runtime_test)
 
     def test_library_ui_uses_room_repository_as_its_record_source(self):
