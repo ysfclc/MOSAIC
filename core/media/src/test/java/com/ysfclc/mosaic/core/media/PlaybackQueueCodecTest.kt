@@ -55,7 +55,7 @@ class PlaybackQueueCodecTest {
             ),
         )
         val lines = valid.lines()
-        val decoded = PlaybackQueueCodec.decode(listOf(lines.first(), lines[1], "broken-row", lines[2]).joinToString("\n"))
+        val decoded = PlaybackQueueCodec.decode(listOf(lines.first(), lines[1], lines[2], "broken-row").joinToString("\n"))
 
         assertNotNull(decoded)
         assertEquals(listOf("one", "two"), decoded!!.items.map { it.mediaId })
