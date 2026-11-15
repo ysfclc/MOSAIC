@@ -195,7 +195,7 @@ class ProjectContractTests(unittest.TestCase):
         app = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/MosaicApp.kt").read_text(encoding="utf-8")
         self.assertIn("database.withTransaction", importer)
         self.assertIn("markerDao.find(MARKER_KEY)", importer)
-        self.assertIn("database.playbackHistory().recent", importer)
+        self.assertIn("database.playbackHistory().findByEventId", importer)
         self.assertIn("database.playbackQueue().entries", importer)
         self.assertIn("database.playbackTimer().state", importer)
         self.assertLess(importer.index("historyReadBack"), importer.index("markerDao.markCompleted"))
