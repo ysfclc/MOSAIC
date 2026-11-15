@@ -177,6 +177,17 @@ class ProjectContractTests(unittest.TestCase):
         self.assertIn(":core:persistence:testDebugUnitTest", workflow)
         self.assertNotIn("fallbackToDestructiveMigration", database)
 
+    def test_library_parent_upserts_do_not_delete_dependent_rows(self):
+        daos = (ROOT / "core/persistence/src/main/java/com/ysfclc/mosaic/core/persistence/LibraryDaos.kt").read_text(encoding="utf-8")
+        media_items = daos.split("interface MediaItemDao", 1)[1].split("@Dao", 1)[0]
+        collections = daos.split("interface MediaCollectionDao", 1)[1].split("@Dao", 1)[0]
+        self.assertIn("@Upsert", media_items)
+        self.assertIn("suspend fun upsert(item: MediaItemEntity)", media_items)
+        self.assertIn("@Upsert", collections)
+        self.assertIn("suspend fun upsert(collection: MediaCollectionEntity)", collections)
+        self.assertNotIn("OnConflictStrategy.REPLACE", media_items)
+        self.assertNotIn("OnConflictStrategy.REPLACE", collections)
+
     def test_podcast_feed_subscriptions_are_saved_on_device(self):
         app = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/MosaicApp.kt").read_text(encoding="utf-8")
         self.assertIn('getSharedPreferences("mosaic_podcast_feeds"', app)
