@@ -43,6 +43,16 @@ class MediaIdentityTest {
     }
 
     @Test
+    fun refusesBlankSourceOrItemIdsInsteadOfCreatingCollisions() {
+        org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            MediaIdentity.stableId("", "item")
+        }
+        org.junit.Assert.assertThrows(IllegalArgumentException::class.java) {
+            MediaIdentity.stableId("source", "")
+        }
+    }
+
+    @Test
     fun rejectsMalformedOrForeignIdentityStrings() {
         assertNull(MediaIdentity.parse("local:42"))
         assertNull(MediaIdentity.parse("mosaic-media-v1:%%%:bad"))
