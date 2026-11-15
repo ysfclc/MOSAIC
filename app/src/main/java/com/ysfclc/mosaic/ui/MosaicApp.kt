@@ -114,6 +114,8 @@ import com.ysfclc.mosaic.PlaybackHistoryStore
 import com.ysfclc.mosaic.core.library.MediaStoreCatalog
 import com.ysfclc.mosaic.core.media.MediaItemRecord
 import com.ysfclc.mosaic.core.media.PlaybackConnection
+import com.ysfclc.mosaic.core.media.PlaybackSleepTimerPolicy
+import com.ysfclc.mosaic.core.media.PlaybackSleepTimerStore
 import com.ysfclc.mosaic.core.media.PlayableStreamAddress
 import com.ysfclc.mosaic.core.media.PodcastFeedLoader
 import com.ysfclc.mosaic.ui.browser.AdSkipAccessibilityStatus
@@ -141,6 +143,10 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
     val catalog = remember(context) { MediaStoreCatalog(context.applicationContext) }
     val historyStore = remember(context) { PlaybackHistoryStore(context.applicationContext) }
     val playback = remember(context) { PlaybackConnection(context.applicationContext) }
+    val sleepTimerStore = remember(context) { PlaybackSleepTimerStore(context.applicationContext) }
+    var sleepTimerRemainingMs by remember(sleepTimerStore) {
+        mutableStateOf(PlaybackSleepTimerPolicy.remainingMs(sleepTimerStore.deadlineEpochMs(), System.currentTimeMillis()))
+    }
     val controller by playback.controller.collectAsState()
     val connectionError by playback.connectionError.collectAsState()
 
@@ -243,6 +249,16 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
         }
     }
 
+    LaunchedEffect(sleepTimerStore) {
+        while (isActive) {
+            sleepTimerRemainingMs = PlaybackSleepTimerPolicy.remainingMs(
+                sleepTimerStore.deadlineEpochMs(),
+                System.currentTimeMillis(),
+            )
+            delay(1000)
+        }
+    }
+
     LaunchedEffect(playback) { playback.connect() }
     DisposableEffect(playback) { onDispose { playback.release() } }
 
@@ -266,6 +282,7 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
                 if (isPlaying) recordHistory(controller?.currentMediaItem, controller?.currentPosition ?: 0L) else saveProgress(controller?.currentMediaItem, controller?.currentPosition ?: 0L)
             }
             override fun onPlaybackStateChanged(playbackState: Int) { playerRevision++ }
+            override fun onPlaybackParametersChanged(playbackParameters: androidx.media3.common.PlaybackParameters) { playerRevision++ }
             override fun onMediaMetadataChanged(mediaMetadata: androidx.media3.common.MediaMetadata) { playerRevision++ }
             override fun onVideoSizeChanged(videoSize: VideoSize) { playerRevision++ }
         }
@@ -453,6 +470,14 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
                             destination = Destination.PLAYER
                         },
                         onOpenLibrary = { destination = Destination.LIBRARY },
+                        sleepTimerRemainingMs = sleepTimerRemainingMs,
+                        onSetSleepTimer = { minutes ->
+                            if (minutes == null) sleepTimerStore.clear() else sleepTimerStore.setMinutes(minutes)
+                            sleepTimerRemainingMs = PlaybackSleepTimerPolicy.remainingMs(
+                                sleepTimerStore.deadlineEpochMs(),
+                                System.currentTimeMillis(),
+                            )
+                        },
                     )
                     Destination.SHIELD -> com.ysfclc.mosaic.ui.adshield.AdShieldScreen()
                     Destination.BROWSER -> BrowserScreen(
@@ -1072,6 +1097,8 @@ private fun PlayerScreen(
     onLoadPodcastFeed: (String) -> Unit,
     onPlayPodcastEpisode: (Int) -> Unit,
     onOpenLibrary: () -> Unit,
+    sleepTimerRemainingMs: Long,
+    onSetSleepTimer: (Int?) -> Unit,
 ) {
     val mediaItem = controller?.currentMediaItem
     val metadata = mediaItem?.mediaMetadata
@@ -1080,6 +1107,7 @@ private fun PlayerScreen(
     val duration = controller?.duration?.takeIf { it > 0L } ?: 1L
     val rawPosition = controller?.currentPosition?.coerceIn(0L, duration) ?: 0L
     val isPlaying = controller?.isPlaying == true
+    val playbackSpeed = controller?.playbackParameters?.speed ?: 1f
     val actualDuration = controller?.duration?.takeIf { it > 0L } ?: 0L
     var draggingPosition by remember(mediaItem) { mutableStateOf<Float?>(null) }
     val positionFraction = draggingPosition ?: (rawPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
@@ -1203,6 +1231,80 @@ private fun PlayerScreen(
                 }
             }
     
+        }
+        if (mediaItem != null) {
+            Column(
+                modifier = Modifier.fillMaxWidth()
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(MosaicPalette.SurfaceGlass)
+                    .border(1.dp, Color.White.copy(alpha = .06f), RoundedCornerShape(18.dp))
+                    .padding(13.dp),
+                verticalArrangement = Arrangement.spacedBy(9.dp),
+            ) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("PLAYBACK SPEED", color = MosaicPalette.Cyan, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+                        Text("Choose your pace", color = MosaicPalette.TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                    Spacer(Modifier.weight(1f))
+                    Text("${playbackSpeed}×", color = MosaicPalette.Violet, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    listOf(0.75f, 1f, 1.25f, 1.5f, 2f).forEach { speed ->
+                        val selected = kotlin.math.abs(playbackSpeed - speed) < 0.01f
+                        Surface(
+                            onClick = { controller?.setPlaybackSpeed(speed) },
+                            color = if (selected) MosaicPalette.Violet.copy(alpha = .22f) else MosaicPalette.SurfaceRaised,
+                            shape = RoundedCornerShape(10.dp),
+                            border = if (selected) androidx.compose.foundation.BorderStroke(1.dp, MosaicPalette.Violet.copy(alpha = .55f)) else null,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Box(Modifier.padding(vertical = 9.dp), contentAlignment = Alignment.Center) {
+                                Text("${speed}×", color = if (selected) MosaicPalette.TextPrimary else MosaicPalette.TextMuted, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.fillMaxWidth().height(1.dp).background(MosaicPalette.Divider.copy(alpha = .7f)))
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("SLEEP TIMER", color = MosaicPalette.Cyan, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+                        Text("Stop playback and keep your queue ready", color = MosaicPalette.TextMuted, fontSize = 8.sp)
+                    }
+                    Spacer(Modifier.weight(1f))
+                    Text(
+                        if (sleepTimerRemainingMs > 0L) "ENDS IN ${formatDuration(sleepTimerRemainingMs)}" else "OFF",
+                        color = if (sleepTimerRemainingMs > 0L) MosaicPalette.Violet else MosaicPalette.TextMuted,
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    listOf(15, 30, 45, 60, 90).forEach { minutes ->
+                        Surface(
+                            onClick = { onSetSleepTimer(minutes) },
+                            color = MosaicPalette.SurfaceRaised,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Box(Modifier.padding(vertical = 9.dp), contentAlignment = Alignment.Center) {
+                                Text("${minutes}m", color = MosaicPalette.TextSecondary, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                    }
+                }
+                if (sleepTimerRemainingMs > 0L) {
+                    Text(
+                        "CANCEL TIMER",
+                        color = MosaicPalette.TextMuted,
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = .8.sp,
+                        modifier = Modifier.align(Alignment.End).clickable { onSetSleepTimer(null) }.padding(5.dp),
+                    )
+                }
+            }
+            Spacer(Modifier.height(14.dp))
         }
         if (queueRows.isNotEmpty()) {
             Column(
