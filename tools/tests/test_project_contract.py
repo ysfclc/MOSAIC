@@ -149,6 +149,18 @@ class ProjectContractTests(unittest.TestCase):
         self.assertIn("sleepTimerRunnable", service)
         self.assertIn("deadline_epoch_ms", timer)
 
+    def test_media_identity_is_source_scoped_across_playback_and_resolution(self):
+        factory = (ROOT / "core/media/src/main/java/com/ysfclc/mosaic/core/media/MediaItemFactory.kt").read_text(encoding="utf-8")
+        identity = (ROOT / "core/media/src/main/java/com/ysfclc/mosaic/core/media/MediaIdentity.kt").read_text(encoding="utf-8")
+        adapter = (ROOT / "core/library/src/main/java/com/ysfclc/mosaic/core/library/MediaStoreCatalog.kt").read_text(encoding="utf-8")
+        connection = (ROOT / "core/media/src/main/java/com/ysfclc/mosaic/core/media/PlaybackConnection.kt").read_text(encoding="utf-8")
+        app = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/MosaicApp.kt").read_text(encoding="utf-8")
+        self.assertIn("MediaIdentity.forRecord(this)", factory)
+        self.assertIn("fun sourceItemId(stableId: String, expectedSourceId: String)", identity)
+        self.assertIn("MediaIdentity.sourceItemId(mediaId, descriptor.id)", adapter)
+        self.assertIn("mediaId: String? = null", connection)
+        self.assertIn("entry.resumePositionMs, entry.mediaId", app)
+
     def test_podcast_feed_subscriptions_are_saved_on_device(self):
         app = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/MosaicApp.kt").read_text(encoding="utf-8")
         self.assertIn('getSharedPreferences("mosaic_podcast_feeds"', app)
