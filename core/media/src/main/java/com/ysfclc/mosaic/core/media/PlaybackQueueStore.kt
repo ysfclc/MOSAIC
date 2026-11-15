@@ -1,7 +1,7 @@
 package com.ysfclc.mosaic.core.media
 
 import android.content.Context
-import java.net.URI
+import com.ysfclc.mosaic.core.persistence.SafeMediaLocatorPolicy
 import java.nio.charset.StandardCharsets
 import java.util.Base64
 
@@ -29,7 +29,6 @@ object PlaybackQueueCodec {
     private const val HEADER = "mosaic-queue-v1"
     private const val FIELD_SEPARATOR = "|"
     private const val MAX_ITEMS = 100
-    private const val MAX_URI_LENGTH = 4096
 
     fun encode(snapshot: PlaybackQueueSnapshot): String {
         val safe = sanitize(snapshot)
@@ -106,16 +105,8 @@ object PlaybackQueueCodec {
     }
 
     private fun isPersistable(item: PersistedQueueItem): Boolean {
-        if (item.uri.isBlank() || item.uri.length > MAX_URI_LENGTH) return false
         if (item.mediaId.length > 1024 || item.title.length > 512 || item.creator.orEmpty().length > 512 || item.mimeType.orEmpty().length > 128) return false
-        val parsed = runCatching { URI(item.uri) }.getOrNull() ?: return false
-        if (parsed.rawUserInfo != null || parsed.rawQuery != null || parsed.rawFragment != null) return false
-        return when (parsed.scheme?.lowercase()) {
-            "https" -> !parsed.host.isNullOrBlank() && (parsed.port == -1 || parsed.port in 1..65535)
-            "content" -> !parsed.rawAuthority.isNullOrBlank()
-            "file" -> !parsed.path.isNullOrBlank()
-            else -> false
-        }
+        return SafeMediaLocatorPolicy.isSafe(item.uri)
     }
 
     private fun encodeField(value: String): String =
