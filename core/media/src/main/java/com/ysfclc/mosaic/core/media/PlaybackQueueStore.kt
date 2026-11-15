@@ -88,6 +88,7 @@ object PlaybackQueueCodec {
 
         val selectedPosition = safeItems.indexOfFirst { it.first == selectedIndex }
             .takeIf { it >= 0 }
+            ?: safeItems.indexOfFirst { it.first > selectedIndex }.takeIf { it >= 0 }
             ?: safeItems.indexOfLast { it.first < selectedIndex }.takeIf { it >= 0 }
             ?: 0
         val windowStart = if (safeItems.size <= MAX_ITEMS) {
