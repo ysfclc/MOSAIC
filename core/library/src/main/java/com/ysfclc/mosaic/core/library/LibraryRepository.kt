@@ -55,7 +55,7 @@ class LibraryRepository(
             if (reconcileMissing) {
                 database.withTransaction {
                     database.mediaItems().markAllMissing(sourceId, nowEpochMs)
-                    database.mediaLocations().clearForSource(sourceId)
+                    database.mediaLocations().clearForMissingSourceItems(sourceId)
                 }
             }
             return 0
@@ -73,6 +73,8 @@ class LibraryRepository(
                 .chunked(QUERY_CHUNK_SIZE)
                 .flatMap { database.mediaLocations().locationsForMediaIds(it) }
                 .groupBy { it.mediaId }
+
+            if (reconcileMissing) database.mediaItems().markAllMissing(sourceId, nowEpochMs)
 
             val itemEntities = uniqueRecords.map { record ->
                 val sourceItemId = record.id.ifBlank { record.uri }
@@ -129,12 +131,7 @@ class LibraryRepository(
             }
             locations.chunked(QUERY_CHUNK_SIZE).forEach { database.mediaLocations().upsertAll(it) }
 
-            if (reconcileMissing) {
-                database.mediaItems().markMissingExcept(sourceId, sourceItemIds, nowEpochMs)
-                sourceItemIds.chunked(QUERY_CHUNK_SIZE).forEach { ids ->
-                    database.mediaLocations().clearForMissingSourceItems(sourceId, ids)
-                }
-            }
+            if (reconcileMissing) database.mediaLocations().clearForMissingSourceItems(sourceId)
             uniqueRecords.size
         }
     }
