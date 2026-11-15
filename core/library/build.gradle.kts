@@ -20,6 +20,7 @@ kotlin {
 
 dependencies {
     api(project(":core:media"))
+    implementation(project(":core:persistence"))
     implementation("androidx.core:core-ktx:1.17.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.10.2")
 }
