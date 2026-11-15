@@ -199,3 +199,15 @@
 - CI run [#263](https://github.com/ysfclc/MOSAIC/actions/runs/43727831351) passed the relation-preserving upsert contract and complete Android build. It ran 55 tests with zero failures/errors and published [mosaic-dev-build-263](https://github.com/ysfclc/MOSAIC/releases/tag/mosaic-dev-build-263).
 - APK SHA-256: `7cfbc70737bfa9bbea643ee670c8c0f94a5b0ff47a4146f7984dbae8416efd44`.
 - No Room-backed production reads/writes, legacy preference import, schema migration or physical-device acceptance is claimed yet.
+
+## 2026-11-15 — Room compatibility mirror and runtime verification
+
+- Added `playback_timer_state` to Room v1 so the sleep timer is represented by a durable wall-clock deadline.
+- Added a retry-safe startup compatibility mirror for the existing playback history, native queue and sleep-timer preferences. Preferences remain the source of truth until a deliberate Room cutover; each launch mirrors the current snapshot in one transaction, verifies read-back, and never clears the old preferences.
+- Added transaction-safe clearing for Room history/queue/timer snapshots so user-cleared legacy state is mirrored rather than resurrected.
+- Made the importer accept an injected database for deterministic tests.
+- Added Robolectric tests for initial import, repeated launch sync, history/queue/timer clearing, legacy preference retention, and Room foreign-key relation preservation when parent media/collection rows are updated with `@Upsert`.
+- CI run [#282](https://github.com/ysfclc/MOSAIC/actions/runs/43730060625) passed 57 tests with zero failures/errors, lint, APK assembly, signing and checksum verification.
+- Published [mosaic-dev-build-282](https://github.com/ysfclc/MOSAIC/releases/tag/mosaic-dev-build-282).
+- APK SHA-256: `de58314ca0faa49305f441318a4908f1d1a4daae9c13650f5d1ce656f47cb955`.
+- The generated Room v1 schema is preserved in the CI report artifact but is not yet committed under `core/persistence/schemas`. Room-backed production reads/writes and physical-device/process-death acceptance remain open.
