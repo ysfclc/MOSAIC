@@ -1083,6 +1083,13 @@ private fun PlayerScreen(
     val actualDuration = controller?.duration?.takeIf { it > 0L } ?: 0L
     var draggingPosition by remember(mediaItem) { mutableStateOf<Float?>(null) }
     val positionFraction = draggingPosition ?: (rawPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+    val queueCount = controller?.mediaItemCount ?: 0
+    val currentQueueIndex = controller?.currentMediaItemIndex ?: -1
+    val queueStart = if (currentQueueIndex >= 0) (currentQueueIndex - 1).coerceAtLeast(0) else 0
+    val queueEnd = minOf(queueCount, queueStart + 8)
+    val queueRows = if (controller == null) emptyList() else (queueStart until queueEnd).map { index ->
+        index to controller.getMediaItemAt(index)
+    }
 
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 22.dp).padding(top = 12.dp, bottom = 18.dp),
@@ -1197,7 +1204,76 @@ private fun PlayerScreen(
             }
     
         }
-        Spacer(Modifier.height(22.dp))
+        if (queueRows.isNotEmpty()) {
+            Column(
+                modifier = Modifier.fillMaxWidth()
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(MosaicPalette.SurfaceGlass)
+                    .border(1.dp, Color.White.copy(alpha = .06f), RoundedCornerShape(18.dp))
+                    .padding(13.dp),
+                verticalArrangement = Arrangement.spacedBy(7.dp),
+            ) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("MOSAIC QUEUE", color = MosaicPalette.Cyan, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.3.sp)
+                        Text("Your playback, in order", color = MosaicPalette.TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                    Spacer(Modifier.weight(1f))
+                    Text("$queueCount ITEMS", color = MosaicPalette.TextMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = .8.sp)
+                }
+                queueRows.forEach { (index, queuedItem) ->
+                    val isCurrent = index == currentQueueIndex
+                    Surface(
+                        onClick = { controller?.seekTo(index, 0L); controller?.play() },
+                        color = if (isCurrent) MosaicPalette.SurfaceRaised else Color.Transparent,
+                        shape = RoundedCornerShape(12.dp),
+                        border = if (isCurrent) androidx.compose.foundation.BorderStroke(1.dp, MosaicPalette.Cyan.copy(alpha = .28f)) else null,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Row(Modifier.padding(horizontal = 10.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                when {
+                                    isCurrent -> "NOW"
+                                    currentQueueIndex < 0 && index == 0 -> "READY"
+                                    index > currentQueueIndex -> "NEXT"
+                                    else -> "PAST"
+                                },
+                                color = if (isCurrent) MosaicPalette.Cyan else MosaicPalette.TextMuted,
+                                fontSize = 7.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = .7.sp,
+                                modifier = Modifier.width(38.dp),
+                            )
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text(
+                                    queuedItem.mediaMetadata.title?.toString()?.takeIf(String::isNotBlank) ?: "Untitled media",
+                                    color = MosaicPalette.TextPrimary,
+                                    fontSize = 10.sp,
+                                    fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                                Text(
+                                    queuedItem.mediaMetadata.artist?.toString()?.takeIf(String::isNotBlank)
+                                        ?: queuedItem.localConfiguration?.uri?.host.orEmpty().ifBlank { "MOSAIC media" },
+                                    color = MosaicPalette.TextMuted,
+                                    fontSize = 8.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                            if (isCurrent) Icon(Icons.Default.GraphicEq, contentDescription = "Current queue item", tint = MosaicPalette.Cyan, modifier = Modifier.size(16.dp))
+                        }
+                    }
+                }
+                if (queueCount > queueRows.size) {
+                    Text("Showing the current item and nearby tracks", color = MosaicPalette.TextMuted, fontSize = 8.sp)
+                }
+            }
+            Spacer(Modifier.height(22.dp))
+        } else {
+            Spacer(Modifier.height(22.dp))
+        }
         StreamSourcePanel(onPlayStream = onPlayStream)
         Spacer(Modifier.height(18.dp))
         PodcastFeedPanel(
