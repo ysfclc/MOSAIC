@@ -25,8 +25,8 @@ data class LegacyImportSummary(
 /**
  * One-time, retry-safe import of pre-Room playback preferences.
  *
- * The old preferences are intentionally retained. The import marker is written
- * only after the Room transaction has committed its data and verified read-back.
+ * The old preferences are intentionally retained. Data and the completion marker
+ * commit atomically, and the marker is written only after read-back checks pass.
  */
 class LegacyPreferencesImporter(context: Context) {
     private val appContext = context.applicationContext
@@ -48,7 +48,7 @@ class LegacyPreferencesImporter(context: Context) {
             val queue = PlaybackQueueStore(appContext).load()
             val timerDeadline = PlaybackSleepTimerStore(appContext).deadlineEpochMs()
 
-            val historyEntities = history.mapIndexed { index, entry ->
+            val historyEntities = history.map { entry ->
                 val linkedMediaId = database.mediaItems().findById(entry.mediaId)?.mediaId
                 PlaybackHistoryEntity(
                     eventId = legacyEventId(entry.mediaId, entry.uri, entry.playedAtEpochMs),
@@ -98,7 +98,7 @@ class LegacyPreferencesImporter(context: Context) {
                 )
             }
 
-            // Verify the committed view before writing the marker. Any failed
+            // Verify the transactional view before writing the marker. Any failed
             // check rolls back the entire transaction and leaves import retryable.
             check(historyEntities.all { database.playbackHistory().findByEventId(it.eventId) != null }) {
                 "Legacy playback history import read-back did not match."
