@@ -73,6 +73,9 @@ interface PlaybackHistoryDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun record(event: PlaybackHistoryEntity)
 
+    @Query("SELECT * FROM playback_history WHERE eventId = :eventId LIMIT 1")
+    suspend fun findByEventId(eventId: String): PlaybackHistoryEntity?
+
     @Query("SELECT * FROM playback_history ORDER BY playedAtEpochMs DESC LIMIT :limit")
     suspend fun recent(limit: Int): List<PlaybackHistoryEntity>
 
