@@ -51,11 +51,11 @@ class LegacyPreferencesImporter(context: Context) {
             val historyEntities = history.mapIndexed { index, entry ->
                 val linkedMediaId = database.mediaItems().findById(entry.mediaId)?.mediaId
                 PlaybackHistoryEntity(
-                    eventId = legacyEventId(entry.mediaId, entry.uri, entry.playedAtEpochMs, index),
+                    eventId = legacyEventId(entry.mediaId, entry.uri, entry.playedAtEpochMs),
                     mediaId = linkedMediaId,
                     titleSnapshot = entry.title,
                     creatorSnapshot = entry.creator,
-                    safeUriSnapshot = entry.uri.takeIf(SafeMediaLocatorPolicy::isSafe),
+                    safeUriSnapshot = entry.uri.takeIf { SafeMediaLocatorPolicy.isSafe(it) },
                     playedAtEpochMs = entry.playedAtEpochMs,
                     resumePositionMs = entry.resumePositionMs.coerceAtLeast(0L),
                 )
@@ -100,8 +100,7 @@ class LegacyPreferencesImporter(context: Context) {
 
             // Verify the committed view before writing the marker. Any failed
             // check rolls back the entire transaction and leaves import retryable.
-            val historyReadBack = database.playbackHistory().recent(historyEntities.size)
-            check(historyReadBack.map { it.eventId }.toSet().containsAll(historyEntities.map { it.eventId })) {
+            check(historyEntities.all { database.playbackHistory().findByEventId(it.eventId) != null }) {
                 "Legacy playback history import read-back did not match."
             }
 
@@ -133,8 +132,8 @@ class LegacyPreferencesImporter(context: Context) {
             )
         }
 
-    private fun legacyEventId(mediaId: String, uri: String, playedAtEpochMs: Long, index: Int): String {
-        val seed = "$mediaId\u0000$uri\u0000$playedAtEpochMs\u0000$index"
+    private fun legacyEventId(mediaId: String, uri: String, playedAtEpochMs: Long): String {
+        val seed = "$mediaId\u0000$uri\u0000$playedAtEpochMs"
         return "legacy-history:${UUID.nameUUIDFromBytes(seed.toByteArray(StandardCharsets.UTF_8))}"
     }
 
