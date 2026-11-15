@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.Uri
 import android.provider.MediaStore
 import androidx.core.database.getStringOrNull
+import com.ysfclc.mosaic.core.media.MediaBrowseResult
 import com.ysfclc.mosaic.core.media.MediaIdentity
 import com.ysfclc.mosaic.core.media.MediaItemRecord
 import com.ysfclc.mosaic.core.media.MediaKind
@@ -17,7 +18,9 @@ import kotlinx.coroutines.withContext
 
 /** Read-only MediaStore index. Original files are never copied, moved, or renamed. */
 class MediaStoreCatalog(private val context: Context) {
-    suspend fun scanAudio(query: String = ""): List<MediaItemRecord> = withContext(Dispatchers.IO) {
+    suspend fun scanAudio(query: String = ""): List<MediaItemRecord> = scanAudioSnapshot(query).items
+
+    suspend fun scanAudioSnapshot(query: String = ""): MediaBrowseResult = withContext(Dispatchers.IO) {
         val projection = arrayOf(
             MediaStore.Audio.Media._ID,
             MediaStore.Audio.Media.TITLE,
@@ -31,15 +34,17 @@ class MediaStoreCatalog(private val context: Context) {
         val selection = if (query.isBlank()) null else "${MediaStore.Audio.Media.TITLE} LIKE ? OR ${MediaStore.Audio.Media.ARTIST} LIKE ?"
         val selectionArgs = if (query.isBlank()) null else arrayOf("%$query%", "%$query%")
         val results = mutableListOf<MediaItemRecord>()
+        var completeSnapshot = false
 
         try {
-            context.contentResolver.query(
+            val cursor = context.contentResolver.query(
                 MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,
                 projection,
                 selection,
                 selectionArgs,
                 "${MediaStore.Audio.Media.TITLE} COLLATE NOCASE ASC",
-            )?.use { cursor ->
+            )
+            if (cursor != null) cursor.use { cursor ->
                 val idColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
                 val titleColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
                 val artistColumn = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
@@ -70,10 +75,11 @@ class MediaStoreCatalog(private val context: Context) {
                     )
                 }
             }
+            completeSnapshot = cursor != null
         } catch (_: SecurityException) {
-            // Permission can be revoked between the UI check and the query. Return an empty view safely.
+            // A permission failure or mid-query revocation is an incomplete snapshot.
         }
-        results
+        MediaBrowseResult(results, isCompleteSnapshot = completeSnapshot)
     }
 }
 
@@ -88,6 +94,8 @@ class LocalMediaSourceAdapter(private val catalog: MediaStoreCatalog) : MediaSou
     )
 
     override suspend fun browse(query: String): List<MediaItemRecord> = catalog.scanAudio(query)
+
+    override suspend fun browseSnapshot(query: String): MediaBrowseResult = catalog.scanAudioSnapshot(query)
 
     override suspend fun resolve(mediaId: String): ResolvedMediaSource? {
         val sourceItemId = MediaIdentity.sourceItemId(mediaId, descriptor.id) ?: mediaId
