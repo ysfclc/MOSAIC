@@ -18,6 +18,7 @@ import androidx.media3.session.MediaSessionService
 class PlaybackService : MediaSessionService() {
     private var mediaSession: MediaSession? = null
     private var queueStore: PlaybackQueueStore? = null
+    private var sleepTimerStore: PlaybackSleepTimerStore? = null
     private val checkpointHandler = Handler(Looper.getMainLooper())
     private val queueListener = object : Player.Listener {
         override fun onEvents(player: Player, events: Player.Events) {
@@ -30,10 +31,21 @@ class PlaybackService : MediaSessionService() {
             checkpointHandler.postDelayed(this, CHECKPOINT_INTERVAL_MS)
         }
     }
+    private val sleepTimerRunnable = object : Runnable {
+        override fun run() {
+            val store = sleepTimerStore
+            if (store != null && PlaybackSleepTimerPolicy.isExpired(store.deadlineEpochMs(), System.currentTimeMillis())) {
+                mediaSession?.player?.pause()
+                store.clear()
+            }
+            checkpointHandler.postDelayed(this, SLEEP_TIMER_CHECK_INTERVAL_MS)
+        }
+    }
 
     override fun onCreate() {
         super.onCreate()
         queueStore = PlaybackQueueStore(applicationContext)
+        sleepTimerStore = PlaybackSleepTimerStore(applicationContext)
         val player = ExoPlayer.Builder(this)
             .setAudioAttributes(AudioAttributes.DEFAULT, /* handleAudioFocus = */ true)
             .setHandleAudioBecomingNoisy(true)
@@ -46,12 +58,14 @@ class PlaybackService : MediaSessionService() {
         player.addListener(queueListener)
         restoreQueue(player)
         checkpointHandler.postDelayed(checkpointRunnable, CHECKPOINT_INTERVAL_MS)
+        checkpointHandler.post(sleepTimerRunnable)
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? = mediaSession
 
     override fun onDestroy() {
         checkpointHandler.removeCallbacks(checkpointRunnable)
+        checkpointHandler.removeCallbacks(sleepTimerRunnable)
         mediaSession?.let { session ->
             persistQueue(session.player)
             session.player.removeListener(queueListener)
@@ -60,6 +74,7 @@ class PlaybackService : MediaSessionService() {
         }
         mediaSession = null
         queueStore = null
+        sleepTimerStore = null
         super.onDestroy()
     }
 
@@ -124,5 +139,6 @@ class PlaybackService : MediaSessionService() {
 
     private companion object {
         const val CHECKPOINT_INTERVAL_MS = 10_000L
+        const val SLEEP_TIMER_CHECK_INTERVAL_MS = 1_000L
     }
 }
