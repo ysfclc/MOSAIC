@@ -66,13 +66,19 @@ Persist the MOSAIC-owned queue independently of the library view.
 
 Queue entries retain enough safe metadata to show the queue if a Library row is missing. Never store credentials or signed URLs.
 
+### `playback_timer_state`
+
+Persist the primary sleep-timer deadline independently from the Player UI.
+
+Fields: `timerId` (PK; initially `primary`), `deadlineEpochMs`, `updatedAtEpochMs`. Store a wall-clock deadline, not a process timer, so service recreation can enforce expiry. A zero/absent deadline means no active timer.
+
 ### `migration_markers`
 
 Idempotency markers for one-time imports from legacy app-private preferences. Marker key is the PK; value records import completion/version and timestamp.
 
 ## Module ownership and dependency direction
 
-Create `:core:persistence` as the shared Room boundary. It owns entities, DAOs, database, exported schemas and migration tests; it must not depend on UI, `:core:media` or `:core:library`.
+The `:core:persistence` shared Room boundary is now implemented at schema v1. It owns entities, DAOs, database, exported schemas and migration tests; it must not depend on UI, `:core:media` or `:core:library`.
 
 - `:core:media` → `:core:persistence` for native queue persistence.
 - `:core:library` → `:core:media` and `:core:persistence` for source adapters and catalog/library operations.
@@ -84,7 +90,7 @@ This avoids a dependency cycle: the playback service must not depend on a librar
 
 1. First Room schema version creates the tables above and exports the schema JSON to version control.
 2. Add explicit, tested Room migrations for every later schema change. **Never use destructive migration fallback.**
-3. Import existing `mosaic_playback_history`, `mosaic_playback_queue` and sleep-timer preferences in an idempotent transaction, using `migration_markers`.
+3. Import existing `mosaic_playback_history`, `mosaic_playback_queue` and sleep-timer preferences in an idempotent transaction, using `migration_markers`. The first app importer now performs history/queue/timer import with read-back checks and retains all legacy preferences; Room-backed reads/writes remain a separate later cutover.
 4. Preserve the original preferences until the Room transaction commits and a subsequent read-back check succeeds. A failed import must be safely retryable.
 5. Preserve legacy IDs as aliases or resolve them through `MediaIdentity`; do not silently create duplicate items because an old ID format differs.
 6. Only after verified import should reads/writes move to Room. Keep a compatibility read path for one release if required; do not dual-write indefinitely.
