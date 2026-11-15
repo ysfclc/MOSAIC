@@ -1,9 +1,11 @@
 package com.ysfclc.mosaic.core.persistence
 
+import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
+import androidx.room.Relation
 
 @Entity(
     tableName = "media_items",
@@ -33,6 +35,15 @@ data class MediaItemEntity(
     val isBookmarked: Boolean = false,
     val isHidden: Boolean = false,
     val availability: String = "UNKNOWN",
+)
+
+data class MediaItemWithLocations(
+    @Embedded val item: MediaItemEntity,
+    @Relation(
+        parentColumn = "mediaId",
+        entityColumn = "mediaId",
+    )
+    val locations: List<MediaLocationEntity>,
 )
 
 @Entity(
