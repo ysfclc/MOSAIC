@@ -43,6 +43,24 @@ class PlaybackQueueCodecTest {
     }
 
     @Test
+    fun movesForwardWhenSelectedQueueItemCannotBePersisted() {
+        val snapshot = PlaybackQueueSnapshot(
+            items = listOf(
+                PersistedQueueItem("one", "One", null, "https://example.com/one.mp3", null),
+                PersistedQueueItem("signed", "Signed", null, "https://example.com/signed.mp3?token=private", null),
+                PersistedQueueItem("three", "Three", null, "https://example.com/three.mp3", null),
+            ),
+            currentIndex = 1,
+            positionMs = 5000L,
+        )
+
+        val decoded = PlaybackQueueCodec.decode(PlaybackQueueCodec.encode(snapshot))
+
+        assertNotNull(decoded)
+        assertEquals("three", decoded!!.items[decoded.currentIndex].mediaId)
+    }
+
+    @Test
     fun toleratesMalformedRowsWithoutShiftingTheSelectedItem() {
         val valid = PlaybackQueueCodec.encode(
             PlaybackQueueSnapshot(
