@@ -69,7 +69,7 @@ class PlaybackService : MediaSessionService() {
         val restoredItems = snapshot.items.map { saved ->
             val metadata = MediaMetadata.Builder()
                 .setTitle(saved.title)
-                .apply { saved.creator?.let(::setArtist) }
+                .apply { saved.creator?.let { setArtist(it) } }
                 .build()
             MediaItem.Builder()
                 .setMediaId(saved.mediaId)
