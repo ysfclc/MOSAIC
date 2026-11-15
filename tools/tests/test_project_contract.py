@@ -137,6 +137,18 @@ class ProjectContractTests(unittest.TestCase):
         self.assertIn("controller?.seekTo(index, 0L)", app)
         self.assertIn("queuedItem.mediaMetadata.title", app)
 
+    def test_player_speed_and_persistent_sleep_timer_are_wired(self):
+        app = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/MosaicApp.kt").read_text(encoding="utf-8")
+        service = (ROOT / "core/media/src/main/java/com/ysfclc/mosaic/core/media/PlaybackService.kt").read_text(encoding="utf-8")
+        timer = (ROOT / "core/media/src/main/java/com/ysfclc/mosaic/core/media/PlaybackSleepTimerStore.kt").read_text(encoding="utf-8")
+        self.assertIn("PLAYBACK SPEED", app)
+        self.assertIn("controller?.setPlaybackSpeed(speed)", app)
+        self.assertIn("SLEEP TIMER", app)
+        self.assertIn("PlaybackSleepTimerStore", app)
+        self.assertIn("PlaybackSleepTimerPolicy.isExpired", service)
+        self.assertIn("sleepTimerRunnable", service)
+        self.assertIn("deadline_epoch_ms", timer)
+
     def test_podcast_feed_subscriptions_are_saved_on_device(self):
         app = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/MosaicApp.kt").read_text(encoding="utf-8")
         self.assertIn('getSharedPreferences("mosaic_podcast_feeds"', app)
