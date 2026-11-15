@@ -86,8 +86,8 @@ object PlaybackQueueCodec {
         val safeItems = indexedItems.filter { isPersistable(it.second) }
         if (safeItems.isEmpty()) return PlaybackQueueSnapshot(emptyList(), 0, 0L)
 
-        val selectedPosition = safeItems.indexOfFirst { it.first == selectedIndex }
-            .takeIf { it >= 0 }
+        val exactSelectedPosition = safeItems.indexOfFirst { it.first == selectedIndex }
+        val selectedPosition = exactSelectedPosition.takeIf { it >= 0 }
             ?: safeItems.indexOfFirst { it.first > selectedIndex }.takeIf { it >= 0 }
             ?: safeItems.indexOfLast { it.first < selectedIndex }.takeIf { it >= 0 }
             ?: 0
@@ -101,7 +101,7 @@ object PlaybackQueueCodec {
         return PlaybackQueueSnapshot(
             items = bounded.map { (_, item) -> item },
             currentIndex = boundedSelected,
-            positionMs = positionMs.coerceAtLeast(0L),
+            positionMs = if (exactSelectedPosition >= 0) positionMs.coerceAtLeast(0L) else 0L,
         )
     }
 
