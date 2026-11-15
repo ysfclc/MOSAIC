@@ -1,7 +1,6 @@
 package com.ysfclc.mosaic.core.media
 
 import android.content.Context
-import android.net.Uri
 import java.net.URI
 import java.nio.charset.StandardCharsets
 import java.util.Base64
