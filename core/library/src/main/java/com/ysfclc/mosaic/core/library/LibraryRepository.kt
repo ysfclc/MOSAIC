@@ -51,11 +51,13 @@ class LibraryRepository(
         val mediaIds = sourceItemIds.map { MediaIdentity.stableId(sourceId, it) }
 
         return database.withTransaction {
-            val existingItems = database.mediaItems()
-                .findBySourceItems(sourceId, sourceItemIds)
+            val existingItems = sourceItemIds
+                .chunked(QUERY_CHUNK_SIZE)
+                .flatMap { database.mediaItems().findBySourceItems(sourceId, it) }
                 .associateBy { it.sourceItemId }
-            val existingLocations = database.mediaLocations()
-                .locationsForMediaIds(mediaIds)
+            val existingLocations = mediaIds
+                .chunked(QUERY_CHUNK_SIZE)
+                .flatMap { database.mediaLocations().locationsForMediaIds(it) }
                 .groupBy { it.mediaId }
 
             val itemEntities = uniqueRecords.map { record ->
@@ -87,7 +89,7 @@ class LibraryRepository(
                     availability = if (safeUri) AVAILABLE else UNRESOLVED,
                 )
             }
-            database.mediaItems().upsertAll(itemEntities)
+            itemEntities.chunked(QUERY_CHUNK_SIZE).forEach { database.mediaItems().upsertAll(it) }
 
             val locations = mutableListOf<MediaLocationEntity>()
             uniqueRecords.forEach { record ->
@@ -111,7 +113,7 @@ class LibraryRepository(
                     )
                 }
             }
-            if (locations.isNotEmpty()) database.mediaLocations().upsertAll(locations)
+            locations.chunked(QUERY_CHUNK_SIZE).forEach { database.mediaLocations().upsertAll(it) }
             uniqueRecords.size
         }
     }
@@ -125,6 +127,7 @@ class LibraryRepository(
     }
 
     private companion object {
+        const val QUERY_CHUNK_SIZE = 400
         const val PRIMARY_LOCATION_ROLE = "PRIMARY"
         const val AVAILABLE = "AVAILABLE"
         const val UNRESOLVED = "UNRESOLVED"
