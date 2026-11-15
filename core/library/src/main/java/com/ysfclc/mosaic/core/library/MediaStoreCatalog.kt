@@ -89,7 +89,8 @@ class LocalMediaSourceAdapter(private val catalog: MediaStoreCatalog) : MediaSou
     override suspend fun browse(query: String): List<MediaItemRecord> = catalog.scanAudio(query)
 
     override suspend fun resolve(mediaId: String): ResolvedMediaSource? {
-        val record = catalog.scanAudio().firstOrNull { it.id == mediaId } ?: return null
+        val sourceItemId = MediaIdentity.sourceItemId(mediaId, descriptor.id) ?: mediaId
+        val record = catalog.scanAudio().firstOrNull { it.id == sourceItemId } ?: return null
         return ResolvedMediaSource(Uri.parse(record.uri), record.mimeType)
     }
 }
