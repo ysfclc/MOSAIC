@@ -176,6 +176,8 @@ class ProjectContractTests(unittest.TestCase):
         self.assertIn("room.schemaLocation", build)
         self.assertIn(":core:persistence:testDebugUnitTest", workflow)
         self.assertNotIn("fallbackToDestructiveMigration", database)
+        self.assertIn("PlaybackTimerStateEntity", database)
+        self.assertIn("abstract fun playbackTimer(): PlaybackTimerDao", database)
 
     def test_library_parent_upserts_do_not_delete_dependent_rows(self):
         daos = (ROOT / "core/persistence/src/main/java/com/ysfclc/mosaic/core/persistence/LibraryDaos.kt").read_text(encoding="utf-8")
@@ -187,6 +189,18 @@ class ProjectContractTests(unittest.TestCase):
         self.assertIn("suspend fun upsert(collection: MediaCollectionEntity)", collections)
         self.assertNotIn("OnConflictStrategy.REPLACE", media_items)
         self.assertNotIn("OnConflictStrategy.REPLACE", collections)
+
+    def test_legacy_playback_preferences_import_is_atomic_and_retry_safe(self):
+        importer = (ROOT / "app/src/main/java/com/ysfclc/mosaic/LegacyPreferencesImporter.kt").read_text(encoding="utf-8")
+        app = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/MosaicApp.kt").read_text(encoding="utf-8")
+        self.assertIn("database.withTransaction", importer)
+        self.assertIn("markerDao.find(MARKER_KEY)", importer)
+        self.assertIn("database.playbackHistory().recent", importer)
+        self.assertIn("database.playbackQueue().entries", importer)
+        self.assertIn("database.playbackTimer().state", importer)
+        self.assertLess(importer.index("historyReadBack"), importer.index("markerDao.markCompleted"))
+        self.assertIn("LegacyPreferencesImporter(context.applicationContext).importIfNeeded()", app)
+        self.assertNotIn("preferences.edit().clear()", importer)
 
     def test_podcast_feed_subscriptions_are_saved_on_device(self):
         app = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/MosaicApp.kt").read_text(encoding="utf-8")
