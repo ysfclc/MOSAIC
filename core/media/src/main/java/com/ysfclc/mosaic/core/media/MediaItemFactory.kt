@@ -13,7 +13,7 @@ fun MediaItemRecord.toMedia3Item(): MediaItem {
         .build()
 
     return MediaItem.Builder()
-        .setMediaId(id)
+        .setMediaId(MediaIdentity.forRecord(this))
         .setUri(Uri.parse(uri))
         .apply { mimeType?.let { setMimeType(it) } }
         .setMediaMetadata(metadata)
