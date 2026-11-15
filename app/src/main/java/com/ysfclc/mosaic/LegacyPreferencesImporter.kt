@@ -6,6 +6,7 @@ import com.ysfclc.mosaic.core.media.MediaIdentity
 import com.ysfclc.mosaic.core.media.PlaybackQueueStore
 import com.ysfclc.mosaic.core.media.PlaybackSleepTimerStore
 import com.ysfclc.mosaic.core.persistence.MigrationMarkerEntity
+import com.ysfclc.mosaic.core.persistence.MosaicDatabase
 import com.ysfclc.mosaic.core.persistence.MosaicDatabaseProvider
 import com.ysfclc.mosaic.core.persistence.PlaybackHistoryEntity
 import com.ysfclc.mosaic.core.persistence.PlaybackQueueEntryEntity
@@ -29,9 +30,11 @@ data class LegacyImportSummary(
  * the current bounded snapshot, while the marker records that initial migration ran.
  * Original preferences are never cleared; data and marker commit atomically.
  */
-class LegacyPreferencesImporter(context: Context) {
+class LegacyPreferencesImporter(
+    context: Context,
+    private val database: MosaicDatabase = MosaicDatabaseProvider.get(context.applicationContext),
+) {
     private val appContext = context.applicationContext
-    private val database = MosaicDatabaseProvider.get(appContext)
 
     suspend fun importIfNeeded(nowEpochMs: Long = System.currentTimeMillis()): LegacyImportSummary =
         database.withTransaction {
