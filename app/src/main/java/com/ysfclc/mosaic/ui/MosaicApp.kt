@@ -1262,7 +1262,7 @@ private fun PlayerScreen(
                                     overflow = TextOverflow.Ellipsis,
                                 )
                             }
-                            if (isCurrent) Icon(Icons.Default.GraphicEq, contentDescription = "Current queue item", tint = MosaicPalette.Cyan, modifier = Modifier.size(16.dp))
+                            if (isCurrent) Icon(Icons.Default.MusicNote, contentDescription = "Current queue item", tint = MosaicPalette.Cyan, modifier = Modifier.size(16.dp))
                         }
                     }
                 }
