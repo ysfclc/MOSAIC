@@ -113,6 +113,8 @@ import com.ysfclc.mosaic.PlaybackHistoryEntry
 import com.ysfclc.mosaic.LegacyPreferencesImporter
 import com.ysfclc.mosaic.PlaybackHistoryStore
 import com.ysfclc.mosaic.core.library.MediaStoreCatalog
+import com.ysfclc.mosaic.core.library.LibraryRepository
+import com.ysfclc.mosaic.core.library.LocalMediaSourceAdapter
 import com.ysfclc.mosaic.core.media.MediaItemRecord
 import com.ysfclc.mosaic.core.media.PlaybackConnection
 import com.ysfclc.mosaic.core.media.PlaybackSleepTimerPolicy
@@ -142,6 +144,8 @@ private enum class Destination(val title: String) {
 fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Unit = {}) {
     val context = LocalContext.current
     val catalog = remember(context) { MediaStoreCatalog(context.applicationContext) }
+    val libraryRepository = remember(context) { LibraryRepository(context.applicationContext) }
+    val tracks by libraryRepository.observeVisible().collectAsState(initial = emptyList())
     val historyStore = remember(context) { PlaybackHistoryStore(context.applicationContext) }
     val playback = remember(context) { PlaybackConnection(context.applicationContext) }
     val sleepTimerStore = remember(context) { PlaybackSleepTimerStore(context.applicationContext) }
@@ -192,7 +196,6 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
             onSharedTextConsumed()
         }
     }
-    var tracks by remember { mutableStateOf(emptyList<MediaItemRecord>()) }
     var indexing by remember { mutableStateOf(false) }
     var audioPermission by remember { mutableStateOf(hasAudioPermission(context)) }
     var scanCounter by remember { mutableIntStateOf(0) }
@@ -274,8 +277,13 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
     LaunchedEffect(scanCounter, audioPermission) {
         if (audioPermission) {
             indexing = true
-            tracks = withContext(Dispatchers.IO) { catalog.scanAudio() }
-            indexing = false
+            try {
+                libraryRepository.sync(LocalMediaSourceAdapter(catalog))
+            } catch (error: Exception) {
+                android.util.Log.w("MOSAIC", "Library sync failed; the last saved Room index remains available.", error)
+            } finally {
+                indexing = false
+            }
         }
     }
 
