@@ -198,7 +198,7 @@ class ProjectContractTests(unittest.TestCase):
         self.assertIn("database.playbackHistory().findByEventId", importer)
         self.assertIn("database.playbackQueue().entries", importer)
         self.assertIn("database.playbackTimer().state", importer)
-        self.assertLess(importer.index("historyReadBack"), importer.index("markerDao.markCompleted"))
+        self.assertLess(importer.index("check(historyEntities.all"), importer.index("markerDao.markCompleted"))
         self.assertIn("LegacyPreferencesImporter(context.applicationContext).importIfNeeded()", app)
         self.assertNotIn("preferences.edit().clear()", importer)
 
