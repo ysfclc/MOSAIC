@@ -22,6 +22,13 @@ interface MediaItemDao {
     @Query("SELECT * FROM media_items WHERE isHidden = 0 ORDER BY title COLLATE NOCASE ASC")
     fun observeVisible(): Flow<List<MediaItemEntity>>
 
+    @Transaction
+    @Query("SELECT * FROM media_items WHERE isHidden = 0 ORDER BY title COLLATE NOCASE ASC")
+    fun observeVisibleWithLocations(): Flow<List<MediaItemWithLocations>>
+
+    @Query("SELECT * FROM media_items WHERE sourceId = :sourceId AND sourceItemId IN (:sourceItemIds)")
+    suspend fun findBySourceItems(sourceId: String, sourceItemIds: List<String>): List<MediaItemEntity>
+
     @Query("SELECT * FROM media_items WHERE isBookmarked = 1 AND isHidden = 0 ORDER BY title COLLATE NOCASE ASC")
     fun observeBookmarks(): Flow<List<MediaItemEntity>>
 
@@ -30,6 +37,9 @@ interface MediaItemDao {
 
     @Query("UPDATE media_items SET availability = :availability, updatedAtEpochMs = :updatedAtEpochMs WHERE mediaId = :mediaId")
     suspend fun updateAvailability(mediaId: String, availability: String, updatedAtEpochMs: Long)
+
+    @Query("UPDATE media_items SET isBookmarked = :bookmarked, updatedAtEpochMs = :updatedAtEpochMs WHERE mediaId = :mediaId")
+    suspend fun updateBookmark(mediaId: String, bookmarked: Boolean, updatedAtEpochMs: Long)
 }
 
 @Dao
@@ -42,6 +52,12 @@ interface MediaLocationDao {
 
     @Query("SELECT * FROM media_locations WHERE mediaId = :mediaId ORDER BY role ASC")
     suspend fun locationsFor(mediaId: String): List<MediaLocationEntity>
+
+    @Query("SELECT * FROM media_locations WHERE mediaId IN (:mediaIds)")
+    suspend fun locationsForMediaIds(mediaIds: List<String>): List<MediaLocationEntity>
+
+    @Query("DELETE FROM media_locations WHERE mediaId = :mediaId")
+    suspend fun clearForMedia(mediaId: String)
 
     @Query("UPDATE media_locations SET availability = :availability, lastVerifiedAtEpochMs = :verifiedAtEpochMs WHERE locationId = :locationId")
     suspend fun updateAvailability(locationId: String, availability: String, verifiedAtEpochMs: Long)
