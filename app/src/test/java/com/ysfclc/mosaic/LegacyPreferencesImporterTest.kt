@@ -13,6 +13,7 @@ import com.ysfclc.mosaic.core.persistence.MediaCollectionItemEntity
 import com.ysfclc.mosaic.core.persistence.MediaItemEntity
 import com.ysfclc.mosaic.core.persistence.MediaLocationEntity
 import com.ysfclc.mosaic.core.persistence.MosaicDatabase
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -165,9 +166,7 @@ class LegacyPreferencesImporterTest {
 
             assertEquals("Updated title", database.mediaItems().findById("media-1")?.title)
             assertEquals(1, database.mediaLocations().locationsFor("media-1").size)
-            assertEquals("Renamed favorites", database.collections().observeCollections().let { flow ->
-                kotlinx.coroutines.flow.first(flow).single().name
-            })
+            assertEquals("Renamed favorites", database.collections().observeCollections().first().single().name)
             assertEquals(1, database.collections().itemsInCollection("collection-1").size)
         } finally {
             database.close()
