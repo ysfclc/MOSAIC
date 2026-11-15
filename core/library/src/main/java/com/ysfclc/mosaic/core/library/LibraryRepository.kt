@@ -32,20 +32,34 @@ class LibraryRepository(
         }
 
     suspend fun sync(adapter: MediaSourceAdapter, query: String = "", nowEpochMs: Long = System.currentTimeMillis()): Int {
-        val records = adapter.browse(query)
-        return syncRecords(adapter.descriptor.id, records, nowEpochMs)
+        val result = adapter.browseSnapshot(query)
+        return syncRecords(
+            sourceId = adapter.descriptor.id,
+            records = result.items,
+            nowEpochMs = nowEpochMs,
+            reconcileMissing = query.isBlank() && result.isCompleteSnapshot,
+        )
     }
 
     suspend fun syncRecords(
         sourceId: String,
         records: List<MediaItemRecord>,
         nowEpochMs: Long = System.currentTimeMillis(),
+        reconcileMissing: Boolean = false,
     ): Int {
         require(sourceId.isNotBlank()) { "A media source ID is required." }
         val uniqueRecords = records
             .filter { it.sourceId == sourceId && it.uri.isNotBlank() }
             .distinctBy { it.id.ifBlank { it.uri } }
-        if (uniqueRecords.isEmpty()) return 0
+        if (uniqueRecords.isEmpty()) {
+            if (reconcileMissing) {
+                database.withTransaction {
+                    database.mediaItems().markAllMissing(sourceId, nowEpochMs)
+                    database.mediaLocations().clearForSource(sourceId)
+                }
+            }
+            return 0
+        }
 
         val sourceItemIds = uniqueRecords.map { it.id.ifBlank { it.uri } }
         val mediaIds = sourceItemIds.map { MediaIdentity.stableId(sourceId, it) }
@@ -114,6 +128,13 @@ class LibraryRepository(
                 }
             }
             locations.chunked(QUERY_CHUNK_SIZE).forEach { database.mediaLocations().upsertAll(it) }
+
+            if (reconcileMissing) {
+                database.mediaItems().markMissingExcept(sourceId, sourceItemIds, nowEpochMs)
+                sourceItemIds.chunked(QUERY_CHUNK_SIZE).forEach { ids ->
+                    database.mediaLocations().clearForMissingSourceItems(sourceId, ids)
+                }
+            }
             uniqueRecords.size
         }
     }
