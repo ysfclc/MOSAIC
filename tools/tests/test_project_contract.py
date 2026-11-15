@@ -219,6 +219,12 @@ class ProjectContractTests(unittest.TestCase):
         self.assertIn(".chunked(QUERY_CHUNK_SIZE)", repository)
         self.assertIn("syncsAnyAdapterPreservesUserStateAndRejectsEphemeralLocations", runtime_test)
 
+    def test_library_ui_uses_room_repository_as_its_record_source(self):
+        app = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/MosaicApp.kt").read_text(encoding="utf-8")
+        self.assertIn("libraryRepository.observeVisible().collectAsState", app)
+        self.assertIn("libraryRepository.sync(LocalMediaSourceAdapter(catalog))", app)
+        self.assertNotIn("catalog.scanAudio()", app)
+
     def test_podcast_feed_subscriptions_are_saved_on_device(self):
         app = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/MosaicApp.kt").read_text(encoding="utf-8")
         self.assertIn('getSharedPreferences("mosaic_podcast_feeds"', app)
