@@ -188,3 +188,14 @@
 - Wired stable IDs into `MediaItemFactory`, `LocalMediaSourceAdapter.resolve`, and `PlaybackConnection.playUri`; resuming a history entry now preserves its existing media ID.
 - Added `MediaIdentityTest` for source collision isolation, Unicode round-trip, incomplete-ID rejection and malformed identifiers, plus a Python source-contract test for playback/resolution wiring. Both passed in GitHub Actions run [#245](https://github.com/ysfclc/MOSAIC/actions/runs/43686929954), along with all Android unit tests, lint, APK assembly, signer and checksum verification. Release: [mosaic-dev-build-245](https://github.com/ysfclc/MOSAIC/releases/tag/mosaic-dev-build-245); APK size 23,056,410 bytes; APK SHA-256 `41f17035ef67d8f246941d5bd9c9640c983985835ccadcfd7af7f0db6699d054`; artifact ID `14150499059` (expires 2026-11-29).
 - Designed the Room-backed Library schema, source/location separation, collections/membership, playback history/queue, safe-locator policy and idempotent SharedPreferences import in `docs/LIBRARY_DATA_MODEL.md`. Locked the shared persistence module boundary and non-destructive migration rules in ADR-017. No Room database or migration has been implemented yet.
+
+## 2026-11-15 — Room persistence foundation and CI recovery
+
+- Added the ADR-017 `:core:persistence` Room v1 foundation: provider-neutral media, locations, collections, history, queue and migration-marker entities; DAOs; database provider; and a shared policy that rejects ephemeral/signed locators.
+- Enabled Room KSP schema generation for the v1 database. The generated schema and reports are retained in CI artifacts; committing the generated JSON under `core/persistence/schemas` remains a follow-up.
+- Fixed the AGP 9 built-in Kotlin/KSP source-set configuration failure with the documented `android.disallowKotlinSourceSets=false` compatibility setting in `gradle.properties`.
+- Replaced destructive Room `REPLACE` writes with `@Upsert` for media and collection parent rows, avoiding accidental deletion/cascade of dependent locations and collection memberships. Added a Python source-contract regression.
+- CI run [#261](https://github.com/ysfclc/MOSAIC/actions/runs/43727730138) passed Room KSP processing, unit tests, lint, signed APK assembly and checksum verification after the KSP compatibility fix.
+- CI run [#263](https://github.com/ysfclc/MOSAIC/actions/runs/43727831351) passed the relation-preserving upsert contract and complete Android build. It ran 55 tests with zero failures/errors and published [mosaic-dev-build-263](https://github.com/ysfclc/MOSAIC/releases/tag/mosaic-dev-build-263).
+- APK SHA-256: `7cfbc70737bfa9bbea643ee670c8c0f94a5b0ff47a4146f7984dbae8416efd44`.
+- No Room-backed production reads/writes, legacy preference import, schema migration or physical-device acceptance is claimed yet.
