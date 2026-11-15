@@ -23,10 +23,11 @@ data class LegacyImportSummary(
 )
 
 /**
- * One-time, retry-safe import of pre-Room playback preferences.
+ * Retry-safe compatibility sync of pre-Room playback preferences.
  *
- * The old preferences are intentionally retained. Data and the completion marker
- * commit atomically, and the marker is written only after read-back checks pass.
+ * Preferences remain the source of truth until the Room cutover. Each launch mirrors
+ * the current bounded snapshot, while the marker records that initial migration ran.
+ * Original preferences are never cleared; data and marker commit atomically.
  */
 class LegacyPreferencesImporter(context: Context) {
     private val appContext = context.applicationContext
@@ -35,15 +36,7 @@ class LegacyPreferencesImporter(context: Context) {
     suspend fun importIfNeeded(nowEpochMs: Long = System.currentTimeMillis()): LegacyImportSummary =
         database.withTransaction {
             val markerDao = database.migrationMarkers()
-            if (markerDao.find(MARKER_KEY) != null) {
-                return@withTransaction LegacyImportSummary(
-                    alreadyImported = true,
-                    historyEntries = 0,
-                    queueEntries = 0,
-                    timerImported = false,
-                )
-            }
-
+            val alreadyImported = markerDao.find(MARKER_KEY) != null
             val history = PlaybackHistoryStore(appContext).load()
             val queue = PlaybackQueueStore(appContext).load()
             val timerDeadline = PlaybackSleepTimerStore(appContext).deadlineEpochMs()
@@ -60,6 +53,7 @@ class LegacyPreferencesImporter(context: Context) {
                     resumePositionMs = entry.resumePositionMs.coerceAtLeast(0L),
                 )
             }
+            database.playbackHistory().clearAll()
             historyEntities.forEach { database.playbackHistory().record(it) }
 
             val queueEntries = queue?.items.orEmpty().mapIndexed { index, item ->
@@ -85,6 +79,8 @@ class LegacyPreferencesImporter(context: Context) {
                     ),
                     queueEntries,
                 )
+            } else {
+                database.playbackQueue().clearQueue(PRIMARY_QUEUE_ID)
             }
 
             val timerImported = timerDeadline > 0L
@@ -96,10 +92,12 @@ class LegacyPreferencesImporter(context: Context) {
                         updatedAtEpochMs = nowEpochMs,
                     ),
                 )
+            } else {
+                database.playbackTimer().clear(PRIMARY_TIMER_ID)
             }
 
-            // Verify the transactional view before writing the marker. Any failed
-            // check rolls back the entire transaction and leaves import retryable.
+            // Verify the transactional view before writing the initial marker. Any failed
+            // check rolls back the entire transaction and leaves the next launch retryable.
             check(historyEntities.all { database.playbackHistory().findByEventId(it.eventId) != null }) {
                 "Legacy playback history import read-back did not match."
             }
@@ -109,23 +107,30 @@ class LegacyPreferencesImporter(context: Context) {
                 val restoredEntries = database.playbackQueue().entries(PRIMARY_QUEUE_ID)
                 check(restoredState?.currentIndex == queue.currentIndex.coerceIn(queueEntries.indices))
                 check(restoredState?.positionMs == queue.positionMs.coerceAtLeast(0L))
-                check(restoredEntries.map { it.safeUriSnapshot } == queueEntries.map { it.safeUriSnapshot })
+                check(restoredEntries == queueEntries)
+            } else {
+                check(database.playbackQueue().state(PRIMARY_QUEUE_ID) == null)
+                check(database.playbackQueue().entries(PRIMARY_QUEUE_ID).isEmpty())
             }
 
             if (timerImported) {
                 check(database.playbackTimer().state(PRIMARY_TIMER_ID)?.deadlineEpochMs == timerDeadline)
+            } else {
+                check(database.playbackTimer().state(PRIMARY_TIMER_ID) == null)
             }
 
-            markerDao.markCompleted(
-                MigrationMarkerEntity(
-                    markerKey = MARKER_KEY,
-                    markerValue = "history=${historyEntities.size};queue=${queueEntries.size};timer=$timerImported",
-                    completedAtEpochMs = nowEpochMs,
-                ),
-            )
+            if (!alreadyImported) {
+                markerDao.markCompleted(
+                    MigrationMarkerEntity(
+                        markerKey = MARKER_KEY,
+                        markerValue = "history=${historyEntities.size};queue=${queueEntries.size};timer=$timerImported",
+                        completedAtEpochMs = nowEpochMs,
+                    ),
+                )
+            }
 
             LegacyImportSummary(
-                alreadyImported = false,
+                alreadyImported = alreadyImported,
                 historyEntries = historyEntities.size,
                 queueEntries = queueEntries.size,
                 timerImported = timerImported,
