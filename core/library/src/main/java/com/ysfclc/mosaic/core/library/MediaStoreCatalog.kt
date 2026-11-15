@@ -5,6 +5,7 @@ import android.content.Context
 import android.net.Uri
 import android.provider.MediaStore
 import androidx.core.database.getStringOrNull
+import com.ysfclc.mosaic.core.media.MediaIdentity
 import com.ysfclc.mosaic.core.media.MediaItemRecord
 import com.ysfclc.mosaic.core.media.MediaKind
 import com.ysfclc.mosaic.core.media.MediaSourceAdapter
