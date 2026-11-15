@@ -54,6 +54,16 @@ class SourceCapabilities(enabled: Set<MediaCapability>) {
     }
 }
 
+/**
+ * Result of a provider browse. Only a provider that knows it returned a complete
+ * source snapshot may set [isCompleteSnapshot]; partial/permission-denied results
+ * must never cause the canonical library to mark unseen records as missing.
+ */
+data class MediaBrowseResult(
+    val items: List<MediaItemRecord>,
+    val isCompleteSnapshot: Boolean,
+)
+
 data class MediaSourceDescriptor(
     val id: String,
     val name: String,
@@ -72,5 +82,7 @@ data class ResolvedMediaSource(
 interface MediaSourceAdapter {
     val descriptor: MediaSourceDescriptor
     suspend fun browse(query: String = ""): List<MediaItemRecord>
+    suspend fun browseSnapshot(query: String = ""): MediaBrowseResult =
+        MediaBrowseResult(items = browse(query), isCompleteSnapshot = false)
     suspend fun resolve(mediaId: String): ResolvedMediaSource?
 }
