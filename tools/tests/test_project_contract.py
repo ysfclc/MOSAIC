@@ -216,6 +216,7 @@ class ProjectContractTests(unittest.TestCase):
         self.assertIn("resumePositionMs = existing?.resumePositionMs ?: 0L", repository)
         self.assertIn("isBookmarked = existing?.isBookmarked ?: false", repository)
         self.assertIn("locationsForMediaIds", repository)
+        self.assertIn(".chunked(QUERY_CHUNK_SIZE)", repository)
         self.assertIn("syncsAnyAdapterPreservesUserStateAndRejectsEphemeralLocations", runtime_test)
 
     def test_podcast_feed_subscriptions_are_saved_on_device(self):
