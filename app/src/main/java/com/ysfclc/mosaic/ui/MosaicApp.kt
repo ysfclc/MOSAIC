@@ -385,7 +385,7 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
                         onOpenSource = openExternalSource,
                         onResume = { controller?.play() },
                         onPlayHistory = { entry ->
-                            playback.playUri(Uri.parse(entry.uri), entry.title, entry.mimeType, entry.resumePositionMs)
+                            playback.playUri(Uri.parse(entry.uri), entry.title, entry.mimeType, entry.resumePositionMs, entry.mediaId)
                             destination = Destination.PLAYER
                         },
                     )
@@ -407,7 +407,7 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
                         onPlay = playTrack,
                         recentHistory = recentHistory,
                         onPlayHistory = { entry ->
-                            playback.playUri(Uri.parse(entry.uri), entry.title, entry.mimeType, entry.resumePositionMs)
+                            playback.playUri(Uri.parse(entry.uri), entry.title, entry.mimeType, entry.resumePositionMs, entry.mediaId)
                             destination = Destination.PLAYER
                         },
                         onClearHistory = {
