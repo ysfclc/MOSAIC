@@ -106,6 +106,18 @@ interface PlaybackQueueDao {
 }
 
 @Dao
+interface PlaybackTimerDao {
+    @Upsert
+    suspend fun save(state: PlaybackTimerStateEntity)
+
+    @Query("SELECT * FROM playback_timer_state WHERE timerId = :timerId LIMIT 1")
+    suspend fun state(timerId: String): PlaybackTimerStateEntity?
+
+    @Query("DELETE FROM playback_timer_state WHERE timerId = :timerId")
+    suspend fun clear(timerId: String)
+}
+
+@Dao
 interface MigrationMarkerDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun markCompleted(marker: MigrationMarkerEntity)
