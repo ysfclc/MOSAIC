@@ -130,6 +130,13 @@ class ProjectContractTests(unittest.TestCase):
         self.assertIn("onPlayMedia = { rawAddress, mediaTitle, mediaType ->", app)
         self.assertIn('playback.playUri(uri, mediaTitle.ifBlank { "Web media" }, mimeType)', app)
 
+    def test_player_exposes_the_mosaic_owned_queue_and_selection(self):
+        app = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/MosaicApp.kt").read_text(encoding="utf-8")
+        self.assertIn("MOSAIC QUEUE", app)
+        self.assertIn("controller.getMediaItemAt(index)", app)
+        self.assertIn("controller?.seekTo(index, 0L)", app)
+        self.assertIn("queuedItem.mediaMetadata.title", app)
+
     def test_podcast_feed_subscriptions_are_saved_on_device(self):
         app = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/MosaicApp.kt").read_text(encoding="utf-8")
         self.assertIn('getSharedPreferences("mosaic_podcast_feeds"', app)
