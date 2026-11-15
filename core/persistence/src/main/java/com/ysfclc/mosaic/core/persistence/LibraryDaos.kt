@@ -19,17 +19,17 @@ interface MediaItemDao {
     @Query("SELECT * FROM media_items WHERE mediaId = :mediaId LIMIT 1")
     suspend fun findById(mediaId: String): MediaItemEntity?
 
-    @Query("SELECT * FROM media_items WHERE isHidden = 0 ORDER BY title COLLATE NOCASE ASC")
+    @Query("SELECT * FROM media_items WHERE isHidden = 0 AND availability = 'AVAILABLE' ORDER BY title COLLATE NOCASE ASC")
     fun observeVisible(): Flow<List<MediaItemEntity>>
 
     @Transaction
-    @Query("SELECT * FROM media_items WHERE isHidden = 0 ORDER BY title COLLATE NOCASE ASC")
+    @Query("SELECT * FROM media_items WHERE isHidden = 0 AND availability = 'AVAILABLE' ORDER BY title COLLATE NOCASE ASC")
     fun observeVisibleWithLocations(): Flow<List<MediaItemWithLocations>>
 
     @Query("SELECT * FROM media_items WHERE sourceId = :sourceId AND sourceItemId IN (:sourceItemIds)")
     suspend fun findBySourceItems(sourceId: String, sourceItemIds: List<String>): List<MediaItemEntity>
 
-    @Query("SELECT * FROM media_items WHERE isBookmarked = 1 AND isHidden = 0 ORDER BY title COLLATE NOCASE ASC")
+    @Query("SELECT * FROM media_items WHERE isBookmarked = 1 AND isHidden = 0 AND availability = 'AVAILABLE' ORDER BY title COLLATE NOCASE ASC")
     fun observeBookmarks(): Flow<List<MediaItemEntity>>
 
     @Query("UPDATE media_items SET resumePositionMs = :positionMs, lastPlayedAtEpochMs = :playedAtEpochMs, updatedAtEpochMs = :playedAtEpochMs WHERE mediaId = :mediaId")
@@ -40,6 +40,12 @@ interface MediaItemDao {
 
     @Query("UPDATE media_items SET isBookmarked = :bookmarked, updatedAtEpochMs = :updatedAtEpochMs WHERE mediaId = :mediaId")
     suspend fun updateBookmark(mediaId: String, bookmarked: Boolean, updatedAtEpochMs: Long)
+
+    @Query("UPDATE media_items SET availability = 'MISSING', updatedAtEpochMs = :updatedAtEpochMs WHERE sourceId = :sourceId AND sourceItemId NOT IN (:sourceItemIds)")
+    suspend fun markMissingExcept(sourceId: String, sourceItemIds: List<String>, updatedAtEpochMs: Long)
+
+    @Query("UPDATE media_items SET availability = 'MISSING', updatedAtEpochMs = :updatedAtEpochMs WHERE sourceId = :sourceId")
+    suspend fun markAllMissing(sourceId: String, updatedAtEpochMs: Long)
 }
 
 @Dao
@@ -58,6 +64,12 @@ interface MediaLocationDao {
 
     @Query("DELETE FROM media_locations WHERE mediaId = :mediaId")
     suspend fun clearForMedia(mediaId: String)
+
+    @Query("DELETE FROM media_locations WHERE mediaId IN (SELECT mediaId FROM media_items WHERE sourceId = :sourceId AND sourceItemId NOT IN (:sourceItemIds))")
+    suspend fun clearForMissingSourceItems(sourceId: String, sourceItemIds: List<String>)
+
+    @Query("DELETE FROM media_locations WHERE sourceId = :sourceId")
+    suspend fun clearForSource(sourceId: String)
 
     @Query("UPDATE media_locations SET availability = :availability, lastVerifiedAtEpochMs = :verifiedAtEpochMs WHERE locationId = :locationId")
     suspend fun updateAvailability(locationId: String, availability: String, verifiedAtEpochMs: Long)
