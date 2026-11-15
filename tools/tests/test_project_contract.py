@@ -206,6 +206,18 @@ class ProjectContractTests(unittest.TestCase):
         self.assertIn("LegacyPreferencesImporter(context.applicationContext).importIfNeeded()", app)
         self.assertNotIn("preferences.edit().clear()", importer)
 
+    def test_library_repository_is_source_neutral_and_preserves_user_state(self):
+        repository = (ROOT / "core/library/src/main/java/com/ysfclc/mosaic/core/library/LibraryRepository.kt").read_text(encoding="utf-8")
+        runtime_test = (ROOT / "app/src/test/java/com/ysfclc/mosaic/LibraryRepositoryTest.kt").read_text(encoding="utf-8")
+        self.assertIn("fun sync(adapter: MediaSourceAdapter", repository)
+        self.assertIn("MediaIdentity.stableId(sourceId, sourceItemId)", repository)
+        self.assertIn("SafeMediaLocatorPolicy.isSafe(record.uri)", repository)
+        self.assertIn("database.withTransaction", repository)
+        self.assertIn("resumePositionMs = existing?.resumePositionMs ?: 0L", repository)
+        self.assertIn("isBookmarked = existing?.isBookmarked ?: false", repository)
+        self.assertIn("locationsForMediaIds", repository)
+        self.assertIn("syncsAnyAdapterPreservesUserStateAndRejectsEphemeralLocations", runtime_test)
+
     def test_podcast_feed_subscriptions_are_saved_on_device(self):
         app = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/MosaicApp.kt").read_text(encoding="utf-8")
         self.assertIn('getSharedPreferences("mosaic_podcast_feeds"', app)
