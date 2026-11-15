@@ -158,6 +158,13 @@ data class PlaybackQueueEntryEntity(
     val mimeType: String? = null,
 )
 
+@Entity(tableName = "playback_timer_state")
+data class PlaybackTimerStateEntity(
+    @PrimaryKey val timerId: String,
+    val deadlineEpochMs: Long,
+    val updatedAtEpochMs: Long,
+)
+
 @Entity(tableName = "migration_markers")
 data class MigrationMarkerEntity(
     @PrimaryKey val markerKey: String,
