@@ -125,6 +125,7 @@ import com.ysfclc.mosaic.ui.browser.AdSkipAccessibilityStatus
 import com.ysfclc.mosaic.ui.browser.BrowserScreen
 import com.ysfclc.mosaic.ui.browser.ExternalMediaSession
 import com.ysfclc.mosaic.ui.browser.ExternalMediaSessionBridge
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -282,6 +283,8 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
                 libraryRepository.observeAndSync(adapter).collect {
                     indexing = false
                 }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
             } catch (error: Exception) {
                 android.util.Log.w("MOSAIC", "Library sync/observation stopped; the last saved Room index remains available.", error)
             } finally {
