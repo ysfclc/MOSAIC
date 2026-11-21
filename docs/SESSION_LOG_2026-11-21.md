@@ -51,3 +51,12 @@ MOSAIC remains a local-first Android personal media OS. Cross-source playback co
 ## Rollback
 
 This is documentation/schema-contract-only. Revert the increment commit(s) to remove the schema artifact, contract test and documentation updates. No user database is modified and no migration is required.
+
+
+## Work completed in this increment
+
+- Added `docs/ROOM_SCHEMA_CONTRACT.md` documenting the Room v1 entity set, referential-integrity rules, migration policy and generated identity hash.
+- Added `tools/tests/test_room_schema_contract.py` with six deterministic source-contract tests covering database version/schema export, registered entities, source-scoped uniqueness, cascade behavior, snapshot retention and queue/timer entities.
+- Updated the P2-001 task note to record the new coverage without claiming the generated JSON is committed.
+- CI run #302 passed source verification and Python tooling, including the new tests. Android unit tests, lint and APK build were still in progress at checkpoint.
+- **Outstanding:** the generated Room JSON from run #300 has not yet been committed under `core/persistence/schemas`; therefore this increment is not complete and must not be described as a finished schema check-in. No production Kotlin behavior or database version was changed.
