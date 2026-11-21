@@ -14,7 +14,8 @@ import com.ysfclc.mosaic.core.media.SourceCapabilities
 import com.ysfclc.mosaic.core.persistence.MosaicDatabase
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
-import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
@@ -66,10 +67,10 @@ class LibraryChangeObservationTest {
                 kind = MediaKind.AUDIO,
             )
             val counts = LibraryRepository(context, database)
-                .observeAndSync(adapterWith(record, flowOf(Unit)))
+                .observeAndSync(adapterWith(record, flow { emit(Unit); delay(100); emit(Unit) }))
                 .toList()
 
-            assertTrue(counts.size >= 1)
+            assertTrue(counts.size >= 2)
             assertEquals(1, counts.first())
             assertEquals("Observed item", database.mediaItems()
                 .findBySourceItems("observed-source", listOf("item-2")).single().title)
