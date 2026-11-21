@@ -1,6 +1,8 @@
 package com.ysfclc.mosaic.core.media
 
 import android.net.Uri
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
 
 /** Stable, provider-neutral description of one item in the personal media library. */
 data class MediaItemRecord(
@@ -84,5 +86,13 @@ interface MediaSourceAdapter {
     suspend fun browse(query: String = ""): List<MediaItemRecord>
     suspend fun browseSnapshot(query: String = ""): MediaBrowseResult =
         MediaBrowseResult(items = browse(query), isCompleteSnapshot = false)
+
+    /**
+     * Emits when the provider knows its browsable content may have changed.
+     * The default is intentionally inert so existing and remote adapters remain
+     * source-compatible and do not acquire polling or lifecycle responsibilities.
+     */
+    fun observeChanges(): Flow<Unit> = emptyFlow()
+
     suspend fun resolve(mediaId: String): ResolvedMediaSource?
 }
