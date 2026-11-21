@@ -278,9 +278,12 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
         if (audioPermission) {
             indexing = true
             try {
-                libraryRepository.sync(LocalMediaSourceAdapter(catalog))
+                val adapter = LocalMediaSourceAdapter(catalog)
+                libraryRepository.observeAndSync(adapter).collect {
+                    indexing = false
+                }
             } catch (error: Exception) {
-                android.util.Log.w("MOSAIC", "Library sync failed; the last saved Room index remains available.", error)
+                android.util.Log.w("MOSAIC", "Library sync/observation stopped; the last saved Room index remains available.", error)
             } finally {
                 indexing = false
             }
