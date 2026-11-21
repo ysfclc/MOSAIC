@@ -1,6 +1,6 @@
 package com.ysfclc.mosaic.core.library
 
-import android.content.ContentObserver
+import android.database.ContentObserver
 import android.content.Context
 import android.os.Handler
 import android.os.Looper
