@@ -47,6 +47,35 @@ class RoomV1ContractTests(unittest.TestCase):
         self.assertIn("onDelete = ForeignKey.SET_NULL", history)
         self.assertIn("onDelete = ForeignKey.SET_NULL", queue)
 
+    def test_generated_room_v1_schema_matches_registered_entities_and_relationships(self):
+        schema_path = ROOT / "core/persistence/schemas/com.ysfclc.mosaic.core.persistence.MosaicDatabase/1.json"
+        if not schema_path.is_file():
+            self.skipTest("The first direct build generates and checks in the Room schema after Gradle compilation.")
+        schema = json.loads(schema_path.read_text(encoding="utf-8"))
+        database = schema["database"]
+        self.assertEqual(schema["formatVersion"], 1)
+        self.assertEqual(database["version"], 1)
+        self.assertEqual(database["identityHash"], "e699d4c9bfc9c75101010c245f07c951")
+        entities = {entity["tableName"]: entity for entity in database["entities"]}
+        self.assertEqual(set(entities), {
+            "media_items", "media_locations", "media_collections",
+            "media_collection_items", "playback_history",
+            "playback_queue_state", "playback_queue_entries",
+            "playback_timer_state", "migration_markers",
+        })
+        media_indexes = entities["media_items"]["indices"]
+        self.assertTrue(any(
+            index["unique"] and index["columnNames"] == ["sourceId", "sourceItemId"]
+            for index in media_indexes
+        ))
+        self.assertEqual(entities["media_locations"]["foreignKeys"][0]["onDelete"], "CASCADE")
+        self.assertEqual(
+            {fk["onDelete"] for fk in entities["media_collection_items"]["foreignKeys"]},
+            {"CASCADE"},
+        )
+        self.assertEqual(entities["playback_history"]["foreignKeys"][0]["onDelete"], "SET NULL")
+        self.assertEqual(entities["playback_queue_entries"]["foreignKeys"][0]["onDelete"], "SET NULL")
+
     def test_queue_state_and_timer_are_first_class_persistent_entities(self):
         self.assertIn("PlaybackQueueStateEntity::class", self.database)
         self.assertIn("PlaybackQueueEntryEntity::class", self.database)
