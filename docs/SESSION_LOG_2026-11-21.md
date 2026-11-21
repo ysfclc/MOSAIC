@@ -49,3 +49,38 @@ Revert the adapter observation, MediaStore monitor, repository stream, tests and
 - Room v1 generated schema JSON is still not checked into `core/persistence/schemas`; this remains an explicit P2-001 blocker.
 - CI run #305 passed end-to-end; the report artifact contains the generated Room schema.
 - Future migrations, Room-backed history/queue/timer cutover and Redmi device/process-death acceptance remain open.
+
+
+## Work completed — MediaStore change observation
+
+- Extended `MediaSourceAdapter` with optional `observeChanges(): Flow<Unit>`; the default `emptyFlow()` keeps existing adapters compatible and does not introduce polling.
+- Added `MediaStoreChangeMonitor`, a cold `callbackFlow` around Android's `ContentObserver` for `MediaStore.Audio.Media.EXTERNAL_CONTENT_URI`. Registration is attempted on collection; `awaitClose` unregisters it. Notifications are conflated.
+- Wired the monitor into `LocalMediaSourceAdapter`.
+- Added `LibraryRepository.observeAndSync()`: an initial snapshot sync followed by serialized syncs when the adapter emits change notifications.
+- Wired the observe-and-sync stream into the active MOSAIC Compose screen. The existing scan action restarts the stream and therefore requests a fresh initial snapshot.
+- Preserved the complete-snapshot guard: only complete, unfiltered snapshots reconcile missing items. Permission-denied or incomplete results do not mark unseen records missing.
+- Added `LibraryChangeObservationTest` covering initial sync for adapters without observers and a subsequent sync after a change signal.
+- Updated `tools/tests/test_project_contract.py`, `docs/TASKS.md` and `docs/STATE.md`.
+
+## Verification
+
+- First CI attempt #316 exposed a stale Python source-contract assertion that expected the previous one-shot sync call; updated the assertion to require the new observe-and-sync wiring and added observer lifecycle/conflation source contracts.
+- CI attempt #317 exposed an incorrect Android import (`ContentObserver` is `android.database.ContentObserver`); corrected the import.
+- Final direct build [#318](https://github.com/ysfclc/MOSAIC/actions/runs/44953257717) passed on `2362cc5b572217dd1d66cd8bb7f55c7a84976374`:
+  - Python/source verification passed.
+  - 60 Android unit tests passed with zero failures/errors/skips.
+  - Android lint passed.
+  - Debug APK assembly, checksum/signature verification and artifact upload passed.
+  - Signed APK private prerelease publication passed.
+- CI report artifact: `MOSAIC-Direct-Build-Reports` (run #318); it contains the generated Room v1 schema JSON.
+
+## Remaining gates
+
+- The generated Room v1 schema is still not committed under `core/persistence/schemas`; it remains a P2-001 blocker.
+- The new observer is CI/source verified but has not been exercised on the Redmi device. Validate media add/update/delete notifications, permission revocation/restoration, lifecycle cancellation and screen-off behavior on-device.
+- This increment performs full source snapshots after notifications. Provider generation/delta queries are a future optimization, not claimed as implemented.
+- Room-backed playback history/queue/timer cutover, future migrations and process-death acceptance remain open.
+
+## Rollback
+
+Revert the commits in this increment on `work/media-library-change-observer-2026-11-21`. The increment does not alter Room schema, existing media files, user preferences or playback ownership.
