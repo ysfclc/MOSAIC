@@ -15,9 +15,15 @@ import com.ysfclc.mosaic.core.media.ResolvedMediaSource
 import com.ysfclc.mosaic.core.media.SourceCapabilities
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.flow.Flow
 
 /** Read-only MediaStore index. Original files are never copied, moved, or renamed. */
 class MediaStoreCatalog(private val context: Context) {
+    private val changeMonitor = MediaStoreChangeMonitor(context)
+
+    /** Emits invalidations while collected; unregisters when collection stops. */
+    fun observeAudioChanges(): Flow<Unit> = changeMonitor.observeAudioChanges()
+
     suspend fun scanAudio(query: String = ""): List<MediaItemRecord> = scanAudioSnapshot(query).items
 
     suspend fun scanAudioSnapshot(query: String = ""): MediaBrowseResult = withContext(Dispatchers.IO) {
@@ -96,6 +102,8 @@ class LocalMediaSourceAdapter(private val catalog: MediaStoreCatalog) : MediaSou
     override suspend fun browse(query: String): List<MediaItemRecord> = catalog.scanAudio(query)
 
     override suspend fun browseSnapshot(query: String): MediaBrowseResult = catalog.scanAudioSnapshot(query)
+
+    override fun observeChanges(): Flow<Unit> = catalog.observeAudioChanges()
 
     override suspend fun resolve(mediaId: String): ResolvedMediaSource? {
         val sourceItemId = MediaIdentity.sourceItemId(mediaId, descriptor.id) ?: mediaId
