@@ -228,8 +228,24 @@ class ProjectContractTests(unittest.TestCase):
     def test_library_ui_uses_room_repository_as_its_record_source(self):
         app = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/MosaicApp.kt").read_text(encoding="utf-8")
         self.assertIn("libraryRepository.observeVisible().collectAsState", app)
-        self.assertIn("libraryRepository.sync(LocalMediaSourceAdapter(catalog))", app)
+        self.assertIn("val adapter = LocalMediaSourceAdapter(catalog)", app)
+        self.assertIn("libraryRepository.observeAndSync(adapter).collect", app)
         self.assertNotIn("catalog.scanAudio()", app)
+
+
+    def test_media_store_change_observer_is_lifecycle_bound_and_conflated(self):
+        monitor = (ROOT / "core/library/src/main/java/com/ysfclc/mosaic/core/library/MediaStoreChangeMonitor.kt").read_text(encoding="utf-8")
+        repository = (ROOT / "core/library/src/main/java/com/ysfclc/mosaic/core/library/LibraryRepository.kt").read_text(encoding="utf-8")
+        adapter = (ROOT / "core/library/src/main/java/com/ysfclc/mosaic/core/library/MediaStoreCatalog.kt").read_text(encoding="utf-8")
+        self.assertIn("registerContentObserver", monitor)
+        self.assertIn("awaitClose", monitor)
+        self.assertIn("unregisterContentObserver", monitor)
+        self.assertIn(".conflate()", monitor)
+        self.assertIn("override fun observeChanges(): Flow<Unit>", adapter)
+        self.assertIn("fun observeChanges(): Flow<Unit> = emptyFlow()", (ROOT / "core/media/src/main/java/com/ysfclc/mosaic/core/media/MediaSource.kt").read_text(encoding="utf-8"))
+        self.assertIn("adapter.observeChanges()", repository)
+        self.assertIn(".onStart { emit(Unit) }", repository)
+        self.assertIn(".conflate()", repository)
 
     def test_podcast_feed_subscriptions_are_saved_on_device(self):
         app = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/MosaicApp.kt").read_text(encoding="utf-8")
