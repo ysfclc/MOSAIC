@@ -13,7 +13,9 @@ import com.ysfclc.mosaic.core.persistence.MosaicDatabase
 import com.ysfclc.mosaic.core.persistence.MosaicDatabaseProvider
 import com.ysfclc.mosaic.core.persistence.SafeMediaLocatorPolicy
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
 
 /**
  * Source-neutral, local-first library index.
@@ -30,6 +32,17 @@ class LibraryRepository(
         database.mediaItems().observeVisibleWithLocations().map { items ->
             items.mapNotNull { it.toMediaRecord() }
         }
+
+    /**
+     * Performs an initial source sync, then refreshes when the adapter reports
+     * possible changes. Collection owns observer lifetime; conflation prevents
+     * notification bursts from queuing redundant full snapshots.
+     */
+    fun observeAndSync(adapter: MediaSourceAdapter): Flow<Int> =
+        adapter.observeChanges()
+            .onStart { emit(Unit) }
+            .conflate()
+            .map { sync(adapter) }
 
     suspend fun sync(adapter: MediaSourceAdapter, query: String = "", nowEpochMs: Long = System.currentTimeMillis()): Int {
         val result = adapter.browseSnapshot(query)
