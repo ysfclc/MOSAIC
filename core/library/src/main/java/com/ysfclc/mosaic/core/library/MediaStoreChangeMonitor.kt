@@ -7,10 +7,12 @@ import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
-import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.flow.buffer
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import com.ysfclc.mosaic.core.media.MediaSourceChange
 
@@ -51,7 +53,7 @@ class MediaStoreChangeMonitor(context: Context) {
                 runCatching { resolver.unregisterContentObserver(observer) }
             }
         }
-    }.conflate()
+    }.buffer(Channel.UNLIMITED).distinctUntilChanged()
 
     companion object {
         /** Pure URI classification so the item-level boundary can be regression-tested. */
