@@ -14,7 +14,9 @@ import com.ysfclc.mosaic.core.persistence.MosaicDatabase
 import com.ysfclc.mosaic.core.persistence.MosaicDatabaseProvider
 import com.ysfclc.mosaic.core.persistence.SafeMediaLocatorPolicy
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.conflate
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.buffer
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 
@@ -43,7 +45,8 @@ class LibraryRepository(
     fun observeAndSync(adapter: MediaSourceAdapter): Flow<Int> =
         adapter.observeChangeEvents()
             .onStart { emit(MediaSourceChange.Invalidate) }
-            .conflate()
+            .buffer(Channel.UNLIMITED)
+            .distinctUntilChanged()
             .map { change ->
                 when (change) {
                     MediaSourceChange.Invalidate -> sync(adapter)
