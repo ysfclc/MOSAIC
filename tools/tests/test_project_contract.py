@@ -243,9 +243,14 @@ class ProjectContractTests(unittest.TestCase):
         self.assertIn(".conflate()", monitor)
         self.assertIn("override fun observeChanges(): Flow<Unit>", adapter)
         self.assertIn("fun observeChanges(): Flow<Unit> = emptyFlow()", (ROOT / "core/media/src/main/java/com/ysfclc/mosaic/core/media/MediaSource.kt").read_text(encoding="utf-8"))
-        self.assertIn("adapter.observeChanges()", repository)
-        self.assertIn(".onStart { emit(Unit) }", repository)
+        media_source = (ROOT / "core/media/src/main/java/com/ysfclc/mosaic/core/media/MediaSource.kt").read_text(encoding="utf-8")
+        self.assertIn("adapter.observeChangeEvents()", repository)
+        self.assertIn(".onStart { emit(MediaSourceChange.Invalidate) }", repository)
         self.assertIn(".conflate()", repository)
+        self.assertIn("observeChanges().map { MediaSourceChange.Invalidate }", media_source)
+        self.assertIn("override fun observeChangeEvents(): Flow<MediaSourceChange>", adapter)
+        self.assertIn("override suspend fun findItem(sourceItemId: String)", adapter)
+        self.assertIn("findAudioById(rowId)", adapter)
 
     def test_podcast_feed_subscriptions_are_saved_on_device(self):
         app = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/MosaicApp.kt").read_text(encoding="utf-8")
