@@ -25,4 +25,11 @@
 - Created branch `work/room-database-reopen-acceptance-2026-11-22` from the CI-verified MediaStore incremental-indexing branch; no production/default branch changes.
 - Added `MosaicDatabaseReopenTest`: writes a media item and location, playback history, queue state/entry and sleep timer to a named on-disk Room database; closes it; opens the same database again; verifies all records and user state survive; then closes and deletes the test database.
 - This test establishes disk-backed persistence across a database close/reopen boundary. It does not claim Android OS process-death, service restoration or physical-device acceptance.
-- CI has been triggered by the test-file commit; verification is pending.
+- CI run #334 was triggered by the test-file commit; Python/source checks passed and Android tests/build were still running at handoff.
+
+## Preserve rapid distinct MediaStore updates
+
+- A follow-up audit found that `.conflate()` on the item-event stream could discard one of two different item IDs when a burst arrived during a slow Room sync. That is unsafe for delta events even though it is acceptable for a pure full-invalidation signal.
+- Replaced conflation in both the MediaStore observer and `LibraryRepository.observeAndSync()` with `Channel.UNLIMITED` buffering plus `distinctUntilChanged()`. This keeps different item IDs in order while suppressing adjacent duplicate notifications.
+- Added `rapidDistinctItemChangesAreAllRefreshed`, which emits two different item IDs without delay and asserts both targeted lookups/upserts occur.
+- The database reopen test and event-burst regression are both on this branch. The next CI run must validate the combined changes; do not treat either as passed before the run completes.
