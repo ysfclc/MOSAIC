@@ -7,7 +7,7 @@
 - `MediaSourceAdapter.observeChangeEvents()` adds provider-neutral `ItemChanged` and `Invalidate` events. Existing `Flow<Unit>` observers remain compatible and are mapped to full invalidations by default.
 - `MediaStoreChangeMonitor` emits `ItemChanged` only for exact, supported external-audio item URIs with a positive numeric ID. Collection, null, malformed, query/fragment-bearing and unsupported-volume URIs remain invalidations.
 - `LocalMediaSourceAdapter.findItem()` and `MediaStoreCatalog.findAudioById()` re-read a single row with `_ID = ?`; the targeted lookup does not enumerate the full library.
-- `LibraryRepository.observeAndSync()` performs the initial full sync, then targeted item upserts for item-change signals. Targeted upserts preserve bookmark, resume position and last-played state through the existing Room `@Upsert` path.
+- `LibraryRepository.observeAndSync()` performs the initial full sync, then targeted item upserts for item-change signals. Item events are buffered without conflation so a burst containing different IDs cannot silently lose an update; adjacent duplicate signals are suppressed. Targeted upserts preserve bookmark, resume position and last-played state through the existing Room `@Upsert` path.
 - If the targeted lookup is missing or unavailable, the repository falls back to a full snapshot. Only a blank-query, complete snapshot reconciles missing items. An incomplete or permission-failed snapshot never marks items missing.
 - `LocalMediaSourceAdapter.resolve()` now resolves a local item by targeted ID lookup rather than scanning the entire catalog.
 
