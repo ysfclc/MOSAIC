@@ -18,3 +18,11 @@
 - Review the new direct-build CI results and fix any failure before calling this slice verified.
 - Continue delta handling only where item identity is reliable; retain full invalidation for collection/bulk changes.
 - Keep the public development-signing-key migration tracked separately; do not rotate the key or break installed-app update compatibility without a controlled replacement and verification plan.
+
+
+## Room database reopen acceptance
+
+- Created branch `work/room-database-reopen-acceptance-2026-11-22` from the CI-verified MediaStore incremental-indexing branch; no production/default branch changes.
+- Added `MosaicDatabaseReopenTest`: writes a media item and location, playback history, queue state/entry and sleep timer to a named on-disk Room database; closes it; opens the same database again; verifies all records and user state survive; then closes and deletes the test database.
+- This test establishes disk-backed persistence across a database close/reopen boundary. It does not claim Android OS process-death, service restoration or physical-device acceptance.
+- CI has been triggered by the test-file commit; verification is pending.
