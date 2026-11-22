@@ -7,6 +7,8 @@ import com.ysfclc.mosaic.core.library.LibraryRepository
 import com.ysfclc.mosaic.core.media.MediaBrowseResult
 import com.ysfclc.mosaic.core.media.MediaItemRecord
 import com.ysfclc.mosaic.core.media.MediaKind
+import com.ysfclc.mosaic.core.media.MediaIdentity
+import com.ysfclc.mosaic.core.media.MediaSourceChange
 import com.ysfclc.mosaic.core.media.MediaSourceAdapter
 import com.ysfclc.mosaic.core.media.MediaSourceDescriptor
 import com.ysfclc.mosaic.core.media.ResolvedMediaSource
@@ -74,6 +76,137 @@ class LibraryChangeObservationTest {
             assertEquals(1, counts.first())
             assertEquals("Observed item", database.mediaItems()
                 .findBySourceItems("observed-source", listOf("item-2")).single().title)
+        } finally {
+            database.close()
+        }
+    }
+
+    @Test
+    fun itemChangeUsesTargetedLookupAndPreservesUserState() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val database = Room.inMemoryDatabaseBuilder(context, MosaicDatabase::class.java)
+            .allowMainThreadQueries()
+            .build()
+        try {
+            val repository = LibraryRepository(context, database)
+            val expectedItemId = "item-3"
+            val initialRecord = MediaItemRecord(
+                id = expectedItemId,
+                sourceId = "targeted-source",
+                title = "Before refresh",
+                creator = "Original creator",
+                uri = "content://media/external/audio/media/3",
+                kind = MediaKind.AUDIO,
+            )
+            val changedRecord = initialRecord.copy(title = "After refresh", creator = "Updated creator")
+            var snapshotQueries = 0
+            var itemQueries = 0
+            val adapter = object : MediaSourceAdapter {
+                override val descriptor = MediaSourceDescriptor(
+                    id = "targeted-source",
+                    name = "Targeted source",
+                    summary = "Item lookup contract test",
+                    requiresNetwork = false,
+                    capabilities = SourceCapabilities.LOCAL_MEDIA,
+                )
+
+                override suspend fun browse(query: String): List<MediaItemRecord> = listOf(initialRecord)
+
+                override suspend fun browseSnapshot(query: String): MediaBrowseResult {
+                    snapshotQueries++
+                    return MediaBrowseResult(listOf(initialRecord), isCompleteSnapshot = true)
+                }
+
+                override fun observeChangeEvents(): Flow<MediaSourceChange> = flow {
+                    delay(100)
+                    emit(MediaSourceChange.ItemChanged(expectedItemId))
+                }
+
+                override suspend fun findItem(sourceItemId: String): MediaItemRecord? {
+                    itemQueries++
+                    return changedRecord.takeIf { sourceItemId == expectedItemId }
+                }
+
+                override suspend fun resolve(mediaId: String): ResolvedMediaSource? = null
+            }
+            val stableId = MediaIdentity.stableId("targeted-source", expectedItemId)
+            val counts = mutableListOf<Int>()
+
+            repository.observeAndSync(adapter).collect { count ->
+                counts += count
+                if (counts.size == 1) {
+                    repository.setBookmarked(stableId, true, nowEpochMs = 60_000L)
+                    repository.updatePlaybackState(stableId, 12_500L, playedAtEpochMs = 61_000L)
+                }
+            }
+
+            assertEquals(listOf(1, 1), counts)
+            assertEquals(1, snapshotQueries)
+            assertEquals(1, itemQueries)
+            val updated = database.mediaItems().findBySourceItems("targeted-source", listOf(expectedItemId)).single()
+            assertEquals("After refresh", updated.title)
+            assertEquals("Updated creator", updated.creator)
+            assertTrue(updated.isBookmarked)
+            assertEquals(12_500L, updated.resumePositionMs)
+            assertEquals(61_000L, updated.lastPlayedAtEpochMs)
+        } finally {
+            database.close()
+        }
+    }
+
+    @Test
+    fun unavailableTargetedLookupFallsBackToIncompleteSnapshotWithoutMarkingMissing() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val database = Room.inMemoryDatabaseBuilder(context, MosaicDatabase::class.java)
+            .allowMainThreadQueries()
+            .build()
+        try {
+            val repository = LibraryRepository(context, database)
+            val expectedItemId = "item-4"
+            val record = MediaItemRecord(
+                id = expectedItemId,
+                sourceId = "fallback-source",
+                title = "Existing item",
+                uri = "content://media/external/audio/media/4",
+                kind = MediaKind.AUDIO,
+            )
+            var snapshots = 0
+            val adapter = object : MediaSourceAdapter {
+                override val descriptor = MediaSourceDescriptor(
+                    id = "fallback-source",
+                    name = "Fallback source",
+                    summary = "Safe fallback contract test",
+                    requiresNetwork = false,
+                    capabilities = SourceCapabilities.LOCAL_MEDIA,
+                )
+
+                override suspend fun browse(query: String): List<MediaItemRecord> = listOf(record)
+
+                override suspend fun browseSnapshot(query: String): MediaBrowseResult {
+                    snapshots++
+                    return if (snapshots == 1) {
+                        MediaBrowseResult(listOf(record), isCompleteSnapshot = true)
+                    } else {
+                        MediaBrowseResult(emptyList(), isCompleteSnapshot = false)
+                    }
+                }
+
+                override fun observeChangeEvents(): Flow<MediaSourceChange> = flow {
+                    delay(100)
+                    emit(MediaSourceChange.ItemChanged(expectedItemId))
+                }
+
+                override suspend fun findItem(sourceItemId: String): MediaItemRecord? = null
+
+                override suspend fun resolve(mediaId: String): ResolvedMediaSource? = null
+            }
+
+            val counts = repository.observeAndSync(adapter).toList()
+            assertEquals(listOf(1, 0), counts)
+            assertEquals(2, snapshots)
+            val existing = database.mediaItems().findBySourceItems("fallback-source", listOf(expectedItemId)).single()
+            assertEquals("AVAILABLE", existing.availability)
+            assertEquals(1, database.mediaLocations().locationsFor(existing.mediaId).size)
         } finally {
             database.close()
         }

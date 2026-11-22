@@ -1,40 +1,42 @@
-# MediaStore incremental indexing design
+# MediaStore incremental indexing
 
-**Status:** Design checkpoint for the next implementation increment  
-**Branch:** `work/media-store-delta-indexing-2026-11-22`
+**Status:** First item-level refresh slice implemented on `work/media-store-delta-indexing-2026-11-22`
 
 ## Current behavior
 
-- `MediaSourceAdapter.observeChanges()` emits `Flow<Unit>`; it communicates invalidation, not item identity.
-- `MediaStoreChangeMonitor` observes the external audio MediaStore URI recursively and conflates notifications.
-- `LibraryRepository.observeAndSync()` treats every notification as a reason to run a full browse/snapshot.
-- Full snapshots are intentionally guarded: only a blank-query, complete provider snapshot can mark unseen records missing. Permission errors and incomplete results do not reconcile deletions.
-- Repository updates preserve user state (bookmark, playback position and last-played timestamp) by stable source-local identity.
+- `MediaSourceAdapter.observeChangeEvents()` adds provider-neutral `ItemChanged` and `Invalidate` events. Existing `Flow<Unit>` observers remain compatible and are mapped to full invalidations by default.
+- `MediaStoreChangeMonitor` emits `ItemChanged` only for exact, supported external-audio item URIs with a positive numeric ID. Collection, null, malformed, query/fragment-bearing and unsupported-volume URIs remain invalidations.
+- `LocalMediaSourceAdapter.findItem()` and `MediaStoreCatalog.findAudioById()` re-read a single row with `_ID = ?`; the targeted lookup does not enumerate the full library.
+- `LibraryRepository.observeAndSync()` performs the initial full sync, then targeted item upserts for item-change signals. Targeted upserts preserve bookmark, resume position and last-played state through the existing Room `@Upsert` path.
+- If the targeted lookup is missing or unavailable, the repository falls back to a full snapshot. Only a blank-query, complete snapshot reconciles missing items. An incomplete or permission-failed snapshot never marks items missing.
+- `LocalMediaSourceAdapter.resolve()` now resolves a local item by targeted ID lookup rather than scanning the entire catalog.
 
-## Why not implement deltas from the current signal
+## Deletion safety
 
-The observer callback can include a URI, but not all notifications are guaranteed to be item-specific; collection-level changes, null URIs, bulk changes, and deletion notifications require different handling. Treating every URI as a precise item mutation or treating a failed item query as a deletion can incorrectly hide media or erase locations.
+Android's `ContentObserver` URI indicates that content changed; it does not reliably identify whether the operation was a deletion. The MediaStore observer therefore emits no direct delete event. A missing targeted lookup triggers the guarded full snapshot, and only a complete full snapshot can mark unseen items missing or clear their locations. No permission failure or empty targeted query alone is deletion evidence.
 
-## Proposed contract (not yet implemented)
+## Verification added
 
-1. Add a provider-neutral change type with explicit `ITEM_UPSERT`, `ITEM_DELETE`, and `INVALIDATE` semantics, including an optional source-item ID/locator.
-2. MediaStore observer maps a notification to an item change only when its URI is a supported item URI with a parseable ID; otherwise it emits `INVALIDATE`.
-3. Item upsert performs a targeted query by ID. A successful query with a record updates only that record; an empty or failed query is not automatically interpreted as deletion.
-4. Deletion may mark one item missing only when the provider has positive deletion evidence. Permission exceptions, null cursors, and ambiguous URIs must never delete.
-5. `INVALIDATE` continues to trigger a full snapshot, with the existing complete-snapshot reconciliation guard.
-6. All database mutations remain serialized and transactional; update paths preserve bookmark/playback fields.
-7. Add tests for item upsert, explicit delete, null/collection URI fallback, provider error, permission failure, notification conflation, and stable user-state preservation before switching production behavior.
+- Exact external and external-primary audio item URIs classify to targeted changes.
+- Collection, null, malformed ID, unsupported-volume, query/fragment and non-content URIs classify to invalidation.
+- Targeted repository refresh updates metadata without another full browse and preserves user bookmark/playback state.
+- A failed targeted lookup falls back to an incomplete snapshot without hiding the existing item or clearing its location.
+- Existing complete/partial snapshot reconciliation and adapter invalidation tests remain in place.
 
 ## Acceptance criteria
 
-- A targeted update does not issue a full-library query.
-- An ambiguous notification falls back to a full snapshot.
-- An incomplete snapshot never marks unseen media missing.
-- A failed targeted query never implies deletion.
-- A deletion changes only the identified record and its locations.
-- User-owned state survives all upsert paths.
-- Existing adapters remain source-compatible during migration (default invalidation behavior).
+- A recognized item update performs a targeted `_ID = ?` lookup and does not issue a full-library query when the row is found.
+- Ambiguous notifications fall back to full snapshots.
+- Missing or failed targeted lookups do not themselves imply deletion.
+- Incomplete/permission-denied snapshots never mark unseen media missing.
+- Only a complete full snapshot can reconcile missing items.
+- User-owned bookmark and playback state survive targeted upserts.
+- Existing adapters remain source-compatible through default invalidation behavior.
 
-## Scope guard
+## Next
 
-This is a design checkpoint, not a claimed implementation. Physical device testing remains required for MediaStore URI behavior, observer lifecycle, permission revocation/restoration, and screen-off scenarios.
+- Continue provider delta work only where an adapter can supply reliable item-level evidence; bulk changes stay invalidations.
+- Add explicit deletion events only for providers with positive deletion evidence. MediaStore's current observer does not provide that evidence.
+- Physical Redmi acceptance remains required for URI notification semantics, observer lifecycle, permission revocation/restoration, process-death and screen-off behavior.
+
+The library remains read-only: original media files are never copied, moved or renamed.

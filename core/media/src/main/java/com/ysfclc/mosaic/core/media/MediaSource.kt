@@ -3,6 +3,7 @@ package com.ysfclc.mosaic.core.media
 import android.net.Uri
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.map
 
 /** Stable, provider-neutral description of one item in the personal media library. */
 data class MediaItemRecord(
@@ -66,6 +67,21 @@ data class MediaBrowseResult(
     val isCompleteSnapshot: Boolean,
 )
 
+/**
+ * Provider-neutral change notification. An item signal means only that the item
+ * should be re-read; it is never proof that the item was added or deleted.
+ * Deletion is inferred only by a complete snapshot reconciliation.
+ */
+sealed interface MediaSourceChange {
+    data class ItemChanged(val sourceItemId: String) : MediaSourceChange {
+        init {
+            require(sourceItemId.isNotBlank()) { "A source item ID is required." }
+        }
+    }
+
+    object Invalidate : MediaSourceChange
+}
+
 data class MediaSourceDescriptor(
     val id: String,
     val name: String,
@@ -93,6 +109,17 @@ interface MediaSourceAdapter {
      * source-compatible and do not acquire polling or lifecycle responsibilities.
      */
     fun observeChanges(): Flow<Unit> = emptyFlow()
+
+    /**
+     * New adapters may provide item-level notifications and lookups. Legacy
+     * observers remain safe: their unit signals are promoted to invalidations,
+     * never guessed to be item-level changes.
+     */
+    fun observeChangeEvents(): Flow<MediaSourceChange> =
+        observeChanges().map { MediaSourceChange.Invalidate }
+
+    /** Targeted lookup by provider-local item ID; null means unavailable. */
+    suspend fun findItem(sourceItemId: String): MediaItemRecord? = null
 
     suspend fun resolve(mediaId: String): ResolvedMediaSource?
 }

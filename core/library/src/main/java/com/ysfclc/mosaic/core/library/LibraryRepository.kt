@@ -6,6 +6,7 @@ import com.ysfclc.mosaic.core.media.MediaIdentity
 import com.ysfclc.mosaic.core.media.MediaItemRecord
 import com.ysfclc.mosaic.core.media.MediaKind
 import com.ysfclc.mosaic.core.media.MediaSourceAdapter
+import com.ysfclc.mosaic.core.media.MediaSourceChange
 import com.ysfclc.mosaic.core.persistence.MediaItemEntity
 import com.ysfclc.mosaic.core.persistence.MediaItemWithLocations
 import com.ysfclc.mosaic.core.persistence.MediaLocationEntity
@@ -35,14 +36,29 @@ class LibraryRepository(
 
     /**
      * Performs an initial source sync, then refreshes when the adapter reports
-     * possible changes. Collection owns observer lifetime; conflation prevents
-     * notification bursts from queuing redundant full snapshots.
+     * changes. Item-level signals use a targeted lookup; unavailable lookups
+     * fall back to a full snapshot. Conflation prevents notification bursts
+     * from queuing redundant work.
      */
     fun observeAndSync(adapter: MediaSourceAdapter): Flow<Int> =
-        adapter.observeChanges()
-            .onStart { emit(Unit) }
+        adapter.observeChangeEvents()
+            .onStart { emit(MediaSourceChange.Invalidate) }
             .conflate()
-            .map { sync(adapter) }
+            .map { change ->
+                when (change) {
+                    MediaSourceChange.Invalidate -> sync(adapter)
+                    is MediaSourceChange.ItemChanged -> {
+                        val record = runCatching { adapter.findItem(change.sourceItemId) }.getOrNull()
+                        if (record != null) {
+                            syncRecords(adapter.descriptor.id, listOf(record))
+                        } else {
+                            // A missing/failed targeted lookup is not deletion evidence.
+                            // Only the existing complete-snapshot guard may reconcile it.
+                            sync(adapter)
+                        }
+                    }
+                }
+            }
 
     suspend fun sync(adapter: MediaSourceAdapter, query: String = "", nowEpochMs: Long = System.currentTimeMillis()): Int {
         val result = adapter.browseSnapshot(query)
