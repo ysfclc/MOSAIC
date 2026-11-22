@@ -20,7 +20,7 @@ MOSAIC remains a local-first Android personal media OS. Preserve long-content re
 - Complete adapter snapshots mark unseen records missing; partial/permission-denied snapshots do not. A later complete snapshot restores matching identities.
 - Home/Library read Room-backed records.
 - Legacy playback history, queue and timer preferences remain the source of truth pending deliberate cutover.
-- Generated Room v1 JSON remains outstanding; do not change Room entities or database version in this increment.
+- Generated Room v1 JSON is checked in; do not change Room entities or database version in this increment.
 
 ## This increment — adapter change observation
 
@@ -46,7 +46,7 @@ Revert the adapter observation, MediaStore monitor, repository stream, tests and
 
 ## Prior increment carry-forward
 
-- Room v1 generated schema JSON is still not checked into `core/persistence/schemas`; this remains an explicit P2-001 blocker.
+- Room v1 generated schema JSON is checked into `core/persistence/schemas`; CI #323 verified the exact generated schema.
 - CI run #305 passed end-to-end; the report artifact contains the generated Room schema.
 - Future migrations, Room-backed history/queue/timer cutover and Redmi device/process-death acceptance remain open.
 
@@ -76,7 +76,7 @@ Revert the adapter observation, MediaStore monitor, repository stream, tests and
 
 ## Remaining gates
 
-- The generated Room v1 schema is still not committed under `core/persistence/schemas`; it remains a P2-001 blocker.
+- Room v1 schema is committed and CI-verified in run #323; the remaining P2-001 work is future migrations and device/process-death acceptance.
 - The new observer is CI/source verified but has not been exercised on the Redmi device. Validate media add/update/delete notifications, permission revocation/restoration, lifecycle cancellation and screen-off behavior on-device.
 - This increment performs full source snapshots after notifications. Provider generation/delta queries are a future optimization, not claimed as implemented.
 - Room-backed playback history/queue/timer cutover, future migrations and process-death acceptance remain open.
