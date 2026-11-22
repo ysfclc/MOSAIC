@@ -212,6 +212,77 @@ class LibraryChangeObservationTest {
         }
     }
 
+
+    @Test
+    fun rapidDistinctItemChangesAreAllRefreshed() = runBlocking {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val database = Room.inMemoryDatabaseBuilder(context, MosaicDatabase::class.java)
+            .allowMainThreadQueries()
+            .build()
+        try {
+            val repository = LibraryRepository(context, database)
+            val first = MediaItemRecord(
+                id = "rapid-1",
+                sourceId = "rapid-source",
+                title = "First item",
+                uri = "content://media/external/audio/media/51",
+                kind = MediaKind.AUDIO,
+            )
+            val second = MediaItemRecord(
+                id = "rapid-2",
+                sourceId = "rapid-source",
+                title = "Second item",
+                uri = "content://media/external/audio/media/52",
+                kind = MediaKind.AUDIO,
+            )
+            val refreshedFirst = first.copy(title = "First item refreshed")
+            val refreshedSecond = second.copy(title = "Second item refreshed")
+            var targetedLookups = 0
+            val adapter = object : MediaSourceAdapter {
+                override val descriptor = MediaSourceDescriptor(
+                    id = "rapid-source",
+                    name = "Rapid event source",
+                    summary = "Distinct item events must not be conflated",
+                    requiresNetwork = false,
+                    capabilities = SourceCapabilities.LOCAL_MEDIA,
+                )
+
+                override suspend fun browse(query: String): List<MediaItemRecord> = listOf(first, second)
+
+                override suspend fun browseSnapshot(query: String): MediaBrowseResult =
+                    MediaBrowseResult(listOf(first, second), isCompleteSnapshot = true)
+
+                override fun observeChangeEvents(): Flow<MediaSourceChange> = flow {
+                    emit(MediaSourceChange.ItemChanged(first.id))
+                    emit(MediaSourceChange.ItemChanged(second.id))
+                }
+
+                override suspend fun findItem(sourceItemId: String): MediaItemRecord? {
+                    targetedLookups++
+                    return when (sourceItemId) {
+                        first.id -> refreshedFirst
+                        second.id -> refreshedSecond
+                        else -> null
+                    }
+                }
+
+                override suspend fun resolve(mediaId: String): ResolvedMediaSource? = null
+            }
+
+            val counts = repository.observeAndSync(adapter).toList()
+
+            assertEquals(listOf(2, 1, 1), counts)
+            assertEquals(2, targetedLookups)
+            val stored = database.mediaItems()
+                .findBySourceItems("rapid-source", listOf(first.id, second.id))
+                .associateBy { it.sourceItemId }
+            assertEquals("First item refreshed", stored[first.id]?.title)
+            assertEquals("Second item refreshed", stored[second.id]?.title)
+        } finally {
+            database.close()
+        }
+    }
+
     private fun adapterWith(record: MediaItemRecord, changes: Flow<Unit>) = object : MediaSourceAdapter {
         override val descriptor = MediaSourceDescriptor(
             id = record.sourceId,
