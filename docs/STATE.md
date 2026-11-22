@@ -1,5 +1,5 @@
 # State Ledger
-_Last updated: 2026-11-21 by ChatGPT GPT-6 — MediaStore change-observation increment in progress; base build #305 passed_
+_Last updated: 2026-11-22 by ChatGPT GPT-6 — Room v1 schema check-in verified in CI #323_
 
 ## 1. Product snapshot
 MOSAIC is a local-first native Android personal media operating system. It unifies discovery, source access, playback continuity, a durable personal library and ad/tracker protection across local files, browser media, streams, podcasts/radio and third-party apps. The two primary pillars are cross-source background playback/control and broad ad/tracker blocking. Completion requires source-by-source real-device evidence, honest playback-ownership labels, measured filtering coverage/limits and a reliable unified media experience; CI success alone is not product acceptance. Canonical north star: `docs/MOSAIC_PRODUCT_VISION.md`; narrative requirements: `docs/PRODUCT_SPEC.md`; requirement/test traceability: `docs/SPEC.md`; architecture constraints: `docs/DECISIONS.md`.
@@ -39,7 +39,7 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 - IPv4 UDP DNS interception does not cover DoH/custom DNS/IPv6 or same-host/in-stream advertising.
 - External YouTube/Spotify/Facebook/Instagram native playback is not demonstrated; external MediaSession control remains delegated to the source app.
 - Browser handoff cannot transfer DRM, MSE/blob, protected or cookie/header-dependent media; this is not general website extraction.
-- Durable unified library remains incomplete: media metadata and safe locations now live in Room and Home/Library read through LibraryRepository. Playback history, queue and timer preferences remain the source of truth while Room mirrors their snapshots on app launch. The generated schema is not yet committed; stale-item reconciliation, playback-state Room cutover, future migrations, collections UX and Android process-death/device acceptance remain open.
+- Durable unified library remains incomplete: media metadata and safe locations now live in Room and Home/Library read through LibraryRepository. Playback history, queue and timer preferences remain the source of truth while Room mirrors their snapshots on app launch. The generated Room v1 schema is checked in and validated by CI #323; stale-item reconciliation, playback-state Room cutover, future migrations, collections UX and Android process-death/device acceptance remain open.
 - No physical-device/ADB acceptance evidence is available in this session.
 
 ## 5. Environment & how to run
@@ -54,8 +54,8 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 - Vercel project: `mosaic-apk` (`prj_17TuuD9O7qZQcjqJoPTxlydWt0sV`), linked to `ysfclc/MOSAIC`; production branch is `main`. No production deployment was created in this session.
 
 ## 6. Next three increments
-1. Commit the generated Room v1 schema from the CI report artifact and add a checked-in schema contract.
-2. Complete lifecycle-bound MediaStore change observation and test that notifications refresh the Room index without unsafe reconciliation; consider provider generation/delta queries only after device evidence.
+1. Generated Room v1 schema check-in is complete (CI #323); next: incremental MediaStore delta queries with safe deletion/reconciliation semantics.
+2. Lifecycle-bound MediaStore change observation is implemented and CI-verified (#318/#323); physical device checks and incremental delta query design remain open.
 3. Move playback history, queue and timer writes from the compatibility preferences to Room only after parity and database-reopen acceptance; then retire the mirror.
 
 ## 7. Open questions for the human
