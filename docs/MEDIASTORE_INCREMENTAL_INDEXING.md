@@ -1,6 +1,6 @@
 # MediaStore incremental indexing
 
-**Status:** First item-level refresh slice implemented on `work/media-store-delta-indexing-2026-11-22`
+**Status:** First item-level refresh slice implemented and CI-verified in [run #332](https://github.com/ysfclc/MOSAIC/actions/runs/45024226563) on `work/media-store-delta-indexing-2026-11-22`
 
 ## Current behavior
 
@@ -32,6 +32,14 @@ Android's `ContentObserver` URI indicates that content changed; it does not reli
 - Only a complete full snapshot can reconcile missing items.
 - User-owned bookmark and playback state survive targeted upserts.
 - Existing adapters remain source-compatible through default invalidation behavior.
+
+## CI verification — run #332
+
+- Source verification and all 34 Python contract/schema tests passed.
+- `:core:persistence:testDebugUnitTest`, `:core:media:testDebugUnitTest`, `:app:testDebugUnitTest`, `:app:lintDebug`, and `:app:assembleDebug` passed.
+- Room schema check, persistent development-signer verification, APK checksum, artifact upload and prerelease publication passed.
+- The first CI attempt (#331) stopped at a stale Python assertion expecting the legacy observer call; that assertion was updated to the new item-event contract before run #332.
+- CI is not physical-device acceptance.
 
 ## Next
 
