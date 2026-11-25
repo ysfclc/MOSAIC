@@ -1,4 +1,4 @@
-name: Build MOSAIC Android APK
+name: MOSAIC CI — APK publication safety lock
 
 on:
   push:
@@ -28,7 +28,7 @@ on:
         default: direct
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: mosaic-android-${{ github.ref }}
@@ -145,7 +145,8 @@ jobs:
 
   build:
     needs: preflight
-    if: needs.preflight.outputs.mode == 'import' && needs.preflight.outputs.already_imported != 'true'
+    # Safety lock: ZIP imports must not build or publish an APK until release gates are approved.
+    if: false
     name: Validate, extract, build and integrate
     runs-on: ubuntu-latest
     timeout-minutes: 90
@@ -728,7 +729,8 @@ jobs:
 
   direct-build:
     needs: preflight
-    if: needs.preflight.outputs.mode == 'direct'
+    # Safety lock: direct CI must not build or publish an APK until release gates are approved.
+    if: false
     name: Verify direct repository changes and build APK
     runs-on: ubuntu-latest
     timeout-minutes: 90
