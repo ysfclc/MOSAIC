@@ -263,3 +263,10 @@
 - Reviewed the browser WebView: JavaScript is a product requirement for interactive provider pages and direct-media detection; file/content access are disabled and there is no JavaScript bridge. Navigation-scheme/origin and mixed-content hardening remain open.
 - Found backup policy gap: `allowBackup=true` and `fullBackupContent=true` with no `dataExtractionRules`. Decide what app-private playback/library metadata may leave the device and add explicit rules.
 - The persistent development signing identity is blocked for further use after the unauthorized public prerelease #347.
+
+
+## 2026-11-25 — Validation-only CI path
+
+- Reworked the direct-source CI path to run source checks, Python tests, Android unit tests, lint and read-only Room schema verification only.
+- Removed development keystore setup, APK assembly, APK artifact upload and prerelease creation from the active direct-source job.
+- The ZIP-import job remains safety-locked. This workflow change must pass its own CI run before being accepted.

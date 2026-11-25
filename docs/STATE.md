@@ -169,3 +169,10 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 - Browser WebView JavaScript is enabled for real interactive sites and direct-media detection. File and content access are disabled, and no JavaScript bridge is exposed. Scheme/host navigation, mixed content and explicit Safe Browsing configuration still need a dedicated hardening pass.
 - Manifest backup is enabled with `fullBackupContent=true`, but no `dataExtractionRules` is declared. Data exposure through cloud backup/device transfer requires an explicit policy and tests.
 - The stable development signing task is now BLOCKED because the signer was used by the unauthorized public prerelease #347 and must be treated as exposed.
+
+
+## 2026-11-25 — AXIOM session 3: validation-only CI redesign
+
+- Re-enabled the direct-source job only for source verification, Python contract tests, Android unit tests, lint and read-only Room v1 schema verification. The job no longer prepares signing material, assembles an APK, uploads an APK or creates a GitHub release.
+- The ZIP-import job remains disabled. It will not be restored until its import integration path is separated from artifact production and verified with read-only permissions.
+- The validation-only workflow must pass on the new commit before GOV-004 is marked complete. APK build/publication remains locked.

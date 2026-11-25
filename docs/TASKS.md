@@ -146,3 +146,5 @@ Current implementation remains a foundation, but it is broader than local audio:
 | SEC-003 | Define Android backup and data-extraction policy | TODO | Manifest currently enables full backup (`allowBackup=true`, `fullBackupContent=true`) but has no Android 12+ `dataExtractionRules`. Inspect Room/preferences and media locator metadata; decide what may be backed up and add explicit cloud/device-transfer rules. |
 | SEC-004 | Complete dependency vulnerability/advisory review | TODO | Version freshness warnings are not a CVE audit. Check resolved dependency graph against current advisories and document accepted/mitigated findings before release. |
 | SEC-005 | Replace exposed development signing identity and verify migration | BLOCKED | Do not reuse the signer from the unauthorized #347 prerelease. New signing material and upgrade compatibility require a controlled plan; never commit private key material. |
+
+| GOV-004 | Restore direct-push CI as validation-only (unit tests + lint, no APK) | IN PROGRESS | Direct-source verification job is being re-enabled without signing, APK assembly, artifact upload or release publication; ZIP import remains paused. |

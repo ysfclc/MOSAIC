@@ -267,11 +267,18 @@ class ProjectContractTests(unittest.TestCase):
         self.assertIn("savedFeeds.forEach", app)
         self.assertIn("onRemoveFeed(savedFeed)", app)
 
-    def test_ci_publishes_apk_as_private_prerelease_when_artifact_storage_is_full(self):
+    def test_ci_validation_path_never_assembles_or_publishes_apk(self):
         workflow = (ROOT / ".github/workflows/build-apk.yml").read_text(encoding="utf-8")
-        self.assertIn("gh release create", workflow)
-        self.assertIn("--prerelease", workflow)
-        self.assertIn("continue-on-error: true", workflow)
+        import_job = workflow.split("  build:", 1)[1].split("  direct-build:", 1)[0]
+        direct_job = workflow.split("  direct-build:", 1)[1]
+        self.assertIn("if: false", import_job)
+        self.assertIn("needs.preflight.outputs.mode == 'direct'", direct_job)
+        self.assertNotIn(":app:assembleDebug", direct_job)
+        self.assertNotIn("gh release create", direct_job)
+        self.assertNotIn("Upload direct-build APK", direct_job)
+        self.assertNotIn("MOSAIC_DEBUG_KEYSTORE", direct_job)
+        self.assertIn(":app:testDebugUnitTest", direct_job)
+        self.assertIn(":app:lintDebug", direct_job)
 
     def test_direct_web_video_has_a_native_player_surface(self):
         app = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/MosaicApp.kt").read_text(encoding="utf-8")
