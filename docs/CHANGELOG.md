@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-25 — Restore the lossless MediaStore event contract
+
+- Session audit identified that the MediaStore observer and LibraryRepository already use `Channel.UNLIMITED` buffering with adjacent `distinctUntilChanged()` suppression so distinct item IDs in a burst are not discarded.
+- Run [#344](https://github.com/ysfclc/MOSAIC/actions/runs/45068709113) failed in the Python contract suite because an older assertion still required `.conflate()`; the failure occurred before Gradle tests, lint or APK assembly.
+- Updated the source contract to require the lossless buffering semantics and explicitly reject conflation, renamed the contract test to describe the preserved behavior, and corrected stale LibraryRepository KDoc. No runtime behavior or dependency was changed.
+- Verification status: pending the direct GitHub Actions run for this commit. The existing disk-backed Room close/reopen test remains unverified until that run completes.
+
 ## 2026-11-12 — Continuity ledger and capability reconciliation
 
 - Added `docs/STATE.md` as the concise canonical session ledger and `docs/SPEC.md` as the requirement-ID traceability registry; `docs/PRODUCT_SPEC.md` remains the narrative product specification.

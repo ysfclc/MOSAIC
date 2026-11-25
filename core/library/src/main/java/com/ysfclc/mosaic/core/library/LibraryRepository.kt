@@ -39,8 +39,8 @@ class LibraryRepository(
     /**
      * Performs an initial source sync, then refreshes when the adapter reports
      * changes. Item-level signals use a targeted lookup; unavailable lookups
-     * fall back to a full snapshot. Conflation prevents notification bursts
-     * from queuing redundant work.
+     * fall back to a full snapshot. Lossless buffering preserves distinct item
+     * IDs while adjacent duplicate notifications are suppressed.
      */
     fun observeAndSync(adapter: MediaSourceAdapter): Flow<Int> =
         adapter.observeChangeEvents()

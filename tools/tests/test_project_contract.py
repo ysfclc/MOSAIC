@@ -233,20 +233,24 @@ class ProjectContractTests(unittest.TestCase):
         self.assertNotIn("catalog.scanAudio()", app)
 
 
-    def test_media_store_change_observer_is_lifecycle_bound_and_conflated(self):
+    def test_media_store_change_observer_is_lifecycle_bound_and_preserves_distinct_events(self):
         monitor = (ROOT / "core/library/src/main/java/com/ysfclc/mosaic/core/library/MediaStoreChangeMonitor.kt").read_text(encoding="utf-8")
         repository = (ROOT / "core/library/src/main/java/com/ysfclc/mosaic/core/library/LibraryRepository.kt").read_text(encoding="utf-8")
         adapter = (ROOT / "core/library/src/main/java/com/ysfclc/mosaic/core/library/MediaStoreCatalog.kt").read_text(encoding="utf-8")
         self.assertIn("registerContentObserver", monitor)
         self.assertIn("awaitClose", monitor)
         self.assertIn("unregisterContentObserver", monitor)
-        self.assertIn(".conflate()", monitor)
+        self.assertIn(".buffer(Channel.UNLIMITED)", monitor)
+        self.assertIn(".distinctUntilChanged()", monitor)
+        self.assertNotIn(".conflate()", monitor)
         self.assertIn("override fun observeChanges(): Flow<Unit>", adapter)
         self.assertIn("fun observeChanges(): Flow<Unit> = emptyFlow()", (ROOT / "core/media/src/main/java/com/ysfclc/mosaic/core/media/MediaSource.kt").read_text(encoding="utf-8"))
         media_source = (ROOT / "core/media/src/main/java/com/ysfclc/mosaic/core/media/MediaSource.kt").read_text(encoding="utf-8")
         self.assertIn("adapter.observeChangeEvents()", repository)
         self.assertIn(".onStart { emit(MediaSourceChange.Invalidate) }", repository)
-        self.assertIn(".conflate()", repository)
+        self.assertIn(".buffer(Channel.UNLIMITED)", repository)
+        self.assertIn(".distinctUntilChanged()", repository)
+        self.assertNotIn(".conflate()", repository)
         self.assertIn("observeChanges().map { MediaSourceChange.Invalidate }", media_source)
         self.assertIn("override fun observeChangeEvents(): Flow<MediaSourceChange>", adapter)
         self.assertIn("override suspend fun findItem(sourceItemId: String)", adapter)
