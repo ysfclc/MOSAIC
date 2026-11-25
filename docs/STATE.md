@@ -160,3 +160,12 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 - The push-triggered workflow published public prerelease [mosaic-dev-build-347](https://github.com/ysfclc/MOSAIC/releases/tag/mosaic-dev-build-347) without release authorization. The APK is unapproved and must not be installed or distributed. Treat the development signing identity as exposed.
 - Safety-lock commit `b13520ca8d8675de154ba69200e1d9bc693ed867` disables both APK-producing jobs and reduces workflow token permission to read. ZIP import is preserved but temporarily paused.
 - Cleanup of the unauthorized prerelease/tag is pending authenticated GitHub access. No further APK build or publication is authorized.
+
+
+## 2026-11-25 — AXIOM session 3: initial Android security review
+
+- `AdShieldVpnService`, `AdSkipAccessibilityService` and `MosaicMediaNotificationListener` are exported with their respective Android bind permissions. The VPN service is guarded by `BIND_VPN_SERVICE`; the accessibility and notification-listener services are guarded by their platform bind permissions. These are system-mediated opt-in endpoints, not ordinary exported app APIs.
+- `PlaybackService` is exported without a service permission to support AndroidX Media3 controllers. The app does not install a custom `MediaSession.Callback`. Current Media3 documentation states that its default accepts all controllers, gives trusted controllers session/player commands, and limits untrusted controllers to read-only access. This is a policy decision to review, not proof that any arbitrary app can control playback.
+- Browser WebView JavaScript is enabled for real interactive sites and direct-media detection. File and content access are disabled, and no JavaScript bridge is exposed. Scheme/host navigation, mixed content and explicit Safe Browsing configuration still need a dedicated hardening pass.
+- Manifest backup is enabled with `fullBackupContent=true`, but no `dataExtractionRules` is declared. Data exposure through cloud backup/device transfer requires an explicit policy and tests.
+- The stable development signing task is now BLOCKED because the signer was used by the unauthorized public prerelease #347 and must be treated as exposed.

@@ -255,3 +255,11 @@
 - The accidental public prerelease `mosaic-dev-build-347` is not approved for installation or distribution. The development signing identity is treated as exposed pending replacement.
 - Both APK-producing jobs were disabled in commit `b13520ca8d8675de154ba69200e1d9bc693ed867`; workflow repository permission was reduced to read-only. ZIP-import implementation remains in place but paused.
 - Lint reported 34 warnings and 1 hint. Security, dependency, signing and physical-device gates remain open.
+
+
+## 2026-11-25 — Initial Android security review
+
+- Reviewed exported services: VPN, Accessibility and Notification Listener services use their respective Android bind permissions. The exported Media3 playback service is intentionally discoverable for platform controllers; default Media3 behavior gives untrusted controllers read-only access, while trusted controllers receive player/session commands. A deliberate controller policy remains to be tested.
+- Reviewed the browser WebView: JavaScript is a product requirement for interactive provider pages and direct-media detection; file/content access are disabled and there is no JavaScript bridge. Navigation-scheme/origin and mixed-content hardening remain open.
+- Found backup policy gap: `allowBackup=true` and `fullBackupContent=true` with no `dataExtractionRules`. Decide what app-private playback/library metadata may leave the device and add explicit rules.
+- The persistent development signing identity is blocked for further use after the unauthorized public prerelease #347.
