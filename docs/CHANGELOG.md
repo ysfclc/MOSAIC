@@ -247,3 +247,11 @@
 - Published [mosaic-dev-build-292](https://github.com/ysfclc/MOSAIC/releases/tag/mosaic-dev-build-292).
 - APK SHA-256: `6e18bb25e61285a80379b28449d3fb33a253a1982743ad0848b699e0e1358795`.
 - The Room v1 schema is still generated in CI but not committed. Permission-safe full-snapshot reconciliation, stale-item handling, playback history/queue/timer cutover and physical device acceptance remain open.
+
+
+## 2026-11-25 — Release workflow safety lock
+
+- After CI run #347 passed its 66-test suite, inspection found that an ordinary push also ran APK assembly and public prerelease publication.
+- The accidental public prerelease `mosaic-dev-build-347` is not approved for installation or distribution. The development signing identity is treated as exposed pending replacement.
+- Both APK-producing jobs were disabled in commit `b13520ca8d8675de154ba69200e1d9bc693ed867`; workflow repository permission was reduced to read-only. ZIP-import implementation remains in place but paused.
+- Lint reported 34 warnings and 1 hint. Security, dependency, signing and physical-device gates remain open.

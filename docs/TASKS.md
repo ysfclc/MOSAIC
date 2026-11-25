@@ -108,7 +108,7 @@ The complete north star is [docs/MOSAIC_PRODUCT_VISION.md](MOSAIC_PRODUCT_VISION
 
 | ID | Task | Status | Verification / note |
 |---|---|---|---|
-| GOV-001 | Add direct-edit CI trigger for source/documentation changes while preserving ZIP importer | DONE | Direct source/doc pushes run source verification, Python tests, Android unit tests, lint and debug APK build; ZIP import path remains separate. Verified run 42033924158 |
+| GOV-001 | Add direct-edit CI trigger for source/documentation changes while preserving ZIP importer | BLOCKED | Previous workflow also built and published APKs automatically. Both build jobs are now safety-locked pending a redesigned validation-only CI and explicit release gate. |
 | GOV-002 | Reconcile latest unprocessed incoming ZIP | TODO | Run 41962171501 failed in preflight; inspect archive and safely integrate only after workflow path resolution is repaired |
 
 ## Locked product vision — ADR-014 and ADR-015
@@ -124,4 +124,14 @@ Current implementation remains a foundation, but it is broader than local audio:
 - Physical Redmi Note 12 Pro 5G acceptance remains pending for Player and Ad Shield.
 - Browser filtering and external-session controls are prototypes; native background playback from named external sources remains unproven. The first cross-app DNS Ad Shield slice is implemented and CI-verified, but physical-device and named-app acceptance are still pending.
 - Do not claim device/source acceptance until the corresponding tests have actually passed.
-- CI APKs must use the persistent MOSAIC development signing certificate and a higher versionCode. Never ask the user to uninstall between ordinary updates. The old ephemeral-signature APK may require a one-time migration uninstall.
+- Do not install or distribute APKs signed with the exposed development signing identity. APK generation and publication are safety-locked until signing/security review, all engineering gates and explicit release approval are complete.
+
+
+## 2026-11-25 — AXIOM session 3: APK publication containment
+
+- CI run [#347](https://github.com/ysfclc/MOSAIC/actions/runs/45665603538) passed 66 Android tests with zero failures, errors or skips. The repeated MediaStore invalidation regression is covered and passing.
+- Lint task completed, but its report contains 34 warnings and 1 hint. Lint is not considered clean; the warnings still require triage.
+- A push-triggered workflow unexpectedly published public prerelease [mosaic-dev-build-347](https://github.com/ysfclc/MOSAIC/releases/tag/mosaic-dev-build-347). This violated the no-APK-before-gates rule. The APK is not approved for installation or distribution; its signer must be treated as exposed.
+- Safety-lock commit `b13520ca8d8675de154ba69200e1d9bc693ed867` disables both the ZIP-import build job and direct-source build job and reduces workflow contents permission to read. Import logic is preserved but paused.
+- Release deletion/tag cleanup remains pending authenticated GitHub access. No new APK build or publication is authorized.
+- Remaining gates: lint warning triage, exported-service/WebView security review, dependency/advisory review, signing-key replacement, Redmi device acceptance, and workflow redesign/verification.

@@ -151,3 +151,12 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 - Root cause: global `distinctUntilChanged()` suppressed consecutive `MediaSourceChange.Invalidate` events. The initial sync and two legitimate legacy observer notifications therefore did not each trigger a snapshot sync. This is a real freshness regression, not a test-only failure.
 - Corrective increment: retain unlimited buffering; deduplicate only adjacent identical `ItemChanged` events; preserve every `Invalidate` event. Strengthen the regression test to assert exactly three sync results (initial sync plus two notifications) and update the Python source contract and task ledger.
 - No database, schema, playback, signing or dependency changes. CI rerun required; no APK release is authorized.
+
+
+## 2026-11-25 — AXIOM session 3: release containment
+
+- CI run [#347](https://github.com/ysfclc/MOSAIC/actions/runs/45665603538) passed 66 tests (0 failures, 0 errors, 0 skipped); `LibraryChangeObservationTest` passed all 5 cases.
+- Lint completed with 34 warnings and 1 hint; this is not a clean lint gate.
+- The push-triggered workflow published public prerelease [mosaic-dev-build-347](https://github.com/ysfclc/MOSAIC/releases/tag/mosaic-dev-build-347) without release authorization. The APK is unapproved and must not be installed or distributed. Treat the development signing identity as exposed.
+- Safety-lock commit `b13520ca8d8675de154ba69200e1d9bc693ed867` disables both APK-producing jobs and reduces workflow token permission to read. ZIP import is preserved but temporarily paused.
+- Cleanup of the unauthorized prerelease/tag is pending authenticated GitHub access. No further APK build or publication is authorized.
