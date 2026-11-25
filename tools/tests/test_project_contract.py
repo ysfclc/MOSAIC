@@ -21,14 +21,15 @@ class ProjectContractTests(unittest.TestCase):
     def test_workflow_is_present(self):
         self.assertTrue((ROOT / ".github/workflows/build-apk.yml").is_file())
 
-    def test_workflow_builds_direct_edits_and_preserves_zip_import(self):
+    def test_workflow_validates_direct_edits_and_keeps_zip_import_paused(self):
         workflow = (ROOT / ".github/workflows/build-apk.yml").read_text(encoding="utf-8")
         self.assertIn('"app/**"', workflow)
         self.assertIn('"core/**"', workflow)
         self.assertIn('direct-build:', workflow)
         self.assertIn("needs.preflight.outputs.mode == 'direct'", workflow)
-        self.assertIn("needs.preflight.outputs.mode == 'import'", workflow)
-        self.assertIn("Validate and safely extract source ZIP", workflow)
+        import_job = workflow.split("  build:", 1)[1].split("  direct-build:", 1)[0]
+        self.assertIn("if: false", import_job)
+        self.assertIn("Validate and safely extract source ZIP", import_job)
 
     def test_player_artwork_receives_revision_from_player_screen(self):
         source = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/MosaicApp.kt").read_text(encoding="utf-8")

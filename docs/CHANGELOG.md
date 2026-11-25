@@ -270,3 +270,9 @@
 - Reworked the direct-source CI path to run source checks, Python tests, Android unit tests, lint and read-only Room schema verification only.
 - Removed development keystore setup, APK assembly, APK artifact upload and prerelease creation from the active direct-source job.
 - The ZIP-import job remains safety-locked. This workflow change must pass its own CI run before being accepted.
+
+
+## 2026-11-25 — Validation-only CI contract correction
+
+- First run [#351](https://github.com/ysfclc/MOSAIC/actions/runs/45687680793) failed one stale Python contract assertion: it expected the ZIP importer to remain executable, despite the new safety lock. The source verifier itself passed. Android unit tests and lint did not run in that attempt.
+- Updated the contract tests and source verifier to assert the actual release-safe design: direct CI is validation-only, ZIP import remains paused, and the GitHub token is read-only. Removed the obsolete requirement that CI expose the development signing identity.

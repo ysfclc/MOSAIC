@@ -176,3 +176,9 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 - Re-enabled the direct-source job only for source verification, Python contract tests, Android unit tests, lint and read-only Room v1 schema verification. The job no longer prepares signing material, assembles an APK, uploads an APK or creates a GitHub release.
 - The ZIP-import job remains disabled. It will not be restored until its import integration path is separated from artifact production and verified with read-only permissions.
 - The validation-only workflow must pass on the new commit before GOV-004 is marked complete. APK build/publication remains locked.
+
+
+## 2026-11-25 — Validation-only CI contract correction
+
+- CI run [#351](https://github.com/ysfclc/MOSAIC/actions/runs/45687680793) confirmed that preflight and SDK setup worked, then stopped in the Python contract suite because one old test still required the ZIP-import job to be executable. That expectation contradicted the deliberate safety lock; Android unit tests and lint were correctly not reached.
+- The contract is being corrected to require direct-source validation-only behavior, a disabled ZIP-import job, and read-only workflow permissions. The old check that treated a development signing key as a required CI capability is removed.
