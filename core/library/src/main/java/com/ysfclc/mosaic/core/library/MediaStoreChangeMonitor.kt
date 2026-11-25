@@ -53,7 +53,11 @@ class MediaStoreChangeMonitor(context: Context) {
                 runCatching { resolver.unregisterContentObserver(observer) }
             }
         }
-    }.buffer(Channel.UNLIMITED).distinctUntilChanged()
+    }.buffer(Channel.UNLIMITED).distinctUntilChanged { previous, current ->
+        previous is MediaSourceChange.ItemChanged &&
+            current is MediaSourceChange.ItemChanged &&
+            previous == current
+    }
 
     companion object {
         /** Pure URI classification so the item-level boundary can be regression-tested. */

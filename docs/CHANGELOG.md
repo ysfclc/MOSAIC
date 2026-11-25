@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-11-25 — Preserve repeated MediaStore invalidations
+
+- Run [#346](https://github.com/ysfclc/MOSAIC/actions/runs/45640565937) identified a genuine regression: global `distinctUntilChanged()` dropped repeated `Invalidate` events, preventing legitimate provider notifications from refreshing the library.
+- Narrowed deduplication to adjacent identical `ItemChanged` events only. Invalidation events remain lossless; the observer/repository still use unlimited buffering.
+- Strengthened `adapterChangeSignalTriggersAnotherSnapshotSync` to require exactly three syncs: initial snapshot plus both provider notifications. Updated the source contract and P2-003 task status.
+- Verification pending the next direct CI run. No APK release is authorized by this change.
+
 ## 2026-11-25 — Restore the lossless MediaStore event contract
 
 - Session audit identified that the MediaStore observer and LibraryRepository already use `Channel.UNLIMITED` buffering with adjacent `distinctUntilChanged()` suppression so distinct item IDs in a burst are not discarded.

@@ -143,3 +143,11 @@ MOSAIC is a local-first native Android personal media operating system. It unifi
 - Latest successful build before the current failure is run [#334](https://github.com/ysfclc/MOSAIC/actions/runs/45068516451). Latest run [#344](https://github.com/ysfclc/MOSAIC/actions/runs/45068709113) failed in the Python contract suite before Gradle, lint or APK assembly. The exact failure is a stale contract assertion requiring `.conflate()` in the MediaStore observer/repository after the implementation intentionally changed to `Channel.UNLIMITED` buffering plus adjacent `distinctUntilChanged()` to preserve distinct item IDs.
 - The committed `MosaicDatabaseReopenTest` exercises a disk-backed close/reopen round trip for media, locations, history, queue and timer state, but remains UNVERIFIED until the Android test/build workflow passes. No physical-device acceptance is claimed.
 - This session's next increment is limited to aligning the Python source contract and repository documentation with the already-implemented lossless event semantics; no playback or persistence behavior is to be changed in that increment.
+
+
+## 2026-11-25 — AXIOM session 2: preserve repeated invalidations
+
+- Direct CI run [#346](https://github.com/ysfclc/MOSAIC/actions/runs/45640565937) passed source verification and Python contract tests, compiled Android sources, and ran 38 unit tests; one failed: `LibraryChangeObservationTest.adapterChangeSignalTriggersAnotherSnapshotSync` at line 58.
+- Root cause: global `distinctUntilChanged()` suppressed consecutive `MediaSourceChange.Invalidate` events. The initial sync and two legitimate legacy observer notifications therefore did not each trigger a snapshot sync. This is a real freshness regression, not a test-only failure.
+- Corrective increment: retain unlimited buffering; deduplicate only adjacent identical `ItemChanged` events; preserve every `Invalidate` event. Strengthen the regression test to assert exactly three sync results (initial sync plus two notifications) and update the Python source contract and task ledger.
+- No database, schema, playback, signing or dependency changes. CI rerun required; no APK release is authorized.

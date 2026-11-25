@@ -72,8 +72,7 @@ class LibraryChangeObservationTest {
                 .observeAndSync(adapterWith(record, flow { emit(Unit); delay(100); emit(Unit) }))
                 .toList()
 
-            assertTrue(counts.size >= 2)
-            assertEquals(1, counts.first())
+            assertEquals(listOf(1, 1, 1), counts)
             assertEquals("Observed item", database.mediaItems()
                 .findBySourceItems("observed-source", listOf("item-2")).single().title)
         } finally {

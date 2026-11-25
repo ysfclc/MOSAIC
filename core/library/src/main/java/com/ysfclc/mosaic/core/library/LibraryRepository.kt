@@ -40,13 +40,18 @@ class LibraryRepository(
      * Performs an initial source sync, then refreshes when the adapter reports
      * changes. Item-level signals use a targeted lookup; unavailable lookups
      * fall back to a full snapshot. Lossless buffering preserves distinct item
-     * IDs while adjacent duplicate notifications are suppressed.
+     * IDs and every invalidation. Only adjacent duplicate item-level signals
+     * are suppressed; repeated invalidations can represent separate provider changes.
      */
     fun observeAndSync(adapter: MediaSourceAdapter): Flow<Int> =
         adapter.observeChangeEvents()
             .onStart { emit(MediaSourceChange.Invalidate) }
             .buffer(Channel.UNLIMITED)
-            .distinctUntilChanged()
+            .distinctUntilChanged { previous, current ->
+                previous is MediaSourceChange.ItemChanged &&
+                    current is MediaSourceChange.ItemChanged &&
+                    previous == current
+            }
             .map { change ->
                 when (change) {
                     MediaSourceChange.Invalidate -> sync(adapter)
