@@ -313,10 +313,13 @@ class ProjectContractTests(unittest.TestCase):
         self.assertIn("workflow_dispatch:", workflow)
         self.assertIn("refs/heads/security/signing-lineage-migration", workflow)
         self.assertNotIn("push:", workflow)
-        self.assertIn("MOSAIC_RELEASE_KEYSTORE_BASE64", workflow)
-        self.assertIn("MOSAIC_RELEASE_KEYSTORE_PASSWORD", workflow)
-        self.assertIn("MOSAIC_RELEASE_KEY_ALIAS", workflow)
-        self.assertIn("MOSAIC_RELEASE_KEY_PASSWORD", workflow)
+        for secret in (
+            "MOSAIC_RELEASE_KEYSTORE_BASE64",
+            "MOSAIC_RELEASE_KEYSTORE_PASSWORD",
+            "MOSAIC_RELEASE_KEY_ALIAS",
+            "MOSAIC_RELEASE_KEY_PASSWORD",
+        ):
+            self.assertIn('if [[ -z "$' + secret + '" ]]', workflow)
         self.assertIn("--lineage", workflow)
         self.assertIn("--rotation-min-sdk-version 28", workflow)
         self.assertIn("MOSAIC-signing-lineage.bin", workflow)

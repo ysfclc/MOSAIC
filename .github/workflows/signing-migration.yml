@@ -53,12 +53,22 @@ jobs:
           MOSAIC_RELEASE_KEY_PASSWORD: ${{ secrets.MOSAIC_RELEASE_KEY_PASSWORD }}
         run: |
           set -euo pipefail
-          for name in MOSAIC_RELEASE_KEYSTORE_BASE64 MOSAIC_RELEASE_KEYSTORE_PASSWORD MOSAIC_RELEASE_KEY_ALIAS MOSAIC_RELEASE_KEY_PASSWORD; do
-            if [[ -z "\${!name:-}" ]]; then
-              echo "::error::Required repository Actions secret is missing: $name"
-              exit 1
-            fi
-          done
+          if [[ -z "$MOSAIC_RELEASE_KEYSTORE_BASE64" ]]; then
+            echo "::error::Required repository Actions secret is missing: MOSAIC_RELEASE_KEYSTORE_BASE64"
+            exit 1
+          fi
+          if [[ -z "$MOSAIC_RELEASE_KEYSTORE_PASSWORD" ]]; then
+            echo "::error::Required repository Actions secret is missing: MOSAIC_RELEASE_KEYSTORE_PASSWORD"
+            exit 1
+          fi
+          if [[ -z "$MOSAIC_RELEASE_KEY_ALIAS" ]]; then
+            echo "::error::Required repository Actions secret is missing: MOSAIC_RELEASE_KEY_ALIAS"
+            exit 1
+          fi
+          if [[ -z "$MOSAIC_RELEASE_KEY_PASSWORD" ]]; then
+            echo "::error::Required repository Actions secret is missing: MOSAIC_RELEASE_KEY_PASSWORD"
+            exit 1
+          fi
           VERSION_CODE="${{ inputs.candidate_version_code }}"
           if [[ ! "$VERSION_CODE" =~ ^[0-9]+$ ]] || (( VERSION_CODE <= 347 )); then
             echo "::error::Candidate version code must be a positive integer greater than 347."

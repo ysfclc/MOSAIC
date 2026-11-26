@@ -60,6 +60,7 @@ checks = {
     "workflow token is read-only": "contents: read" in workflow_text,
     "signing migration is manual and isolated to its migration branch": "workflow_dispatch:" in signing_workflow_text and "refs/heads/security/signing-lineage-migration" in signing_workflow_text and "push:" not in signing_workflow_text,
     "signing migration uses repository Actions secrets": all(name in signing_workflow_text for name in ("MOSAIC_RELEASE_KEYSTORE_BASE64", "MOSAIC_RELEASE_KEYSTORE_PASSWORD", "MOSAIC_RELEASE_KEY_ALIAS", "MOSAIC_RELEASE_KEY_PASSWORD")),
+    "signing migration fails fast for each missing secret": all(('if [[ -z "$' + name + '" ]]') in signing_workflow_text for name in ("MOSAIC_RELEASE_KEYSTORE_BASE64", "MOSAIC_RELEASE_KEYSTORE_PASSWORD", "MOSAIC_RELEASE_KEY_ALIAS", "MOSAIC_RELEASE_KEY_PASSWORD")),
     "signing migration verifies both certificates and v3 lineage": "--lineage" in signing_workflow_text and "--rotation-min-sdk-version 28" in signing_workflow_text and "700b857678b343aed93f7a7280e7d777df73c3f5f5e5024d94c119a4578079d0" in signing_workflow_text and "58205766cd01f75e51a13f8d7aeae08b7619de58749dc2fd4a46cb32b39cb647" in signing_workflow_text,
     "signing migration candidate is not publicly released": "contents: read" in signing_workflow_text and "gh release create" not in signing_workflow_text,
     "release Gradle variant remains unsigned before lineage signing": 'getByName("release")' in app_gradle_text and "signingConfig" not in app_gradle_text.split('getByName("release")', 1)[1].split("}", 1)[0],
