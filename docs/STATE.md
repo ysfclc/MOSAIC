@@ -1,5 +1,5 @@
 # State Ledger
-_Last updated: 2026-11-26 by ChatGPT GPT-6 — all development history consolidated into main; CI #370 passed; user approved signing-key rotation; migration candidate workflow prepared; APK remains unreleased pending repository secrets and Android 14 install-over-existing-app test_
+_Last updated: 2026-11-26 by ChatGPT GPT-6 — CI #382 passed on signing-migration branch (67 tests; 35 lint warnings + 1 hint); user-approved signer migration workflow prepared; APK remains unreleased pending repository secrets and Android 14 install-over-existing-app test_
 
 ## 1. Product snapshot
 MOSAIC is a local-first native Android personal media operating system. It unifies discovery, source access, playback continuity, a durable personal library and ad/tracker protection across local files, browser media, streams, podcasts/radio and third-party apps. The two primary pillars are cross-source background playback/control and broad ad/tracker blocking. Completion requires source-by-source real-device evidence, honest playback-ownership labels, measured filtering coverage/limits and a reliable unified media experience; CI success alone is not product acceptance. Canonical north star: `docs/MOSAIC_PRODUCT_VISION.md`; narrative requirements: `docs/PRODUCT_SPEC.md`; requirement/test traceability: `docs/SPEC.md`; architecture constraints: `docs/DECISIONS.md`.
