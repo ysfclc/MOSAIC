@@ -326,7 +326,7 @@ class ProjectContractTests(unittest.TestCase):
 
     def test_release_variant_is_unsigned_until_apksigner_lineage_step(self):
         gradle = (ROOT / "app/build.gradle.kts").read_text(encoding="utf-8")
-        release = gradle.split('create("release")', 1)[1].split("}", 1)[0]
+        release = gradle.split('getByName("release")', 1)[1].split("}", 1)[0]
         self.assertIn("isDebuggable = false", release)
         self.assertNotIn("signingConfig", release)
         workflow = (ROOT / ".github/workflows/signing-migration.yml").read_text(encoding="utf-8")
