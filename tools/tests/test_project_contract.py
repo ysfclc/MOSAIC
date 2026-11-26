@@ -308,5 +308,30 @@ class ProjectContractTests(unittest.TestCase):
         self.assertIn("onVideoSizeChanged(videoSize: VideoSize)", app)
         self.assertIn("Local library indexing and file selection remain audio-only", readme)
 
+    def test_signing_migration_candidate_is_manual_and_not_published(self):
+        workflow = (ROOT / ".github/workflows/signing-migration.yml").read_text(encoding="utf-8")
+        self.assertIn("workflow_dispatch:", workflow)
+        self.assertIn("refs/heads/security/signing-lineage-migration", workflow)
+        self.assertNotIn("push:", workflow)
+        self.assertIn("MOSAIC_RELEASE_KEYSTORE_BASE64", workflow)
+        self.assertIn("MOSAIC_RELEASE_KEYSTORE_PASSWORD", workflow)
+        self.assertIn("MOSAIC_RELEASE_KEY_ALIAS", workflow)
+        self.assertIn("MOSAIC_RELEASE_KEY_PASSWORD", workflow)
+        self.assertIn("--lineage", workflow)
+        self.assertIn("--rotation-min-sdk-version 28", workflow)
+        self.assertIn("MOSAIC-signing-lineage.bin", workflow)
+        self.assertIn("contents: read", workflow)
+        self.assertNotIn("gh release create", workflow)
+        self.assertIn("Physical Android 14 install-over-existing-app/data-preservation test is still required.", workflow)
+
+    def test_release_variant_is_unsigned_until_apksigner_lineage_step(self):
+        gradle = (ROOT / "app/build.gradle.kts").read_text(encoding="utf-8")
+        release = gradle.split('create("release")', 1)[1].split("}", 1)[0]
+        self.assertIn("isDebuggable = false", release)
+        self.assertNotIn("signingConfig", release)
+        workflow = (ROOT / ".github/workflows/signing-migration.yml").read_text(encoding="utf-8")
+        self.assertIn(":app:assembleRelease", workflow)
+        self.assertIn("apksigner sign", workflow)
+
 if __name__ == "__main__":
     unittest.main()
