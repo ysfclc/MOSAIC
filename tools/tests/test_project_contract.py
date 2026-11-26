@@ -50,6 +50,23 @@ class ProjectContractTests(unittest.TestCase):
         self.assertIn("object AdBlockPolicy", policy)
         self.assertIn("shouldBlock", policy)
 
+    def test_browser_webview_has_explicit_navigation_and_content_security(self):
+        browser = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/browser/BrowserScreen.kt").read_text(encoding="utf-8")
+        policy = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/browser/AdBlockPolicy.kt").read_text(encoding="utf-8")
+        tests = (ROOT / "app/src/test/java/com/ysfclc/mosaic/ui/browser/AdBlockPolicyTest.kt").read_text(encoding="utf-8")
+        self.assertIn("WebSettings.MIXED_CONTENT_NEVER_ALLOW", browser)
+        self.assertIn("settings.safeBrowsingEnabled = true", browser)
+        self.assertIn("settings.javaScriptCanOpenWindowsAutomatically = false", browser)
+        self.assertIn("settings.allowFileAccess = false", browser)
+        self.assertIn("settings.allowContentAccess = false", browser)
+        self.assertIn("settings.allowFileAccessFromFileURLs = false", browser)
+        self.assertIn("settings.allowUniversalAccessFromFileURLs = false", browser)
+        self.assertIn("handler.cancel()", browser)
+        self.assertIn("BrowserNavigationPolicy.isAllowedNavigation", browser)
+        self.assertIn("object BrowserNavigationPolicy", policy)
+        self.assertIn("browserNavigationAllowsOnlyHttpAndHttpsUrlsWithHosts", tests)
+        self.assertNotIn("addJavascriptInterface", browser)
+
     def test_browser_filter_uses_source_and_referrer_context(self):
         browser = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/browser/BrowserScreen.kt").read_text(encoding="utf-8")
         policy = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/browser/AdBlockPolicy.kt").read_text(encoding="utf-8")
