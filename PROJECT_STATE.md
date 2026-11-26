@@ -1,7 +1,4 @@
-# MOSAIC project state — legacy detailed handoff
-
-> **Continuity update (2026-11-12):** the canonical session ledger is now [`docs/STATE.md`](docs/STATE.md), and [`docs/SPEC.md`](docs/SPEC.md) is the requirements traceability registry. This file is retained as a historical, detailed implementation handoff; some entries below predate the current source snapshot. For current status, use `docs/STATE.md`, `docs/TASKS.md` and `docs/PROVIDER_CAPABILITY_MATRIX.md` first.
-
+# MOSAIC project state — session handoff
 
 **Project:** MOSAIC — local-first personal media operating system  
 **Repository:** ysfclc/MOSAIC · **Branch:** main  
@@ -122,3 +119,8 @@ P3-007 Player controls and the first P3-008 Ad Shield slice are both CI-verified
 - Never mark a source or ad-filter capability DONE without real evidence.
 - Never claim a build or device test that was not run.
 - Keep work in small, independently verifiable steps; no unrelated redesign or ZIP handoff unless requested.
+
+
+## 2026-11-14 public-repository build request
+
+The repository is now public. A direct GitHub Actions Android build was triggered by this handoff update so the current `main` source can be verified and a fresh debug APK published. Record the resulting workflow run, APK artifact/release URL, checksum and any failures here after CI completes.
