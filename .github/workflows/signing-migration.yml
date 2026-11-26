@@ -1,0 +1,193 @@
+name: MOSAIC signing migration candidate
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_version_code:
+        description: "Version code for the unsigned-to-signed migration candidate (must be greater than 347)"
+        required: true
+        type: string
+        default: "348"
+permissions:
+  contents: read
+concurrency:
+  group: mosaic-signing-migration
+  cancel-in-progress: false
+jobs:
+  signing-candidate:
+    if: github.ref == 'refs/heads/security/signing-lineage-migration'
+    name: Build and verify rotated-signing candidate (no publication)
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Check out the exact migration revision
+        uses: actions/checkout@v5
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+      - name: Set up Java 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "17"
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+        with:
+          accept-android-sdk-licenses: true
+          packages: platform-tools
+      - name: Install pinned Android SDK packages
+        shell: bash
+        run: |
+          set -euo pipefail
+          sdkmanager --install "platform-tools" "platforms;android-37.2" "build-tools;36.0.0"
+      - name: Set up pinned Gradle 9.3.1
+        uses: gradle/actions/setup-gradle@v6
+        with:
+          gradle-version: "9.3.1"
+      - name: Validate secrets and prepare temporary keystores
+        id: signing
+        shell: bash
+        env:
+          MOSAIC_RELEASE_KEYSTORE_BASE64: ${{ secrets.MOSAIC_RELEASE_KEYSTORE_BASE64 }}
+          MOSAIC_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.MOSAIC_RELEASE_KEYSTORE_PASSWORD }}
+          MOSAIC_RELEASE_KEY_ALIAS: ${{ secrets.MOSAIC_RELEASE_KEY_ALIAS }}
+          MOSAIC_RELEASE_KEY_PASSWORD: ${{ secrets.MOSAIC_RELEASE_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for name in MOSAIC_RELEASE_KEYSTORE_BASE64 MOSAIC_RELEASE_KEYSTORE_PASSWORD MOSAIC_RELEASE_KEY_ALIAS MOSAIC_RELEASE_KEY_PASSWORD; do
+            if [[ -z "\${!name:-}" ]]; then
+              echo "::error::Required repository Actions secret is missing: $name"
+              exit 1
+            fi
+          done
+          VERSION_CODE="${{ inputs.candidate_version_code }}"
+          if [[ ! "$VERSION_CODE" =~ ^[0-9]+$ ]] || (( VERSION_CODE <= 347 )); then
+            echo "::error::Candidate version code must be a positive integer greater than 347."
+            exit 1
+          fi
+          umask 077
+          OLD_KEYSTORE="$RUNNER_TEMP/mosaic-legacy-debug.keystore"
+          NEW_KEYSTORE="$RUNNER_TEMP/mosaic-rotated-release.keystore"
+          printf '%s' "$MOSAIC_RELEASE_KEYSTORE_BASE64" | base64 --decode > "$NEW_KEYSTORE"
+          base64 --decode tools/mosaic-debug-signing-key.b64 > "$OLD_KEYSTORE"
+          test -s "$OLD_KEYSTORE"
+          test -s "$NEW_KEYSTORE"
+          keytool -list -keystore "$OLD_KEYSTORE" -storepass android -alias androiddebugkey >/dev/null
+          keytool -list -keystore "$NEW_KEYSTORE" -storepass "$MOSAIC_RELEASE_KEYSTORE_PASSWORD" -alias "$MOSAIC_RELEASE_KEY_ALIAS" >/dev/null
+          OLD_CERT_SHA256="$(keytool -list -v -keystore "$OLD_KEYSTORE" -storepass android -alias androiddebugkey | awk -F': ' '/SHA256:/{gsub(/:/, "", $2); print tolower($2)}')"
+          NEW_CERT_SHA256="$(keytool -list -v -keystore "$NEW_KEYSTORE" -storepass "$MOSAIC_RELEASE_KEYSTORE_PASSWORD" -alias "$MOSAIC_RELEASE_KEY_ALIAS" | awk -F': ' '/SHA256:/{gsub(/:/, "", $2); print tolower($2)}')"
+          EXPECTED_OLD="700b857678b343aed93f7a7280e7d777df73c3f5f5e5024d94c119a4578079d0"
+          EXPECTED_NEW="58205766cd01f75e51a13f8d7aeae08b7619de58749dc2fd4a46cb32b39cb647"
+          if [[ "$OLD_CERT_SHA256" != "$EXPECTED_OLD" ]]; then
+            echo "::error::Legacy keystore certificate does not match the known installed-app signer."
+            exit 1
+          fi
+          if [[ "$NEW_CERT_SHA256" != "$EXPECTED_NEW" ]]; then
+            echo "::error::Replacement keystore certificate fingerprint does not match the reviewed migration key."
+            exit 1
+          fi
+          {
+            echo "MOSAIC_OLD_KEYSTORE=$OLD_KEYSTORE"
+            echo "MOSAIC_NEW_KEYSTORE=$NEW_KEYSTORE"
+            echo "MOSAIC_RELEASE_KEY_ALIAS=$MOSAIC_RELEASE_KEY_ALIAS"
+            echo "MOSAIC_VERSION_CODE=$VERSION_CODE"
+          } >> "$GITHUB_ENV"
+          {
+            echo "old_cert_sha256=$OLD_CERT_SHA256"
+            echo "new_cert_sha256=$NEW_CERT_SHA256"
+          } >> "$GITHUB_OUTPUT"
+          echo "Both keystores opened successfully; certificate fingerprints match the migration policy."
+      - name: Verify source invariants and Python contract tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/verify_source.py
+          python3 -m unittest discover -s tools/tests -v
+      - name: Run Android tests, lint and unsigned release assembly
+        shell: bash
+        run: |
+          set -euo pipefail
+          ./gradlew --no-daemon --stacktrace -PmosaicVersionCode="$MOSAIC_VERSION_CODE" \
+            :core:persistence:testDebugUnitTest \
+            :core:media:testDebugUnitTest \
+            :app:testDebugUnitTest \
+            :app:lintDebug \
+            :app:assembleRelease
+          UNSIGNED="app/build/outputs/apk/release/app-release-unsigned.apk"
+          test -s "$UNSIGNED"
+          mkdir -p "$RUNNER_TEMP/mosaic-signing-delivery"
+          cp "$UNSIGNED" "$RUNNER_TEMP/mosaic-signing-delivery/MOSAIC-release-unsigned.apk"
+      - name: Generate lineage and sign migration candidate
+        shell: bash
+        env:
+          MOSAIC_RELEASE_KEYSTORE_PASSWORD: ${{ secrets.MOSAIC_RELEASE_KEYSTORE_PASSWORD }}
+          MOSAIC_RELEASE_KEY_PASSWORD: ${{ secrets.MOSAIC_RELEASE_KEY_PASSWORD }}
+          MOSAIC_RELEASE_KEY_ALIAS: ${{ secrets.MOSAIC_RELEASE_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          APKSIGNER="$ANDROID_HOME/build-tools/36.0.0/apksigner"
+          LINEAGE="$RUNNER_TEMP/mosaic-signing-lineage.bin"
+          UNSIGNED="$RUNNER_TEMP/mosaic-signing-delivery/MOSAIC-release-unsigned.apk"
+          SIGNED="$RUNNER_TEMP/mosaic-signing-delivery/MOSAIC-android14-migration-candidate.apk"
+          test -x "$APKSIGNER"
+          test -s "$UNSIGNED"
+          "$APKSIGNER" rotate --out "$LINEAGE" \
+            --old-signer --ks "$MOSAIC_OLD_KEYSTORE" --ks-key-alias androiddebugkey \
+              --ks-pass pass:android --key-pass pass:android \
+            --new-signer --ks "$MOSAIC_NEW_KEYSTORE" --ks-key-alias "$MOSAIC_RELEASE_KEY_ALIAS" \
+              --ks-pass env:MOSAIC_RELEASE_KEYSTORE_PASSWORD --key-pass env:MOSAIC_RELEASE_KEY_PASSWORD
+          "$APKSIGNER" sign \
+            --ks "$MOSAIC_OLD_KEYSTORE" --ks-key-alias androiddebugkey \
+              --ks-pass pass:android --key-pass pass:android \
+            --next-signer \
+            --ks "$MOSAIC_NEW_KEYSTORE" --ks-key-alias "$MOSAIC_RELEASE_KEY_ALIAS" \
+              --ks-pass env:MOSAIC_RELEASE_KEYSTORE_PASSWORD --key-pass env:MOSAIC_RELEASE_KEY_PASSWORD \
+            --lineage "$LINEAGE" --rotation-min-sdk-version 28 \
+            --out "$SIGNED" "$UNSIGNED"
+          "$APKSIGNER" verify --verbose --print-certs --min-sdk-version 28 "$SIGNED" \
+            > "$RUNNER_TEMP/mosaic-signing-delivery/verify-api28.txt" 2>&1
+          "$APKSIGNER" verify --verbose --print-certs --min-sdk-version 34 "$SIGNED" \
+            > "$RUNNER_TEMP/mosaic-signing-delivery/verify-api34.txt" 2>&1
+          python3 - "$RUNNER_TEMP/mosaic-signing-delivery/verify-api28.txt" \
+            "$RUNNER_TEMP/mosaic-signing-delivery/verify-api34.txt" <<'PY_VERIFY'
+          import re
+          import sys
+          expected_old = "700b857678b343aed93f7a7280e7d777df73c3f5f5e5024d94c119a4578079d0"
+          expected_new = "58205766cd01f75e51a13f8d7aeae08b7619de58749dc2fd4a46cb32b39cb647"
+          for name in sys.argv[1:]:
+              text = open(name, encoding="utf-8").read().lower()
+              normalized = re.sub(r"[^0-9a-f]", "", text)
+              if expected_old not in normalized or expected_new not in normalized:
+                  raise SystemExit(f"Both expected lineage certificates were not reported by apksigner for {name}.")
+              if "verified using v3 scheme" not in text:
+                  raise SystemExit(f"APK Signature Scheme v3 verification missing for {name}.")
+          print("PASS: v3 signatures and both expected lineage certificates verified for API 28 and API 34.")
+          PY_VERIFY
+          cp "$LINEAGE" "$RUNNER_TEMP/mosaic-signing-delivery/MOSAIC-signing-lineage.bin"
+          "$ANDROID_HOME/build-tools/36.0.0/aapt" dump badging "$SIGNED" \
+            | grep -F "package: name='com.ysfclc.mosaic' versionCode='$MOSAIC_VERSION_CODE'" \
+            > "$RUNNER_TEMP/mosaic-signing-delivery/package-identity.txt"
+          (cd "$RUNNER_TEMP/mosaic-signing-delivery" && sha256sum MOSAIC-android14-migration-candidate.apk MOSAIC-signing-lineage.bin > SHA256SUMS.txt)
+          {
+            echo "## Signing migration candidate verified"
+            echo "- Package: com.ysfclc.mosaic"
+            echo "- Version code: $MOSAIC_VERSION_CODE"
+            echo "- Legacy signer SHA-256: 700b857678b343aed93f7a7280e7d777df73c3f5f5e5024d94c119a4578079d0"
+            echo "- Replacement signer SHA-256: 58205766cd01f75e51a13f8d7aeae08b7619de58749dc2fd4a46cb32b39cb647"
+            echo "- APK Signature Scheme v3 verified for API 28 and API 34."
+            echo "- Candidate only; no GitHub release or public publication was created."
+            echo "- Physical Android 14 install-over-existing-app/data-preservation test is still required."
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload migration candidate, lineage and verification reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: MOSAIC-Signing-Migration-Candidate
+          path: |
+            ${{ runner.temp }}/mosaic-signing-delivery/MOSAIC-android14-migration-candidate.apk
+            ${{ runner.temp }}/mosaic-signing-delivery/MOSAIC-signing-lineage.bin
+            ${{ runner.temp }}/mosaic-signing-delivery/SHA256SUMS.txt
+            ${{ runner.temp }}/mosaic-signing-delivery/verify-api28.txt
+            ${{ runner.temp }}/mosaic-signing-delivery/verify-api34.txt
+            ${{ runner.temp }}/mosaic-signing-delivery/package-identity.txt
+          if-no-files-found: error
+          compression-level: 0
+          retention-days: 14
