@@ -351,3 +351,12 @@
 - Main post-merge validation-only run [#387](https://github.com/ysfclc/MOSAIC/actions/runs/45891776407) passed source verification, Python contract tests, 67 Android unit tests across 16 suites (0 failures, 0 errors, 0 skipped), lint and read-only Room v1 schema check (9 tables).
 - Main report artifact [MOSAIC-Direct-Build-Reports](https://github.com/ysfclc/MOSAIC/actions/runs/45891776407/artifacts/15151523380), SHA-256 `84051a514803c9fec82a30997e98fcfd76f954acc49a0d4c634928d205ecddb2`. Lint remains at 35 warnings and 1 hint across 10 issue IDs. The validation-only workflow produced no APK.
 - Manual migration candidate workflow is now present on main and still restricted to `security/signing-lineage-migration`. It awaits four repository Actions secrets; no candidate has been built or published.
+
+
+## 2026-11-26 — Signing-secret guard fixed; candidate awaits repository secrets
+
+- Merged PR [#4](https://github.com/ysfclc/MOSAIC/pull/4) as `b0e0a938c530219419667426f4fc2bb24b0b53d5`. The migration workflow now explicitly checks each of the four required Actions secrets and fails with the missing name before attempting replacement-keystore decoding.
+- The first manual candidate dispatch [#1](https://github.com/ysfclc/MOSAIC/actions/runs/45892632736) found all four secret environment variables empty and stopped before the replacement keystore was decoded or any APK was assembled. No secret values were logged and no candidate artifact was produced.
+- Corrected migration branch head `0a3bf4db84754c0b537610ccd71b22def99b48d5` passed validation-only run [#398](https://github.com/ysfclc/MOSAIC/actions/runs/45893221023); main post-merge validation [#396](https://github.com/ysfclc/MOSAIC/actions/runs/45893185083) also passed.
+- Main report artifact [MOSAIC-Direct-Build-Reports](https://github.com/ysfclc/MOSAIC/actions/runs/45893185083/artifacts/15151579956), SHA-256 `97c60dd86dea35715338a1e73cd799aad3336c4f96a12b8010be0981654d1dc6`. Lint remains at 35 warnings and 1 hint; these are validation-only runs and do not produce APKs.
+- Next gate: configure `MOSAIC_RELEASE_KEYSTORE_BASE64`, `MOSAIC_RELEASE_KEYSTORE_PASSWORD`, `MOSAIC_RELEASE_KEY_ALIAS`, and `MOSAIC_RELEASE_KEY_PASSWORD`; then rerun the manual candidate workflow on `security/signing-lineage-migration` with version code 348.
