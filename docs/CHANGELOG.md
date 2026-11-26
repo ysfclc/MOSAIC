@@ -325,3 +325,21 @@
 
 - First run [#351](https://github.com/ysfclc/MOSAIC/actions/runs/45687680793) failed one stale Python contract assertion: it expected the ZIP importer to remain executable, despite the new safety lock. The source verifier itself passed. Android unit tests and lint did not run in that attempt.
 - Updated the contract tests and source verifier to assert the actual release-safe design: direct CI is validation-only, ZIP import remains paused, and the GitHub token is read-only. Removed the obsolete requirement that CI expose the development signing identity.
+
+
+## 2026-11-26 — Approved signing-key rotation candidate
+
+- User explicitly approved rotating the exposed development signer using APK Signature Scheme v3 lineage.
+- Generated a fresh RSA-4096 signing identity outside Git. Its public certificate SHA-256 is `58205766cd01f75e51a13f8d7aeae08b7619de58749dc2fd4a46cb32b39cb647`; private key/password material is not committed.
+- Added a manual, migration-branch-only workflow that verifies the old and new certificate fingerprints, builds an unsigned release variant, creates a v3 signing lineage, signs a candidate, verifies API 28/API 34 signatures and uploads a 14-day candidate artifact only. It cannot publish a GitHub release.
+- Added source and Python contract checks for the signing safeguards; CI validation and the migration candidate run are still required.
+- Repository Actions secrets must be configured before candidate dispatch. The candidate must then be installed over the existing Android 14 MOSAIC app, without uninstalling, to prove package upgrade and local-data preservation.
+- No APK has been built or issued in this migration increment. Public prerelease #347 remains unapproved and must not be installed.
+
+
+## 2026-11-26 — Signing migration branch validation passed
+
+- Migration branch head `e133ac79af81e09186b72193ba48d04cd76cfbbe` passed GitHub Actions validation-only run [#382](https://github.com/ysfclc/MOSAIC/actions/runs/45890938598): source verifier, Python contract tests, 67 Android unit tests across 16 suites (0 failures, 0 errors, 0 skipped), lint and read-only Room v1 schema check (9 tables).
+- Lint passed with 35 warnings and 1 hint across 10 issue IDs; the report includes security review items for WebView JavaScript, exported service permission policy and Android backup/device-transfer rules. Zero-warning lint has not been achieved.
+- Report artifact [MOSAIC-Direct-Build-Reports](https://github.com/ysfclc/MOSAIC/actions/runs/45890938598/artifacts/15152115702), SHA-256 `dd391bae914c1f8602262b32f42d3267e22c34d2c7044f1c6436df112ea6f659`. This was validation-only; no APK was assembled, signed, uploaded or published.
+- Manual signing-candidate workflow remains gated on the four repository Actions secrets and subsequent Android 14 install-over-existing-app/data-preservation acceptance.

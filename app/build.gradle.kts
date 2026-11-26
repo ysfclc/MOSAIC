@@ -12,7 +12,7 @@ android {
 
     defaultConfig {
         applicationId = "com.ysfclc.mosaic"
-        minSdk = 26
+        minSdk = 28 // APK key rotation requires v3 support; Android 8.x is no longer supported
         targetSdk = 36
         versionCode = mosaicCiVersionCode
         versionName = "0.2.0-browser-preview"
@@ -35,6 +35,13 @@ android {
             if (!mosaicDebugKeystorePath.isNullOrBlank()) {
                 signingConfig = signingConfigs.getByName("stableDebug")
             }
+        }
+
+        // Release output is deliberately unsigned here. CI signs it with the
+        // rotated key and verified certificate lineage after all tests pass.
+        getByName("release") {
+            isDebuggable = false
+            isMinifyEnabled = false
         }
     }
 
