@@ -36,6 +36,13 @@ android {
                 signingConfig = signingConfigs.getByName("stableDebug")
             }
         }
+
+        // Release output is deliberately unsigned here. CI signs it with the
+        // rotated key and verified certificate lineage after all tests pass.
+        create("release") {
+            isDebuggable = false
+            isMinifyEnabled = false
+        }
     }
 
     buildFeatures {
