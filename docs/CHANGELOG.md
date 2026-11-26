@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-11-26 — Record signing migration design and reverify validation-only CI
+
+- Validation-only GitHub Actions run [#355](https://github.com/ysfclc/MOSAIC/actions/runs/45837449371), commit `92ff71dbcb1c51569811d3c79a505a1b2a9e458b`, completed successfully.
+- The direct-source job passed source/Python checks (34 contract tests), Android unit tests, `:app:lintDebug`, and the unchanged tracked Room v1 schema check (9 tables). Gradle reported `BUILD SUCCESSFUL`.
+- The APK-producing/import job was skipped by design. No APK, signing, artifact delivery or release was performed.
+- Known lint warning debt remains (run #352 reported 34 warnings and 1 hint); this is not a zero-warning lint pass.
+- Documented the proposed development-signer migration in `docs/SECURITY.md`: fresh private key in Actions Secrets, APK Signature Scheme v3/v3.1 lineage, fingerprint/lineage verification and an in-place update test on the Android 14 target. Android 12/API 31 and earlier compatibility requires an explicit decision before implementation.
+- The public development keystore remains in the repository pending a coordinated migration. Release publication stays locked.
+
 ## 2026-11-25 — Verify lossless MediaStore events and disk-backed Room reopen
 
 - Validation-only GitHub Actions run [#352](https://github.com/ysfclc/MOSAIC/actions/runs/45687926178), commit `922ef245b44e8ace68b28073136edb1a6dfa9c48`, passed the direct-source validation job.
