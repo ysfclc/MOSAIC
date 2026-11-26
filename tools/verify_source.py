@@ -20,6 +20,7 @@ REQUIRED = [
     "docs/TASKS.md",
     "PROJECT_STATE.md",
     "tools/mosaic-debug-signing-key.b64",
+    ".github/workflows/signing-migration.yml",
 ]
 
 def fail(message: str) -> None:
@@ -40,6 +41,8 @@ ad_skip_config = (ROOT / "app/src/main/res/xml/ad_skip_accessibility_service.xml
 ad_shield_service = (ROOT / "app/src/main/java/com/ysfclc/mosaic/adshield/AdShieldVpnService.kt").read_text(encoding="utf-8")
 workflow = ROOT / ".github/workflows/build-apk.yml"
 workflow_text = workflow.read_text(encoding="utf-8")
+signing_workflow_text = (ROOT / ".github/workflows/signing-migration.yml").read_text(encoding="utf-8")
+app_gradle_text = (ROOT / "app/build.gradle.kts").read_text(encoding="utf-8")
 checks = {
     "media playback foreground permission": "FOREGROUND_SERVICE_MEDIA_PLAYBACK" in manifest,
     "single MediaSessionService declaration": manifest.count("androidx.media3.session.MediaSessionService") == 1,
@@ -55,6 +58,11 @@ checks = {
     "direct-source CI is validation-only": "needs.preflight.outputs.mode == 'direct'" in workflow_text.split("  direct-build:", 1)[1] and ":app:assembleDebug" not in workflow_text.split("  direct-build:", 1)[1] and "gh release create" not in workflow_text.split("  direct-build:", 1)[1] and "MOSAIC_DEBUG_KEYSTORE" not in workflow_text.split("  direct-build:", 1)[1],
     "ZIP import remains safety-locked": "if: false" in workflow_text.split("  build:", 1)[1].split("  direct-build:", 1)[0],
     "workflow token is read-only": "contents: read" in workflow_text,
+    "signing migration is manual and isolated to its migration branch": "workflow_dispatch:" in signing_workflow_text and "refs/heads/security/signing-lineage-migration" in signing_workflow_text and "push:" not in signing_workflow_text,
+    "signing migration uses repository Actions secrets": all(name in signing_workflow_text for name in ("MOSAIC_RELEASE_KEYSTORE_BASE64", "MOSAIC_RELEASE_KEYSTORE_PASSWORD", "MOSAIC_RELEASE_KEY_ALIAS", "MOSAIC_RELEASE_KEY_PASSWORD")),
+    "signing migration verifies both certificates and v3 lineage": "--lineage" in signing_workflow_text and "--rotation-min-sdk-version 28" in signing_workflow_text and "700b857678b343aed93f7a7280e7d777df73c3f5f5e5024d94c119a4578079d0" in signing_workflow_text and "58205766cd01f75e51a13f8d7aeae08b7619de58749dc2fd4a46cb32b39cb647" in signing_workflow_text,
+    "signing migration candidate is not publicly released": "contents: read" in signing_workflow_text and "gh release create" not in signing_workflow_text,
+    "release Gradle variant remains unsigned before lineage signing": 'create("release")' in app_gradle_text and "signingConfig" not in app_gradle_text.split('create("release")', 1)[1].split("}", 1)[0],
     "version code remains configurable for a controlled release": "mosaicVersionCode" in (ROOT / "app/build.gradle.kts").read_text(encoding="utf-8"),
     "browser has network permission for WebView": "android.permission.INTERNET" in manifest and "WebView(context)" in browser,
     "browser ad-filter policy is present": "object AdBlockPolicy" in (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/browser/AdBlockPolicy.kt").read_text(encoding="utf-8"),
