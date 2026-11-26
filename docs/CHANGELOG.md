@@ -1,3 +1,11 @@
+## 2026-11-26 — Main validation-only CI #369
+
+- Main head tree validated by GitHub Actions run [#369](https://github.com/ysfclc/MOSAIC/actions/runs/45859434855); source verification, Python contract tests, 67 Android unit tests across 16 suites (0 failures, 0 errors, 0 skipped), lint and read-only Room v1 schema verification (9 tables) passed.
+- The Room database close/reopen regression passed under Robolectric; no Android instrumentation or physical-device process-death acceptance is claimed.
+- Lint remains at 34 warnings and 1 hint across 10 issue IDs; this is not a lint-clean gate.
+- Reports artifact [MOSAIC-Direct-Build-Reports](https://github.com/ysfclc/MOSAIC/actions/runs/45859434855/artifacts/15137537092), SHA-256 `9641146de44f7b74e81a90b61ec096fbbb2402399656774d530bf797cc1db3b2`, expires 2026-12-03.
+- No APK was assembled, signed, uploaded or published. The development signer remains compromised and release stays locked.
+
 ## 2026-11-26 — Consolidate development into main; WebView hardening
 
 - Merged [PR #2](https://github.com/ysfclc/MOSAIC/pull/2) into `main`; merge commit `6a0e830b3fbb14ef18a1d8dde486ace8fc7a9887`.
