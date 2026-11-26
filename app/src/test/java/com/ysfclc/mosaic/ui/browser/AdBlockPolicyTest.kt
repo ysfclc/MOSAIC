@@ -84,6 +84,19 @@ class AdBlockPolicyTest {
     }
 
     @Test
+    fun browserNavigationAllowsOnlyHttpAndHttpsUrlsWithHosts() {
+        assertTrue(BrowserNavigationPolicy.isAllowedNavigation("https://example.com/path"))
+        assertTrue(BrowserNavigationPolicy.isAllowedNavigation("http://example.com/path"))
+        assertTrue(BrowserNavigationPolicy.isAllowedNavigation("HTTPS://EXAMPLE.COM/path"))
+        assertFalse(BrowserNavigationPolicy.isAllowedNavigation("javascript:alert(1)"))
+        assertFalse(BrowserNavigationPolicy.isAllowedNavigation("file:///etc/passwd"))
+        assertFalse(BrowserNavigationPolicy.isAllowedNavigation("content://provider/item"))
+        assertFalse(BrowserNavigationPolicy.isAllowedNavigation("intent://scan/#Intent;scheme=zxing;end"))
+        assertFalse(BrowserNavigationPolicy.isAllowedNavigation("https:///missing-host"))
+        assertFalse(BrowserNavigationPolicy.isAllowedNavigation("not a url"))
+    }
+
+    @Test
     fun handlesMalformedUrlsWithoutBlocking() {
         assertFalse(AdBlockPolicy.shouldBlock("not a url", "news.example"))
     }
