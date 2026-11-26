@@ -6,6 +6,7 @@ import android.os.Looper
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
@@ -82,13 +83,31 @@ fun BrowserScreen(
     val webView = remember(context) {
         WebView(context).apply {
             settings.javaScriptEnabled = true
+            settings.javaScriptCanOpenWindowsAutomatically = false
             settings.domStorageEnabled = true
             settings.mediaPlaybackRequiresUserGesture = true
+            settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+            settings.safeBrowsingEnabled = true
+            settings.setSupportMultipleWindows(false)
             settings.allowFileAccess = false
             settings.allowContentAccess = false
+            settings.allowFileAccessFromFileURLs = false
+            settings.allowUniversalAccessFromFileURLs = false
             webViewClient = object : WebViewClient() {
+                override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean =
+                    !BrowserNavigationPolicy.isAllowedNavigation(request.url.toString())
+
+                override fun onReceivedSslError(
+                    view: WebView,
+                    handler: android.webkit.SslErrorHandler,
+                    error: android.net.http.SslError,
+                ) {
+                    handler.cancel()
+                }
+
                 override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
-                    if (!shieldRef.get() || !request.url.scheme.orEmpty().startsWith("http")) return null
+                    val scheme = request.url.scheme.orEmpty()
+                    if (!shieldRef.get() || (!scheme.equals("http", true) && !scheme.equals("https", true))) return null
                     val referrerUrl = request.requestHeaders.entries
                         .firstOrNull { it.key.equals("Referer", ignoreCase = true) }
                         ?.value
