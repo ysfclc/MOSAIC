@@ -1,3 +1,13 @@
+## 2026-11-26 — Validation-only CI #356 and security gate evidence
+
+- Commit: `b17999744d4933ed8cbdaa59e01a6679e84b994d`.
+- GitHub Actions run [#356](https://github.com/ysfclc/MOSAIC/actions/runs/45853647475) completed successfully. Source verification, Python contract tests, Android unit tests, lint and read-only Room v1 schema verification all passed.
+- Preserved test reports contain 66 Android tests across 16 test suites: 0 failures, 0 errors and 0 skipped. `MosaicDatabaseReopenTest.libraryAndPlaybackStateSurviveClosingAndReopeningDatabase` passed; this remains a Robolectric JVM test, not Android instrumentation or physical-device process-death evidence.
+- The checked-in Room v1 schema remains unchanged at 9 tables.
+- Lint report contains 34 warnings and 1 hint across 10 issue IDs. The warnings include WebView JavaScript, exported Media3 service, backup extraction rules, target SDK/toolchain/dependency freshness, obsolete SDK guards and KTX style suggestions. These are not all equivalent severity; security/privacy issues must be resolved or explicitly accepted before release. No lint-clean gate is claimed.
+- CI artifact [MOSAIC-Direct-Build-Reports](https://github.com/ysfclc/MOSAIC/actions/runs/45853647475/artifacts/15135605304), SHA-256 `1cec506f3c8e8d6df059fd0cebd88758ef9e42554b04cc6f361668b6fdab3a76`, expires 2026-12-03.
+- No APK was assembled, signed, uploaded or published. The exposed development signer remains blocked; signing migration and device acceptance remain release blockers.
+
 # Changelog
 
 ## 2026-11-26 — Record signing migration design and reverify validation-only CI
