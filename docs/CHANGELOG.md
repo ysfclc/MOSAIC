@@ -325,3 +325,13 @@
 
 - First run [#351](https://github.com/ysfclc/MOSAIC/actions/runs/45687680793) failed one stale Python contract assertion: it expected the ZIP importer to remain executable, despite the new safety lock. The source verifier itself passed. Android unit tests and lint did not run in that attempt.
 - Updated the contract tests and source verifier to assert the actual release-safe design: direct CI is validation-only, ZIP import remains paused, and the GitHub token is read-only. Removed the obsolete requirement that CI expose the development signing identity.
+
+
+## 2026-11-26 — Approved signing-key rotation candidate
+
+- User explicitly approved rotating the exposed development signer using APK Signature Scheme v3 lineage.
+- Generated a fresh RSA-4096 signing identity outside Git. Its public certificate SHA-256 is `58205766cd01f75e51a13f8d7aeae08b7619de58749dc2fd4a46cb32b39cb647`; private key/password material is not committed.
+- Added a manual, migration-branch-only workflow that verifies the old and new certificate fingerprints, builds an unsigned release variant, creates a v3 signing lineage, signs a candidate, verifies API 28/API 34 signatures and uploads a 14-day candidate artifact only. It cannot publish a GitHub release.
+- Added source and Python contract checks for the signing safeguards; CI validation and the migration candidate run are still required.
+- Repository Actions secrets must be configured before candidate dispatch. The candidate must then be installed over the existing Android 14 MOSAIC app, without uninstalling, to prove package upgrade and local-data preservation.
+- No APK has been built or issued in this migration increment. Public prerelease #347 remains unapproved and must not be installed.
