@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-11-25 — Verify lossless MediaStore events and disk-backed Room reopen
+
+- Validation-only GitHub Actions run [#352](https://github.com/ysfclc/MOSAIC/actions/runs/45687926178), commit `922ef245b44e8ace68b28073136edb1a6dfa9c48`, passed the direct-source validation job.
+- Android unit-test reports: 66 tests, 0 failures, 0 errors, 0 skipped. This includes `MosaicDatabaseReopenTest` (1 test), which writes media metadata, location, playback history, queue and timer state, closes the on-disk Room database, reopens it and verifies each record.
+- Python contract suite: 34 tests passed. The tracked Room v1 schema was unchanged and validated with 9 tables.
+- `:app:lintDebug` completed with 0 errors, 34 warnings and 1 hint. Warning debt remains; the run is not a zero-warning lint pass.
+- The corrected MediaStore invalidation regression verifies the initial snapshot plus both provider notifications (exactly three syncs).
+- The workflow is explicitly validation-only: no APK assembly, signing, artifact publication or release occurred. The APK safety lock remains in force.
+- Room reopen evidence is a Robolectric JVM test. Android's current Room testing guidance recommends device testing and does not recommend Robolectric local unit tests for Room; Android process-death and Redmi acceptance remain open.
+
 ## 2026-11-25 — Preserve repeated MediaStore invalidations
 
 - Run [#346](https://github.com/ysfclc/MOSAIC/actions/runs/45640565937) identified a genuine regression: global `distinctUntilChanged()` dropped repeated `Invalidate` events, preventing legitimate provider notifications from refreshing the library.
