@@ -12,22 +12,88 @@ class AdBlockPolicyTest {
     }
 
     @Test
+    fun blocksKnownThirdPartyAdDomainsOnYoutubeAndSpotifyPages() {
+        assertTrue(AdBlockPolicy.shouldBlock("https://cdn.taboola.com/ad.js", "m.youtube.com"))
+        assertTrue(AdBlockPolicy.shouldBlock("https://cdn.criteo.com/ad.js", "open.spotify.com"))
+    }
+
+    @Test
+    fun blocksGoogleAdInfrastructureOnOrdinaryPages() {
+        assertTrue(AdBlockPolicy.shouldBlock("https://securepubads.g.doubleclick.net/tag", "news.example"))
+        assertTrue(AdBlockPolicy.shouldBlock("https://pagead2.googlesyndication.com/pagead/js", "news.example"))
+    }
+
+    @Test
+    fun allowsGooglePlayerCompatibilityHostsOnlyInYoutubeContext() {
+        assertFalse(AdBlockPolicy.shouldBlock("https://securepubads.g.doubleclick.net/tag", "www.youtube.com"))
+        assertFalse(AdBlockPolicy.shouldBlock("https://pagead2.googlesyndication.com/pagead/js", "m.youtube.com"))
+        assertFalse(
+            AdBlockPolicy.shouldBlock(
+                "https://securepubads.g.doubleclick.net/tag",
+                "news.example",
+                "https://www.youtube.com/embed/abc",
+            ),
+        )
+        assertTrue(AdBlockPolicy.shouldBlock("https://securepubads.g.doubleclick.net/tag", "open.spotify.com"))
+        assertTrue(AdBlockPolicy.shouldBlock("https://securepubads.g.doubleclick.net/tag", "news.example"))
+    }
+
+    @Test
+    fun recognizesProviderPagesWithoutExemptingTheirThirdPartyRequests() {
+        assertTrue(AdBlockPolicy.isProviderPage("www.youtube.com"))
+        assertTrue(AdBlockPolicy.isProviderPage("open.spotify.com"))
+        assertFalse(AdBlockPolicy.isProviderPage("news.example"))
+        assertTrue(AdBlockPolicy.shouldBlock("https://cdn.taboola.com/ad.js", "www.youtube.com"))
+    }
+
+    @Test
+    fun preservesProviderContentAndMediaHosts() {
+        assertFalse(AdBlockPolicy.shouldBlock("https://www.youtube.com/watch?v=abc", "news.example"))
+        assertFalse(AdBlockPolicy.shouldBlock("https://r1---sn.googlevideo.com/videoplayback", "www.youtube.com"))
+        assertFalse(AdBlockPolicy.shouldBlock("https://i.scdn.co/image/cover", "open.spotify.com"))
+        assertFalse(AdBlockPolicy.shouldBlock("https://open.spotify.com/track/abc", "news.example"))
+    }
+
+    @Test
+    fun matchesDomainBoundariesAndNormalizesRequestHosts() {
+        assertTrue(AdBlockPolicy.shouldBlock("https://WWW.TABOOLA.COM./ad.js", "news.example"))
+        assertFalse(AdBlockPolicy.shouldBlock("https://taboola.com.attacker.example/ad.js", "news.example"))
+        assertFalse(AdBlockPolicy.shouldBlock("https://nottaboola.com/ad.js", "news.example"))
+    }
+
+    @Test
+    fun onlyFiltersHttpAndHttpsRequests() {
+        assertFalse(AdBlockPolicy.shouldBlock("ftp://taboola.com/ad.js", "news.example"))
+        assertFalse(AdBlockPolicy.shouldBlock("file:///taboola.com/ad.js", "news.example"))
+    }
+
+    @Test
+    fun doesNotTrustLookalikeYoutubeReferrersForCompatibility() {
+        assertTrue(
+            AdBlockPolicy.shouldBlock(
+                "https://securepubads.g.doubleclick.net/tag",
+                "news.example",
+                "https://youtube.com.attacker.example/embed/abc",
+            ),
+        )
+    }
+
+    @Test
     fun allowsOrdinaryContentAndUnknownHosts() {
         assertFalse(AdBlockPolicy.shouldBlock("https://cdn.example.com/app.js", "news.example"))
     }
 
     @Test
-    fun exemptsYoutubeAndSpotifyPagesAndAssets() {
-        assertFalse(AdBlockPolicy.shouldBlock("https://cdn.taboola.com/ad.js", "m.youtube.com"))
-        assertFalse(AdBlockPolicy.shouldBlock("https://cdn.criteo.com/ad.js", "open.spotify.com"))
-        assertFalse(AdBlockPolicy.shouldBlock("https://www.youtube.com/watch?v=abc", "news.example"))
-        assertFalse(AdBlockPolicy.shouldBlock("https://open.spotify.com/track/abc", "news.example"))
-    }
-
-    @Test
-    fun doesNotBlockGoogleAdInfrastructureUsedByProviderPlayers() {
-        assertFalse(AdBlockPolicy.shouldBlock("https://securepubads.g.doubleclick.net/tag", "news.example"))
-        assertFalse(AdBlockPolicy.shouldBlock("https://pagead2.googlesyndication.com/pagead/js", "news.example"))
+    fun browserNavigationAllowsOnlyHttpAndHttpsUrlsWithHosts() {
+        assertTrue(BrowserNavigationPolicy.isAllowedNavigation("https://example.com/path"))
+        assertTrue(BrowserNavigationPolicy.isAllowedNavigation("http://example.com/path"))
+        assertTrue(BrowserNavigationPolicy.isAllowedNavigation("HTTPS://EXAMPLE.COM/path"))
+        assertFalse(BrowserNavigationPolicy.isAllowedNavigation("javascript:alert(1)"))
+        assertFalse(BrowserNavigationPolicy.isAllowedNavigation("file:///etc/passwd"))
+        assertFalse(BrowserNavigationPolicy.isAllowedNavigation("content://provider/item"))
+        assertFalse(BrowserNavigationPolicy.isAllowedNavigation("intent://scan/#Intent;scheme=zxing;end"))
+        assertFalse(BrowserNavigationPolicy.isAllowedNavigation("https:///missing-host"))
+        assertFalse(BrowserNavigationPolicy.isAllowedNavigation("not a url"))
     }
 
     @Test

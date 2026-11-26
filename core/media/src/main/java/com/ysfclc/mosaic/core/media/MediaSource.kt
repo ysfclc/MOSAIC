@@ -1,6 +1,9 @@
 package com.ysfclc.mosaic.core.media
 
 import android.net.Uri
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.map
 
 /** Stable, provider-neutral description of one item in the personal media library. */
 data class MediaItemRecord(
@@ -54,6 +57,31 @@ class SourceCapabilities(enabled: Set<MediaCapability>) {
     }
 }
 
+/**
+ * Result of a provider browse. Only a provider that knows it returned a complete
+ * source snapshot may set [isCompleteSnapshot]; partial/permission-denied results
+ * must never cause the canonical library to mark unseen records as missing.
+ */
+data class MediaBrowseResult(
+    val items: List<MediaItemRecord>,
+    val isCompleteSnapshot: Boolean,
+)
+
+/**
+ * Provider-neutral change notification. An item signal means only that the item
+ * should be re-read; it is never proof that the item was added or deleted.
+ * Deletion is inferred only by a complete snapshot reconciliation.
+ */
+sealed interface MediaSourceChange {
+    data class ItemChanged(val sourceItemId: String) : MediaSourceChange {
+        init {
+            require(sourceItemId.isNotBlank()) { "A source item ID is required." }
+        }
+    }
+
+    object Invalidate : MediaSourceChange
+}
+
 data class MediaSourceDescriptor(
     val id: String,
     val name: String,
@@ -72,5 +100,26 @@ data class ResolvedMediaSource(
 interface MediaSourceAdapter {
     val descriptor: MediaSourceDescriptor
     suspend fun browse(query: String = ""): List<MediaItemRecord>
+    suspend fun browseSnapshot(query: String = ""): MediaBrowseResult =
+        MediaBrowseResult(items = browse(query), isCompleteSnapshot = false)
+
+    /**
+     * Emits when the provider knows its browsable content may have changed.
+     * The default is intentionally inert so existing and remote adapters remain
+     * source-compatible and do not acquire polling or lifecycle responsibilities.
+     */
+    fun observeChanges(): Flow<Unit> = emptyFlow()
+
+    /**
+     * New adapters may provide item-level notifications and lookups. Legacy
+     * observers remain safe: their unit signals are promoted to invalidations,
+     * never guessed to be item-level changes.
+     */
+    fun observeChangeEvents(): Flow<MediaSourceChange> =
+        observeChanges().map { MediaSourceChange.Invalidate }
+
+    /** Targeted lookup by provider-local item ID; null means unavailable. */
+    suspend fun findItem(sourceItemId: String): MediaItemRecord? = null
+
     suspend fun resolve(mediaId: String): ResolvedMediaSource?
 }

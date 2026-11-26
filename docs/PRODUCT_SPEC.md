@@ -1,6 +1,6 @@
 # Product specification — MOSAIC
 
-> Canonical product north star: [MOSAIC Product Vision](MOSAIC_PRODUCT_VISION.md). This specification implements that broader personal media OS vision; it must not narrow MOSAIC to a local player, browser or ad-blocking utility.
+> Canonical product north star: [MOSAIC Product Vision](MOSAIC_PRODUCT_VISION.md). This specification implements that broader personal media OS vision; it must not narrow MOSAIC to a local player, browser or ad-blocking utility. Requirement IDs and implementation/test/documentation coverage are indexed in [SPEC.md](SPEC.md).
 
 ## Product statement
 
@@ -106,4 +106,4 @@ The product target is broad cross-source playback in the background and broad ad
 4. One queue: only sources actually playable by MOSAIC can join its native queue. Delegated sessions must be labelled honestly until a supported native playback path exists.
 
 ### Current implementation status
-The current source snapshot contains local audio playback through Media3, a basic WebView browser with a conservative third-party host filter, and opt-in discovery/control of external Android media sessions. These are foundations, not completion of the cross-source background playback or broad ad-blocking vision. See docs/TASKS.md and PROJECT_STATE.md.
+The current source snapshot contains read-only local audio indexing and Media3 playback; validated HTTPS stream input including supported HLS; bounded HTTPS RSS 2.0 / Atom feed loading with secure parsing, local feed subscriptions and episode queueing; direct HTTPS HTML5 audio/video detection in Browser with a handoff into the shared Media3 player and a native video surface; delegated Android MediaSession controls; an opt-in YouTube-only visible ad-skip helper; browser third-party request filtering; and an opt-in DNS-only local VPN Ad Shield. These are foundations, not completion of the cross-source background playback or broad ad-blocking vision. Named external providers have not been demonstrated as MOSAIC-native streams, and real Redmi/device acceptance is not recorded. Browser filtering's first source-aware slice removes whole-page YouTube/Spotify exemptions and filters known third-party ad/tracker hosts on provider pages. Google ad infrastructure remains temporarily allowlisted only in a YouTube top-level or YouTube-frame Referer context based on the existing player-delivery compatibility concern; this exception and overall filter coverage still need unit/device acceptance. See P3-015 in docs/TASKS.md and docs/PROVIDER_CAPABILITY_MATRIX.md. See docs/SPEC.md for per-requirement evidence.

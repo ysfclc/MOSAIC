@@ -1,4 +1,4 @@
-name: Build MOSAIC Android APK
+name: MOSAIC CI — validation only (APK release locked)
 
 on:
   push:
@@ -28,7 +28,7 @@ on:
         default: direct
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: mosaic-android-${{ github.ref }}
@@ -145,7 +145,8 @@ jobs:
 
   build:
     needs: preflight
-    if: needs.preflight.outputs.mode == 'import' && needs.preflight.outputs.already_imported != 'true'
+    # Safety lock: ZIP imports must not build or publish an APK until release gates are approved.
+    if: false
     name: Validate, extract, build and integrate
     runs-on: ubuntu-latest
     timeout-minutes: 90
@@ -442,6 +443,7 @@ jobs:
           set -euo pipefail
           cd "$GITHUB_WORKSPACE"
           ./gradlew --no-daemon --stacktrace -PmosaicVersionCode="$GITHUB_RUN_NUMBER" \
+            :core:persistence:testDebugUnitTest \
             :core:media:testDebugUnitTest \
             :app:testDebugUnitTest \
             :app:lintDebug \
@@ -727,8 +729,9 @@ jobs:
 
   direct-build:
     needs: preflight
+    # Direct CI is validation-only. APK packaging and publication are forbidden in this job.
     if: needs.preflight.outputs.mode == 'direct'
-    name: Verify direct repository changes and build APK
+    name: Verify direct repository changes (validation only)
     runs-on: ubuntu-latest
     timeout-minutes: 90
     steps:
@@ -778,57 +781,44 @@ jobs:
           chmod +x ./gradlew
           ./gradlew --no-daemon --version
 
-      - name: Prepare persistent MOSAIC development signing key
+      - name: Run Android unit tests and lint (no APK)
         shell: bash
         run: |
           set -euo pipefail
-          KEYSTORE="$RUNNER_TEMP/mosaic-debug.keystore"
-          base64 --decode "$GITHUB_WORKSPACE/tools/mosaic-debug-signing-key.b64" > "$KEYSTORE"
-          keytool -list -keystore "$KEYSTORE" -storepass android -alias androiddebugkey >/dev/null
-          echo "MOSAIC_DEBUG_KEYSTORE=$KEYSTORE" >> "$GITHUB_ENV"
+          ./gradlew --no-daemon --stacktrace :core:persistence:testDebugUnitTest \
+            :core:media:testDebugUnitTest :app:testDebugUnitTest :app:lintDebug
 
-      - name: Run Android unit tests, lint and debug APK build
+      - name: Verify checked-in Room v1 schema (read-only)
         shell: bash
         run: |
           set -euo pipefail
-          ./gradlew --no-daemon --stacktrace -PmosaicVersionCode="$GITHUB_RUN_NUMBER" :core:media:testDebugUnitTest :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+          SCHEMA="core/persistence/schemas/com.ysfclc.mosaic.core.persistence.MosaicDatabase/1.json"
+          test -s "$SCHEMA"
+          git ls-files --error-unmatch "$SCHEMA" >/dev/null
+          python3 - "$SCHEMA" <<'PY_SCHEMA'
+          import json
+          import sys
+          from pathlib import Path
 
-      - name: Verify APK and calculate checksum
-        shell: bash
-        run: |
-          set -euo pipefail
-          APK="app/build/outputs/apk/debug/app-debug.apk"
-          test -s "$APK"
-          APKSIGNER="$ANDROID_HOME/build-tools/36.0.0/apksigner"
-          test -x "$APKSIGNER"
-          CERT_SHA="$("$APKSIGNER" verify --print-certs "$APK" | awk -F': ' '/Signer #1 certificate SHA-256 digest/ {gsub(/:/, "", $2); print tolower($2)}')"
-          if [[ "$CERT_SHA" != "700b857678b343aed93f7a7280e7d777df73c3f5f5e5024d94c119a4578079d0" ]]; then
-            echo "::error::APK was not signed with the persistent MOSAIC development certificate."
-            exit 1
-          fi
-          mkdir -p "$RUNNER_TEMP/mosaic-direct-delivery"
-          cp "$APK" "$RUNNER_TEMP/mosaic-direct-delivery/MOSAIC-debug.apk"
-          sha256sum "$RUNNER_TEMP/mosaic-direct-delivery/MOSAIC-debug.apk" > "$RUNNER_TEMP/mosaic-direct-delivery/MOSAIC-debug.apk.sha256.txt"
-          {
-            echo "## MOSAIC direct-source verification passed"
-            echo "- Commit: `$GITHUB_SHA`"
-            echo "- Workflow: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
-            echo "- Unit tests, lint and debug APK: passed"
-            echo "- Physical device acceptance: not performed by CI"
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Upload direct-build APK
-        if: success()
-        continue-on-error: true
-        uses: actions/upload-artifact@v4
-        with:
-          name: MOSAIC-Android-debug-APK
-          path: |
-            ${{ runner.temp }}/mosaic-direct-delivery/MOSAIC-debug.apk
-            ${{ runner.temp }}/mosaic-direct-delivery/MOSAIC-debug.apk.sha256.txt
-          if-no-files-found: error
-          compression-level: 0
-          retention-days: 14
+          schema = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+          database = schema.get("database", {})
+          expected_tables = {
+              "media_items", "media_locations", "media_collections",
+              "media_collection_items", "playback_history",
+              "playback_queue_state", "playback_queue_entries",
+              "playback_timer_state", "migration_markers",
+          }
+          actual_tables = {entity["tableName"] for entity in database.get("entities", [])}
+          if schema.get("formatVersion") != 1 or database.get("version") != 1:
+              raise SystemExit("Generated Room schema format/database version is not v1.")
+          if database.get("identityHash") != "e699d4c9bfc9c75101010c245f07c951":
+              raise SystemExit("Room v1 identity hash changed without an approved schema-version increment.")
+          if actual_tables != expected_tables:
+              raise SystemExit(f"Unexpected Room v1 entity set: {sorted(actual_tables)}")
+          if not __import__("subprocess").run(["git", "diff", "--quiet", "--", sys.argv[1]]).returncode == 0:
+              raise SystemExit("Generated Room v1 schema differs from the tracked schema; add an explicit migration/version increment.")
+          print(f"Validated unchanged tracked Room v1 schema: {len(actual_tables)} tables")
+          PY_SCHEMA
 
       - name: Preserve direct-build reports
         if: always()
@@ -839,29 +829,11 @@ jobs:
           path: |
             app/build/reports/**
             app/build/test-results/**
+            core/persistence/build/reports/**
+            core/persistence/build/test-results/**
+            core/persistence/schemas/**
             core/media/build/reports/**
             core/media/build/test-results/**
           if-no-files-found: warn
           retention-days: 7
 
-      - name: Publish signed APK as a private GitHub prerelease
-        if: success()
-        env:
-          GH_TOKEN: ${{ github.token }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          DELIVERY_DIR="$RUNNER_TEMP/mosaic-direct-delivery"
-          APK="$DELIVERY_DIR/MOSAIC-debug.apk"
-          CHECKSUM="$DELIVERY_DIR/MOSAIC-debug.apk.sha256.txt"
-          test -s "$APK"
-          test -s "$CHECKSUM"
-          TAG="mosaic-dev-build-$GITHUB_RUN_NUMBER"
-          gh release create "$TAG" "$APK" "$CHECKSUM" \
-            --repo "$GITHUB_REPOSITORY" \
-            --title "MOSAIC development build #$GITHUB_RUN_NUMBER" \
-            --notes "Automated signed development APK. Commit: $GITHUB_SHA. CI unit tests, lint, APK assembly and persistent signer verification passed. Physical-device acceptance is not implied." \
-            --prerelease \
-            --target "$GITHUB_SHA"
-          RELEASE_URL="$(gh release view "$TAG" --repo "$GITHUB_REPOSITORY" --json url --jq .url)"
-          echo "Private APK release: $RELEASE_URL" | tee -a "$GITHUB_STEP_SUMMARY"

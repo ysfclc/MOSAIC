@@ -18,7 +18,7 @@ internal object DnsPacketCodec {
     private const val DNS_HEADER = 12
 
     fun parseIpv4UdpQuery(packet: ByteArray, packetLength: Int = packet.size): DnsIpv4UdpQuery? {
-        if (packetLength < IP_HEADER + UDP_HEADER + DNS_HEADER) return null
+        if (packetLength < IP_HEADER + UDP_HEADER + DNS_HEADER || packetLength > packet.size) return null
         val first = packet[0].toInt() and 0xff
         if (first ushr 4 != 4) return null
         val ipHeaderLength = (first and 0x0f) * 4

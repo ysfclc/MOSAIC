@@ -132,3 +132,14 @@ This decision is withdrawn in full. It incorrectly described copy/paste and cont
 - VpnService.Builder API: https://developer.android.com/reference/android/net/VpnService.Builder
 - Android VPN guide: https://developer.android.com/develop/connectivity/vpn
 - Foreground service types: https://developer.android.com/about/versions/14/changes/fgs-types-required
+
+
+## ADR-017 — Shared Room persistence boundary for the unified Library (LOCKED)
+
+- **Date:** 2026-11-15
+- **Decision:** introduce a dedicated `:core:persistence` module as the owner of Room entities, DAOs, database schema exports and migrations. It is independent of media and UI modules; `:core:media` and `:core:library` depend on it, while the app coordinates UI and legacy preference import.
+- **Why:** queue state, playback history, media identity, locations and collections must share one durable local data model. Putting the database inside `:core:library` would create a dependency cycle because the Library already consumes the media module and the playback service also needs persistence.
+- **Identity:** every canonical item uses the source-scoped `MediaIdentity` format. A source-local ID alone is never a global key. Locations are separate from identity and may be refreshed or revoked without deleting the media item.
+- **Privacy and ownership:** store metadata and safe references only. Do not copy, move or rename original media; do not persist signed URLs, user-info, request headers or ephemeral tokens. No mandatory account or backend.
+- **Migration:** export Room schemas; every version change requires an explicit tested migration. Destructive fallback is prohibited. Existing SharedPreferences history/queue/sleep timer data is imported transactionally and idempotently; legacy preferences are retained until commit and read-back verification succeed.
+- **Scope:** the model and module plan are specified in `docs/LIBRARY_DATA_MODEL.md`. Implementation is incremental; this ADR does not claim Room tables or migrations already exist.

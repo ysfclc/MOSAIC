@@ -1,0 +1,31 @@
+package com.ysfclc.mosaic.core.persistence
+
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
+import org.junit.Test
+
+class SafeMediaLocatorPolicyTest {
+    @Test
+    fun acceptsStableHttpsAndLocalReferences() {
+        assertTrue(SafeMediaLocatorPolicy.isSafe("https://media.example.org/audio/episode.mp3"))
+        assertTrue(SafeMediaLocatorPolicy.isSafe("content://media/external/audio/media/42"))
+        assertTrue(SafeMediaLocatorPolicy.isSafe("file:///storage/emulated/0/Music/track.mp3"))
+    }
+
+    @Test
+    fun rejectsEphemeralCredentialsAndUnsupportedSchemes() {
+        assertFalse(SafeMediaLocatorPolicy.isSafe("https://media.example.org/audio.mp3?token=secret"))
+        assertFalse(SafeMediaLocatorPolicy.isSafe("https://user:pass@media.example.org/audio.mp3"))
+        assertFalse(SafeMediaLocatorPolicy.isSafe("https://media.example.org/audio.mp3#chapter"))
+        assertFalse(SafeMediaLocatorPolicy.isSafe("http://media.example.org/audio.mp3"))
+        assertFalse(SafeMediaLocatorPolicy.isSafe("javascript:alert(1)"))
+    }
+
+    @Test
+    fun rejectsMalformedAndOversizedValues() {
+        assertFalse(SafeMediaLocatorPolicy.isSafe("not a uri"))
+        assertFalse(SafeMediaLocatorPolicy.isSafe("https://"))
+        val oversized = "https://media.example.org/" + "x".repeat(4096)
+        assertFalse(SafeMediaLocatorPolicy.isSafe(oversized))
+    }
+}

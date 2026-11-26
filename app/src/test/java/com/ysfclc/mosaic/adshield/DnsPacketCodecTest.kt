@@ -52,6 +52,22 @@ class DnsPacketCodecTest {
     }
 
     @Test
+    fun rejectsPacketLengthOutsideBackingBuffer() {
+        val packet = ipv4DnsQuery("media.example")
+        assertNull(DnsPacketCodec.parseIpv4UdpQuery(packet, packet.size + 1))
+        assertNull(DnsPacketCodec.parseIpv4UdpQuery(packet, packet.size - 1))
+    }
+
+    @Test
+    fun rejectsFragmentedAndInconsistentUdpPackets() {
+        val fragmented = ipv4DnsQuery("media.example").also { putU16(it, 6, 0x2000) }
+        assertNull(DnsPacketCodec.parseIpv4UdpQuery(fragmented))
+
+        val invalidUdpLength = ipv4DnsQuery("media.example").also { putU16(it, 24, it.size) }
+        assertNull(DnsPacketCodec.parseIpv4UdpQuery(invalidUdpLength))
+    }
+
+    @Test
     fun acceptsOnlyMatchingDnsResponses() {
         val query = dnsQuery("media.example")
         val valid = DnsPacketCodec.buildServFailResponse(query)!!

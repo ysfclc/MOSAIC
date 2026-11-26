@@ -109,15 +109,23 @@ import androidx.media3.ui.AspectRatioFrameLayout
 import androidx.media3.ui.PlayerView
 import androidx.media3.session.MediaController
 import com.ysfclc.mosaic.core.design.MosaicPalette
+import com.ysfclc.mosaic.PlaybackHistoryEntry
+import com.ysfclc.mosaic.LegacyPreferencesImporter
+import com.ysfclc.mosaic.PlaybackHistoryStore
 import com.ysfclc.mosaic.core.library.MediaStoreCatalog
+import com.ysfclc.mosaic.core.library.LibraryRepository
+import com.ysfclc.mosaic.core.library.LocalMediaSourceAdapter
 import com.ysfclc.mosaic.core.media.MediaItemRecord
 import com.ysfclc.mosaic.core.media.PlaybackConnection
+import com.ysfclc.mosaic.core.media.PlaybackSleepTimerPolicy
+import com.ysfclc.mosaic.core.media.PlaybackSleepTimerStore
 import com.ysfclc.mosaic.core.media.PlayableStreamAddress
 import com.ysfclc.mosaic.core.media.PodcastFeedLoader
 import com.ysfclc.mosaic.ui.browser.AdSkipAccessibilityStatus
 import com.ysfclc.mosaic.ui.browser.BrowserScreen
 import com.ysfclc.mosaic.ui.browser.ExternalMediaSession
 import com.ysfclc.mosaic.ui.browser.ExternalMediaSessionBridge
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -137,7 +145,14 @@ private enum class Destination(val title: String) {
 fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Unit = {}) {
     val context = LocalContext.current
     val catalog = remember(context) { MediaStoreCatalog(context.applicationContext) }
+    val libraryRepository = remember(context) { LibraryRepository(context.applicationContext) }
+    val tracks by libraryRepository.observeVisible().collectAsState(initial = emptyList())
+    val historyStore = remember(context) { PlaybackHistoryStore(context.applicationContext) }
     val playback = remember(context) { PlaybackConnection(context.applicationContext) }
+    val sleepTimerStore = remember(context) { PlaybackSleepTimerStore(context.applicationContext) }
+    var sleepTimerRemainingMs by remember(sleepTimerStore) {
+        mutableStateOf(PlaybackSleepTimerPolicy.remainingMs(sleepTimerStore.deadlineEpochMs(), System.currentTimeMillis()))
+    }
     val controller by playback.controller.collectAsState()
     val connectionError by playback.connectionError.collectAsState()
 
@@ -159,6 +174,14 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
     val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(context) {
+        runCatching {
+            LegacyPreferencesImporter(context.applicationContext).importIfNeeded()
+        }.onFailure { error ->
+            android.util.Log.w("MOSAIC", "Legacy playback import deferred; it will retry on a later launch.", error)
+        }
+    }
+
+    LaunchedEffect(context) {
         while (isActive) {
             notificationAccess = ExternalMediaSessionBridge.hasNotificationAccess(context)
             adSkipEnabled = AdSkipAccessibilityStatus.isEnabled(context)
@@ -174,11 +197,46 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
             onSharedTextConsumed()
         }
     }
-    var tracks by remember { mutableStateOf(emptyList<MediaItemRecord>()) }
     var indexing by remember { mutableStateOf(false) }
     var audioPermission by remember { mutableStateOf(hasAudioPermission(context)) }
     var scanCounter by remember { mutableIntStateOf(0) }
     var playerRevision by remember { mutableIntStateOf(0) }
+    var recentHistory by remember { mutableStateOf(historyStore.load()) }
+
+    val recordHistory = remember(historyStore) {
+        { item: MediaItem?, positionMs: Long ->
+            val mediaUri = item?.localConfiguration?.uri
+            if (item != null && mediaUri != null && mediaUri.encodedQuery.isNullOrBlank() && mediaUri.encodedFragment.isNullOrBlank() && !mediaUri.authority.orEmpty().contains('@')) {
+                val metadata = item.mediaMetadata
+                historyStore.record(
+                    PlaybackHistoryEntry(
+                        mediaId = item.mediaId.ifBlank { mediaUri.toString() },
+                        title = metadata.title?.toString()?.takeIf(String::isNotBlank) ?: mediaUri.lastPathSegment ?: "Untitled media",
+                        creator = metadata.artist?.toString()?.takeIf(String::isNotBlank),
+                        uri = mediaUri.toString(),
+                        mimeType = item.localConfiguration?.mimeType,
+                        playedAtEpochMs = System.currentTimeMillis(),
+                        resumePositionMs = positionMs.coerceAtLeast(0L),
+                    ),
+                )
+                recentHistory = historyStore.load()
+            }
+        }
+    }
+
+    val saveProgress = remember(historyStore) {
+        { item: MediaItem?, positionMs: Long ->
+            val mediaUri = item?.localConfiguration?.uri
+            if (item != null && mediaUri != null && mediaUri.encodedQuery.isNullOrBlank() && mediaUri.encodedFragment.isNullOrBlank() && !mediaUri.authority.orEmpty().contains('@')) {
+                historyStore.updateProgress(
+                    item.mediaId.ifBlank { mediaUri.toString() },
+                    mediaUri.toString(),
+                    positionMs,
+                )
+                recentHistory = historyStore.load()
+            }
+        }
+    }
 
     val permissionName = if (Build.VERSION.SDK_INT >= 33) {
         Manifest.permission.READ_MEDIA_AUDIO
@@ -204,23 +262,50 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
         }
     }
 
+    LaunchedEffect(sleepTimerStore) {
+        while (isActive) {
+            sleepTimerRemainingMs = PlaybackSleepTimerPolicy.remainingMs(
+                sleepTimerStore.deadlineEpochMs(),
+                System.currentTimeMillis(),
+            )
+            delay(1000)
+        }
+    }
+
     LaunchedEffect(playback) { playback.connect() }
     DisposableEffect(playback) { onDispose { playback.release() } }
 
     LaunchedEffect(scanCounter, audioPermission) {
         if (audioPermission) {
             indexing = true
-            tracks = withContext(Dispatchers.IO) { catalog.scanAudio() }
-            indexing = false
+            try {
+                val adapter = LocalMediaSourceAdapter(catalog)
+                libraryRepository.observeAndSync(adapter).collect {
+                    indexing = false
+                }
+            } catch (cancelled: CancellationException) {
+                throw cancelled
+            } catch (error: Exception) {
+                android.util.Log.w("MOSAIC", "Library sync/observation stopped; the last saved Room index remains available.", error)
+            } finally {
+                indexing = false
+            }
         }
     }
 
-    DisposableEffect(controller) {
+    DisposableEffect(controller, recordHistory) {
         if (controller == null) return@DisposableEffect onDispose { }
         val listener = object : Player.Listener {
-            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) { playerRevision++ }
-            override fun onIsPlayingChanged(isPlaying: Boolean) { playerRevision++ }
+            override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+                playerRevision++
+                if (controller?.isPlaying == true) recordHistory(mediaItem, controller?.currentPosition ?: 0L)
+            }
+            override fun onIsPlayingChanged(isPlaying: Boolean) {
+                playerRevision++
+                if (isPlaying) recordHistory(controller?.currentMediaItem, controller?.currentPosition ?: 0L) else saveProgress(controller?.currentMediaItem, controller?.currentPosition ?: 0L)
+            }
             override fun onPlaybackStateChanged(playbackState: Int) { playerRevision++ }
+            override fun onPlaybackParametersChanged(playbackParameters: androidx.media3.common.PlaybackParameters) { playerRevision++ }
             override fun onMediaMetadataChanged(mediaMetadata: androidx.media3.common.MediaMetadata) { playerRevision++ }
             override fun onVideoSizeChanged(videoSize: VideoSize) { playerRevision++ }
         }
@@ -229,8 +314,17 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
     }
 
     LaunchedEffect(controller) {
+        if (controller?.isPlaying == true) recordHistory(controller?.currentMediaItem, controller?.currentPosition ?: 0L)
+        var lastProgressCheckpoint = 0L
         while (controller != null) {
-            if (controller?.isPlaying == true) playerRevision++
+            if (controller?.isPlaying == true) {
+                playerRevision++
+                val now = System.currentTimeMillis()
+                if (now - lastProgressCheckpoint >= 10_000L) {
+                    saveProgress(controller?.currentMediaItem, controller?.currentPosition ?: 0L)
+                    lastProgressCheckpoint = now
+                }
+            }
             delay(800)
         }
     }
@@ -300,6 +394,7 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
                         indexing = indexing,
                         hasPermission = audioPermission,
                         nowPlaying = hasNowPlaying,
+                        recentHistory = recentHistory,
                         currentTitle = currentTitle,
                         currentArtist = currentArtist,
                         externalSessionCount = externalSessions.size,
@@ -312,6 +407,10 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
                         onOpenShield = { destination = Destination.SHIELD },
                         onOpenSource = openExternalSource,
                         onResume = { controller?.play() },
+                        onPlayHistory = { entry ->
+                            playback.playUri(Uri.parse(entry.uri), entry.title, entry.mimeType, entry.resumePositionMs, entry.mediaId)
+                            destination = Destination.PLAYER
+                        },
                     )
                     Destination.EXPLORE -> ExploreScreen(
                         onOpenSource = openExternalSource,
@@ -329,6 +428,15 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
                         onScan = requestScan,
                         onOpenFile = openFile,
                         onPlay = playTrack,
+                        recentHistory = recentHistory,
+                        onPlayHistory = { entry ->
+                            playback.playUri(Uri.parse(entry.uri), entry.title, entry.mimeType, entry.resumePositionMs, entry.mediaId)
+                            destination = Destination.PLAYER
+                        },
+                        onClearHistory = {
+                            historyStore.clear()
+                            recentHistory = emptyList()
+                        },
                     )
                     Destination.PLAYER -> PlayerScreen(
                         controller = controller,
@@ -385,6 +493,14 @@ fun MosaicApp(initialSharedText: String? = null, onSharedTextConsumed: () -> Uni
                             destination = Destination.PLAYER
                         },
                         onOpenLibrary = { destination = Destination.LIBRARY },
+                        sleepTimerRemainingMs = sleepTimerRemainingMs,
+                        onSetSleepTimer = { minutes ->
+                            if (minutes == null) sleepTimerStore.clear() else sleepTimerStore.setMinutes(minutes)
+                            sleepTimerRemainingMs = PlaybackSleepTimerPolicy.remainingMs(
+                                sleepTimerStore.deadlineEpochMs(),
+                                System.currentTimeMillis(),
+                            )
+                        },
                     )
                     Destination.SHIELD -> com.ysfclc.mosaic.ui.adshield.AdShieldScreen()
                     Destination.BROWSER -> BrowserScreen(
@@ -484,6 +600,7 @@ private fun HomeScreen(
     indexing: Boolean,
     hasPermission: Boolean,
     nowPlaying: Boolean,
+    recentHistory: List<PlaybackHistoryEntry>,
     currentTitle: String,
     currentArtist: String,
     externalSessionCount: Int,
@@ -496,6 +613,7 @@ private fun HomeScreen(
     onOpenShield: () -> Unit,
     onOpenSource: (String) -> Unit,
     onResume: () -> Unit,
+    onPlayHistory: (PlaybackHistoryEntry) -> Unit,
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -517,6 +635,32 @@ private fun HomeScreen(
                 onPrimary = if (nowPlaying) onResume else onExplore,
                 onSecondary = onOpenPlayer,
             )
+        }
+        item {
+            if (recentHistory.isNotEmpty()) {
+                Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                    SectionHeading("PICK UP WHERE YOU LEFT OFF", "RECENTLY PLAYED")
+                    recentHistory.take(4).forEach { entry ->
+                        Surface(
+                            onClick = { onPlayHistory(entry) },
+                            color = MosaicPalette.SurfaceGlass,
+                            shape = RoundedCornerShape(14.dp),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = .07f)),
+                            modifier = Modifier.fillMaxWidth(),
+                        ) {
+                            Row(Modifier.padding(horizontal = 12.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.MusicNote, contentDescription = null, tint = MosaicPalette.Cyan, modifier = Modifier.size(18.dp))
+                                Spacer(Modifier.width(10.dp))
+                                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                    Text(entry.title, color = MosaicPalette.TextPrimary, fontSize = 11.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    Text(entry.creator ?: "Saved playback reference", color = MosaicPalette.TextMuted, fontSize = 9.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+                                Icon(Icons.Default.PlayArrow, contentDescription = "Play ${entry.title}", tint = MosaicPalette.Cyan, modifier = Modifier.size(18.dp))
+                            }
+                        }
+                    }
+                }
+            }
         }
         item {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -792,6 +936,9 @@ private fun LibraryScreen(
     onScan: () -> Unit,
     onOpenFile: () -> Unit,
     onPlay: (Int) -> Unit,
+    recentHistory: List<PlaybackHistoryEntry>,
+    onPlayHistory: (PlaybackHistoryEntry) -> Unit,
+    onClearHistory: () -> Unit,
 ) {
     var query by remember { mutableStateOf("") }
     val filtered = remember(tracks, query) {
@@ -837,21 +984,64 @@ private fun LibraryScreen(
             Spacer(Modifier.weight(1f))
             Text("LOCAL · READ ONLY", color = MosaicPalette.Cyan.copy(alpha = .8f), fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = .8.sp)
         }
-        if (filtered.isEmpty()) {
-            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                EmptyLibraryState(
-                    hasPermission = hasPermission,
-                    indexing = indexing,
-                    onScan = onScan,
-                    onOpenFile = onOpenFile,
-                )
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 18.dp),
+            verticalArrangement = Arrangement.spacedBy(7.dp),
+        ) {
+            if (recentHistory.isNotEmpty()) {
+                item {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 12.dp, bottom = 8.dp)) {
+                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                            Text("RECENTLY PLAYED", color = MosaicPalette.TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold, letterSpacing = .5.sp)
+                            Spacer(Modifier.weight(1f))
+                            Text(
+                                "CLEAR",
+                                color = MosaicPalette.TextMuted,
+                                fontSize = 8.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 1.sp,
+                                modifier = Modifier.clickable(onClick = onClearHistory).padding(8.dp),
+                            )
+                        }
+                        recentHistory.take(10).forEach { entry ->
+                            Surface(
+                                onClick = { onPlayHistory(entry) },
+                                color = MosaicPalette.SurfaceGlass,
+                                shape = RoundedCornerShape(13.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color.White.copy(alpha = .06f)),
+                                modifier = Modifier.fillMaxWidth(),
+                            ) {
+                                Row(Modifier.padding(horizontal = 11.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Default.MusicNote, contentDescription = null, tint = MosaicPalette.Cyan, modifier = Modifier.size(17.dp))
+                                    Spacer(Modifier.width(9.dp))
+                                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                        Text(entry.title, color = MosaicPalette.TextPrimary, fontSize = 10.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        Text(entry.creator ?: "Recent media", color = MosaicPalette.TextMuted, fontSize = 8.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                    }
+                                    if (entry.resumePositionMs > 0L) {
+                                        Text("RESUME", color = MosaicPalette.Cyan, fontSize = 7.sp, fontWeight = FontWeight.Bold, letterSpacing = .6.sp)
+                                    } else {
+                                        Icon(Icons.Default.PlayArrow, contentDescription = "Play ${entry.title}", tint = MosaicPalette.Cyan, modifier = Modifier.size(17.dp))
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = androidx.compose.foundation.layout.PaddingValues(bottom = 18.dp),
-                verticalArrangement = Arrangement.spacedBy(7.dp),
-            ) {
+            if (filtered.isEmpty()) {
+                item {
+                    Box(Modifier.fillMaxWidth().height(240.dp), contentAlignment = Alignment.Center) {
+                        EmptyLibraryState(
+                            hasPermission = hasPermission,
+                            indexing = indexing,
+                            onScan = onScan,
+                            onOpenFile = onOpenFile,
+                        )
+                    }
+                }
+            } else {
                 itemsIndexed(filtered, key = { _, item -> item.id }) { index, item ->
                     val sourceIndex = tracks.indexOfFirst { it.id == item.id }.coerceAtLeast(0)
                     MediaTrackRow(item = item, index = index + 1, onClick = { onPlay(sourceIndex) })
@@ -930,6 +1120,8 @@ private fun PlayerScreen(
     onLoadPodcastFeed: (String) -> Unit,
     onPlayPodcastEpisode: (Int) -> Unit,
     onOpenLibrary: () -> Unit,
+    sleepTimerRemainingMs: Long,
+    onSetSleepTimer: (Int?) -> Unit,
 ) {
     val mediaItem = controller?.currentMediaItem
     val metadata = mediaItem?.mediaMetadata
@@ -938,9 +1130,17 @@ private fun PlayerScreen(
     val duration = controller?.duration?.takeIf { it > 0L } ?: 1L
     val rawPosition = controller?.currentPosition?.coerceIn(0L, duration) ?: 0L
     val isPlaying = controller?.isPlaying == true
+    val playbackSpeed = controller?.playbackParameters?.speed ?: 1f
     val actualDuration = controller?.duration?.takeIf { it > 0L } ?: 0L
     var draggingPosition by remember(mediaItem) { mutableStateOf<Float?>(null) }
     val positionFraction = draggingPosition ?: (rawPosition.toFloat() / duration.toFloat()).coerceIn(0f, 1f)
+    val queueCount = controller?.mediaItemCount ?: 0
+    val currentQueueIndex = controller?.currentMediaItemIndex ?: -1
+    val queueStart = if (currentQueueIndex >= 0) (currentQueueIndex - 1).coerceAtLeast(0) else 0
+    val queueEnd = minOf(queueCount, queueStart + 8)
+    val queueRows = if (controller == null) emptyList() else (queueStart until queueEnd).map { index ->
+        index to controller.getMediaItemAt(index)
+    }
 
     Column(
         modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 22.dp).padding(top = 12.dp, bottom = 18.dp),
@@ -1055,7 +1255,150 @@ private fun PlayerScreen(
             }
     
         }
-        Spacer(Modifier.height(22.dp))
+        if (mediaItem != null) {
+            Column(
+                modifier = Modifier.fillMaxWidth()
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(MosaicPalette.SurfaceGlass)
+                    .border(1.dp, Color.White.copy(alpha = .06f), RoundedCornerShape(18.dp))
+                    .padding(13.dp),
+                verticalArrangement = Arrangement.spacedBy(9.dp),
+            ) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("PLAYBACK SPEED", color = MosaicPalette.Cyan, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+                        Text("Choose your pace", color = MosaicPalette.TextPrimary, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                    Spacer(Modifier.weight(1f))
+                    Text("${playbackSpeed}×", color = MosaicPalette.Violet, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    listOf(0.75f, 1f, 1.25f, 1.5f, 2f).forEach { speed ->
+                        val selected = kotlin.math.abs(playbackSpeed - speed) < 0.01f
+                        Surface(
+                            onClick = { controller?.setPlaybackSpeed(speed) },
+                            color = if (selected) MosaicPalette.Violet.copy(alpha = .22f) else MosaicPalette.SurfaceRaised,
+                            shape = RoundedCornerShape(10.dp),
+                            border = if (selected) androidx.compose.foundation.BorderStroke(1.dp, MosaicPalette.Violet.copy(alpha = .55f)) else null,
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Box(Modifier.padding(vertical = 9.dp), contentAlignment = Alignment.Center) {
+                                Text("${speed}×", color = if (selected) MosaicPalette.TextPrimary else MosaicPalette.TextMuted, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.fillMaxWidth().height(1.dp).background(MosaicPalette.Divider.copy(alpha = .7f)))
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("SLEEP TIMER", color = MosaicPalette.Cyan, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.2.sp)
+                        Text("Stop playback and keep your queue ready", color = MosaicPalette.TextMuted, fontSize = 8.sp)
+                    }
+                    Spacer(Modifier.weight(1f))
+                    Text(
+                        if (sleepTimerRemainingMs > 0L) "ENDS IN ${formatDuration(sleepTimerRemainingMs)}" else "OFF",
+                        color = if (sleepTimerRemainingMs > 0L) MosaicPalette.Violet else MosaicPalette.TextMuted,
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Bold,
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(5.dp)) {
+                    listOf(15, 30, 45, 60, 90).forEach { minutes ->
+                        Surface(
+                            onClick = { onSetSleepTimer(minutes) },
+                            color = MosaicPalette.SurfaceRaised,
+                            shape = RoundedCornerShape(10.dp),
+                            modifier = Modifier.weight(1f),
+                        ) {
+                            Box(Modifier.padding(vertical = 9.dp), contentAlignment = Alignment.Center) {
+                                Text("${minutes}m", color = MosaicPalette.TextSecondary, fontSize = 9.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                        }
+                    }
+                }
+                if (sleepTimerRemainingMs > 0L) {
+                    Text(
+                        "CANCEL TIMER",
+                        color = MosaicPalette.TextMuted,
+                        fontSize = 8.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = .8.sp,
+                        modifier = Modifier.align(Alignment.End).clickable { onSetSleepTimer(null) }.padding(5.dp),
+                    )
+                }
+            }
+            Spacer(Modifier.height(14.dp))
+        }
+        if (queueRows.isNotEmpty()) {
+            Column(
+                modifier = Modifier.fillMaxWidth()
+                    .clip(RoundedCornerShape(18.dp))
+                    .background(MosaicPalette.SurfaceGlass)
+                    .border(1.dp, Color.White.copy(alpha = .06f), RoundedCornerShape(18.dp))
+                    .padding(13.dp),
+                verticalArrangement = Arrangement.spacedBy(7.dp),
+            ) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text("MOSAIC QUEUE", color = MosaicPalette.Cyan, fontSize = 9.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.3.sp)
+                        Text("Your playback, in order", color = MosaicPalette.TextPrimary, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                    }
+                    Spacer(Modifier.weight(1f))
+                    Text("$queueCount ITEMS", color = MosaicPalette.TextMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold, letterSpacing = .8.sp)
+                }
+                queueRows.forEach { (index, queuedItem) ->
+                    val isCurrent = index == currentQueueIndex
+                    Surface(
+                        onClick = { controller?.seekTo(index, 0L); controller?.play() },
+                        color = if (isCurrent) MosaicPalette.SurfaceRaised else Color.Transparent,
+                        shape = RoundedCornerShape(12.dp),
+                        border = if (isCurrent) androidx.compose.foundation.BorderStroke(1.dp, MosaicPalette.Cyan.copy(alpha = .28f)) else null,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Row(Modifier.padding(horizontal = 10.dp, vertical = 9.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                when {
+                                    isCurrent -> "NOW"
+                                    currentQueueIndex < 0 && index == 0 -> "READY"
+                                    index > currentQueueIndex -> "NEXT"
+                                    else -> "PAST"
+                                },
+                                color = if (isCurrent) MosaicPalette.Cyan else MosaicPalette.TextMuted,
+                                fontSize = 7.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = .7.sp,
+                                modifier = Modifier.width(38.dp),
+                            )
+                            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                                Text(
+                                    queuedItem.mediaMetadata.title?.toString()?.takeIf(String::isNotBlank) ?: "Untitled media",
+                                    color = MosaicPalette.TextPrimary,
+                                    fontSize = 10.sp,
+                                    fontWeight = if (isCurrent) FontWeight.Bold else FontWeight.Medium,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                                Text(
+                                    queuedItem.mediaMetadata.artist?.toString()?.takeIf(String::isNotBlank)
+                                        ?: queuedItem.localConfiguration?.uri?.host.orEmpty().ifBlank { "MOSAIC media" },
+                                    color = MosaicPalette.TextMuted,
+                                    fontSize = 8.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                )
+                            }
+                            if (isCurrent) Icon(Icons.Default.MusicNote, contentDescription = "Current queue item", tint = MosaicPalette.Cyan, modifier = Modifier.size(16.dp))
+                        }
+                    }
+                }
+                if (queueCount > queueRows.size) {
+                    Text("Showing the current item and nearby tracks", color = MosaicPalette.TextMuted, fontSize = 8.sp)
+                }
+            }
+            Spacer(Modifier.height(22.dp))
+        } else {
+            Spacer(Modifier.height(22.dp))
+        }
         StreamSourcePanel(onPlayStream = onPlayStream)
         Spacer(Modifier.height(18.dp))
         PodcastFeedPanel(

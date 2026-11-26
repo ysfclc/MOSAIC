@@ -6,6 +6,7 @@ import android.os.Looper
 import android.webkit.WebChromeClient
 import android.webkit.WebResourceRequest
 import android.webkit.WebResourceResponse
+import android.webkit.WebSettings
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.activity.compose.BackHandler
@@ -82,14 +83,35 @@ fun BrowserScreen(
     val webView = remember(context) {
         WebView(context).apply {
             settings.javaScriptEnabled = true
+            settings.javaScriptCanOpenWindowsAutomatically = false
             settings.domStorageEnabled = true
             settings.mediaPlaybackRequiresUserGesture = true
+            settings.mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
+            settings.safeBrowsingEnabled = true
+            settings.setSupportMultipleWindows(false)
             settings.allowFileAccess = false
             settings.allowContentAccess = false
+            settings.allowFileAccessFromFileURLs = false
+            settings.allowUniversalAccessFromFileURLs = false
             webViewClient = object : WebViewClient() {
+                override fun shouldOverrideUrlLoading(view: WebView, request: WebResourceRequest): Boolean =
+                    !BrowserNavigationPolicy.isAllowedNavigation(request.url.toString())
+
+                override fun onReceivedSslError(
+                    view: WebView,
+                    handler: android.webkit.SslErrorHandler,
+                    error: android.net.http.SslError,
+                ) {
+                    handler.cancel()
+                }
+
                 override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
-                    if (!shieldRef.get() || !request.url.scheme.orEmpty().startsWith("http")) return null
-                    if (!AdBlockPolicy.shouldBlock(request.url.toString(), topHostRef.get())) return null
+                    val scheme = request.url.scheme.orEmpty()
+                    if (!shieldRef.get() || (!scheme.equals("http", true) && !scheme.equals("https", true))) return null
+                    val referrerUrl = request.requestHeaders.entries
+                        .firstOrNull { it.key.equals("Referer", ignoreCase = true) }
+                        ?.value
+                    if (!AdBlockPolicy.shouldBlock(request.url.toString(), topHostRef.get(), referrerUrl)) return null
                     mainHandler.post { blockedRequests += 1 }
                     return WebResourceResponse("text/plain", "utf-8", ByteArrayInputStream(ByteArray(0)))
                 }
@@ -191,8 +213,11 @@ fun BrowserScreen(
             Column(modifier = Modifier.weight(1f)) {
                 Text("MOSAIC BROWSER", color = MosaicPalette.TextPrimary, fontSize = 16.sp)
                 Text(
-                    if (AdBlockPolicy.isProtectedProviderHost(pageHost)) "PROVIDER PLAYER · FILTER EXEMPT"
-                    else "AD/TRACKER FILTER · " + if (shieldEnabled) "ON" else "OFF",
+                    when {
+                        !shieldEnabled -> "AD/TRACKER FILTER · OFF"
+                        AdBlockPolicy.isProviderPage(pageHost) -> "SOURCE-AWARE FILTER · PROVIDER"
+                        else -> "AD/TRACKER FILTER · ON"
+                    },
                     color = MosaicPalette.Cyan,
                     fontSize = 9.sp,
                     letterSpacing = 1.sp,
@@ -286,7 +311,7 @@ fun BrowserScreen(
             if (loadError != null) Text("Load error", color = Color(0xFFFF9C9C), fontSize = 9.sp)
         }
         Text(
-            "Provider pages (including YouTube and Spotify) are deliberately exempt. This shield is not a universal or system-wide ad blocker.",
+            "Provider pages are filtered too. YouTube player-dependent Google ad infrastructure remains temporarily allowlisted; unrelated ad/tracker hosts are still blocked. This is not a universal or system-wide ad blocker.",
             color = MosaicPalette.TextMuted,
             fontSize = 9.sp,
             lineHeight = 13.sp,

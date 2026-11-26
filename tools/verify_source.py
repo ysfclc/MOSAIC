@@ -39,6 +39,7 @@ ad_skip_service = (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/browser/AdSkip
 ad_skip_config = (ROOT / "app/src/main/res/xml/ad_skip_accessibility_service.xml").read_text(encoding="utf-8")
 ad_shield_service = (ROOT / "app/src/main/java/com/ysfclc/mosaic/adshield/AdShieldVpnService.kt").read_text(encoding="utf-8")
 workflow = ROOT / ".github/workflows/build-apk.yml"
+workflow_text = workflow.read_text(encoding="utf-8")
 checks = {
     "media playback foreground permission": "FOREGROUND_SERVICE_MEDIA_PLAYBACK" in manifest,
     "single MediaSessionService declaration": manifest.count("androidx.media3.session.MediaSessionService") == 1,
@@ -51,8 +52,10 @@ checks = {
     "explicit source capabilities": "class SourceCapabilities" in contract,
     "current architecture notes": (ROOT / "docs/ARCHITECTURE.md").is_file(),
     "workflow template included": workflow.is_file(),
-    "stable debug signing is configured in CI": "MOSAIC_DEBUG_KEYSTORE" in workflow.read_text(encoding="utf-8") and "700b857678b343aed93f7a7280e7d777df73c3f5f5e5024d94c119a4578079d0" in workflow.read_text(encoding="utf-8"),
-    "CI build version code is incremented": "mosaicVersionCode" in (ROOT / "app/build.gradle.kts").read_text(encoding="utf-8"),
+    "direct-source CI is validation-only": "needs.preflight.outputs.mode == 'direct'" in workflow_text.split("  direct-build:", 1)[1] and ":app:assembleDebug" not in workflow_text.split("  direct-build:", 1)[1] and "gh release create" not in workflow_text.split("  direct-build:", 1)[1] and "MOSAIC_DEBUG_KEYSTORE" not in workflow_text.split("  direct-build:", 1)[1],
+    "ZIP import remains safety-locked": "if: false" in workflow_text.split("  build:", 1)[1].split("  direct-build:", 1)[0],
+    "workflow token is read-only": "contents: read" in workflow_text,
+    "version code remains configurable for a controlled release": "mosaicVersionCode" in (ROOT / "app/build.gradle.kts").read_text(encoding="utf-8"),
     "browser has network permission for WebView": "android.permission.INTERNET" in manifest and "WebView(context)" in browser,
     "browser ad-filter policy is present": "object AdBlockPolicy" in (ROOT / "app/src/main/java/com/ysfclc/mosaic/ui/browser/AdBlockPolicy.kt").read_text(encoding="utf-8"),
     "external media controls require notification listener permission": "android.permission.BIND_NOTIFICATION_LISTENER_SERVICE" in manifest,

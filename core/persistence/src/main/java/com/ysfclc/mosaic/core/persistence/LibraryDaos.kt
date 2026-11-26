@@ -1,0 +1,167 @@
+package com.ysfclc.mosaic.core.persistence
+
+import androidx.room.Dao
+import androidx.room.Insert
+import androidx.room.OnConflictStrategy
+import androidx.room.Query
+import androidx.room.Transaction
+import androidx.room.Upsert
+import kotlinx.coroutines.flow.Flow
+
+@Dao
+interface MediaItemDao {
+    @Upsert
+    suspend fun upsert(item: MediaItemEntity)
+
+    @Upsert
+    suspend fun upsertAll(items: List<MediaItemEntity>)
+
+    @Query("SELECT * FROM media_items WHERE mediaId = :mediaId LIMIT 1")
+    suspend fun findById(mediaId: String): MediaItemEntity?
+
+    @Query("SELECT * FROM media_items WHERE isHidden = 0 AND availability = 'AVAILABLE' ORDER BY title COLLATE NOCASE ASC")
+    fun observeVisible(): Flow<List<MediaItemEntity>>
+
+    @Transaction
+    @Query("SELECT * FROM media_items WHERE isHidden = 0 AND availability = 'AVAILABLE' ORDER BY title COLLATE NOCASE ASC")
+    fun observeVisibleWithLocations(): Flow<List<MediaItemWithLocations>>
+
+    @Query("SELECT * FROM media_items WHERE sourceId = :sourceId AND sourceItemId IN (:sourceItemIds)")
+    suspend fun findBySourceItems(sourceId: String, sourceItemIds: List<String>): List<MediaItemEntity>
+
+    @Query("SELECT * FROM media_items WHERE isBookmarked = 1 AND isHidden = 0 AND availability = 'AVAILABLE' ORDER BY title COLLATE NOCASE ASC")
+    fun observeBookmarks(): Flow<List<MediaItemEntity>>
+
+    @Query("UPDATE media_items SET resumePositionMs = :positionMs, lastPlayedAtEpochMs = :playedAtEpochMs, updatedAtEpochMs = :playedAtEpochMs WHERE mediaId = :mediaId")
+    suspend fun updatePlaybackState(mediaId: String, positionMs: Long, playedAtEpochMs: Long)
+
+    @Query("UPDATE media_items SET availability = :availability, updatedAtEpochMs = :updatedAtEpochMs WHERE mediaId = :mediaId")
+    suspend fun updateAvailability(mediaId: String, availability: String, updatedAtEpochMs: Long)
+
+    @Query("UPDATE media_items SET isBookmarked = :bookmarked, updatedAtEpochMs = :updatedAtEpochMs WHERE mediaId = :mediaId")
+    suspend fun updateBookmark(mediaId: String, bookmarked: Boolean, updatedAtEpochMs: Long)
+
+    @Query("UPDATE media_items SET availability = 'MISSING', updatedAtEpochMs = :updatedAtEpochMs WHERE sourceId = :sourceId")
+    suspend fun markAllMissing(sourceId: String, updatedAtEpochMs: Long)
+}
+
+@Dao
+interface MediaLocationDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsert(location: MediaLocationEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun upsertAll(locations: List<MediaLocationEntity>)
+
+    @Query("SELECT * FROM media_locations WHERE mediaId = :mediaId ORDER BY role ASC")
+    suspend fun locationsFor(mediaId: String): List<MediaLocationEntity>
+
+    @Query("SELECT * FROM media_locations WHERE mediaId IN (:mediaIds)")
+    suspend fun locationsForMediaIds(mediaIds: List<String>): List<MediaLocationEntity>
+
+    @Query("DELETE FROM media_locations WHERE mediaId = :mediaId")
+    suspend fun clearForMedia(mediaId: String)
+
+    @Query("DELETE FROM media_locations WHERE mediaId IN (SELECT mediaId FROM media_items WHERE sourceId = :sourceId AND availability = 'MISSING')")
+    suspend fun clearForMissingSourceItems(sourceId: String)
+
+    @Query("DELETE FROM media_locations WHERE sourceId = :sourceId")
+    suspend fun clearForSource(sourceId: String)
+
+    @Query("UPDATE media_locations SET availability = :availability, lastVerifiedAtEpochMs = :verifiedAtEpochMs WHERE locationId = :locationId")
+    suspend fun updateAvailability(locationId: String, availability: String, verifiedAtEpochMs: Long)
+}
+
+@Dao
+interface MediaCollectionDao {
+    @Upsert
+    suspend fun upsert(collection: MediaCollectionEntity)
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun addItem(membership: MediaCollectionItemEntity)
+
+    @Query("SELECT * FROM media_collections ORDER BY sortOrder ASC, name COLLATE NOCASE ASC")
+    fun observeCollections(): Flow<List<MediaCollectionEntity>>
+
+    @Query("SELECT * FROM media_collection_items WHERE collectionId = :collectionId ORDER BY sortOrder ASC, addedAtEpochMs ASC")
+    suspend fun itemsInCollection(collectionId: String): List<MediaCollectionItemEntity>
+
+    @Query("DELETE FROM media_collection_items WHERE collectionId = :collectionId AND mediaId = :mediaId")
+    suspend fun removeItem(collectionId: String, mediaId: String)
+
+    @Query("DELETE FROM media_collections WHERE collectionId = :collectionId")
+    suspend fun deleteCollection(collectionId: String)
+}
+
+@Dao
+interface PlaybackHistoryDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun record(event: PlaybackHistoryEntity)
+
+    @Query("SELECT * FROM playback_history WHERE eventId = :eventId LIMIT 1")
+    suspend fun findByEventId(eventId: String): PlaybackHistoryEntity?
+
+    @Query("SELECT * FROM playback_history ORDER BY playedAtEpochMs DESC LIMIT :limit")
+    suspend fun recent(limit: Int): List<PlaybackHistoryEntity>
+
+    @Query("DELETE FROM playback_history")
+    suspend fun clearAll()
+
+    @Query("DELETE FROM playback_history WHERE playedAtEpochMs < :cutoffEpochMs")
+    suspend fun pruneBefore(cutoffEpochMs: Long)
+}
+
+@Dao
+interface PlaybackQueueDao {
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun saveState(state: PlaybackQueueStateEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertEntries(entries: List<PlaybackQueueEntryEntity>)
+
+    @Query("DELETE FROM playback_queue_entries WHERE queueId = :queueId")
+    suspend fun clearEntries(queueId: String)
+
+    @Query("DELETE FROM playback_queue_state WHERE queueId = :queueId")
+    suspend fun clearState(queueId: String)
+
+    @Query("SELECT * FROM playback_queue_state WHERE queueId = :queueId LIMIT 1")
+    suspend fun state(queueId: String): PlaybackQueueStateEntity?
+
+    @Query("SELECT * FROM playback_queue_entries WHERE queueId = :queueId ORDER BY position ASC")
+    suspend fun entries(queueId: String): List<PlaybackQueueEntryEntity>
+
+    @Transaction
+    suspend fun replaceQueue(state: PlaybackQueueStateEntity, entries: List<PlaybackQueueEntryEntity>) {
+        saveState(state)
+        clearEntries(state.queueId)
+        if (entries.isNotEmpty()) insertEntries(entries)
+    }
+
+    @Transaction
+    suspend fun clearQueue(queueId: String) {
+        clearEntries(queueId)
+        clearState(queueId)
+    }
+}
+
+@Dao
+interface PlaybackTimerDao {
+    @Upsert
+    suspend fun save(state: PlaybackTimerStateEntity)
+
+    @Query("SELECT * FROM playback_timer_state WHERE timerId = :timerId LIMIT 1")
+    suspend fun state(timerId: String): PlaybackTimerStateEntity?
+
+    @Query("DELETE FROM playback_timer_state WHERE timerId = :timerId")
+    suspend fun clear(timerId: String)
+}
+
+@Dao
+interface MigrationMarkerDao {
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun markCompleted(marker: MigrationMarkerEntity)
+
+    @Query("SELECT * FROM migration_markers WHERE markerKey = :markerKey LIMIT 1")
+    suspend fun find(markerKey: String): MigrationMarkerEntity?
+}
