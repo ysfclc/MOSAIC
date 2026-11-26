@@ -331,7 +331,7 @@ class ProjectContractTests(unittest.TestCase):
         self.assertNotIn("signingConfig", release)
         workflow = (ROOT / ".github/workflows/signing-migration.yml").read_text(encoding="utf-8")
         self.assertIn(":app:assembleRelease", workflow)
-        self.assertIn("apksigner sign", workflow)
+        self.assertIn('"$APKSIGNER" sign', workflow)
 
 if __name__ == "__main__":
     unittest.main()
