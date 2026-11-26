@@ -1,3 +1,15 @@
+## 2026-11-26 — Consolidate development into main; WebView hardening
+
+- Merged [PR #2](https://github.com/ysfclc/MOSAIC/pull/2) into `main`; merge commit `6a0e830b3fbb14ef18a1d8dde486ace8fc7a9887`.
+- Promoted the current Room/database development line, including Room v1 persistence, safe legacy preference mirroring, source-neutral Library persistence, MediaStore change observation and database reopen acceptance coverage. Older media-library, MediaStore delta-indexing, Room schema check-in and Room v1 contract branches are ancestors of the merged line.
+- The independent continuity branch held only two older documentation commits in `docs/STATE.md` and `docs/TASKS.md`; those were superseded by the current ledger/task board and were not allowed to roll back current status.
+- Added WebView navigation hardening: allow only HTTP(S) URLs with hosts, block mixed content, enable Safe Browsing, disable automatic JS pop-ups/multiple windows and file/content/universal file access, and cancel TLS certificate errors. Added scheme regression tests and source contract coverage.
+- Validation-only CI [#364](https://github.com/ysfclc/MOSAIC/actions/runs/45857568692) passed source verification, Python contract tests, 67 Android unit tests across 16 suites (0 failures, 0 errors, 0 skipped), lint and read-only Room v1 schema verification (9 tables). The Room close/reopen test passed under Robolectric; no physical Android process-death test is claimed.
+- Lint still reports 34 warnings and 1 hint across 10 issue IDs, including JavaScript-enabled WebView, exported Media3 service, backup extraction rules, target SDK/toolchain/dependency freshness, obsolete SDK guards and KTX style suggestions. This is not a lint-clean release gate.
+- Reports artifact: [MOSAIC-Direct-Build-Reports](https://github.com/ysfclc/MOSAIC/actions/runs/45857568692/artifacts/15136469137), ZIP SHA-256 `1a9ba8dd70ee4fe85558f2b95f0911b1ff89f2e3fc777ebfcf50e4f7d7b39d97`, expires 2026-12-03.
+- No APK was assembled or published. The publicly tracked development signer remains compromised; the signer migration and in-place Redmi Android 14 update test are still blockers.
+- The Vercel Preview deployment attached to PR #2 was rate-limited by the account's free daily deployment quota; it did not build an APK and does not change the successful GitHub Actions validation result.
+
 ## 2026-11-26 — Validation-only CI #356 and security gate evidence
 
 - Commit: `b17999744d4933ed8cbdaa59e01a6679e84b994d`.
