@@ -343,3 +343,11 @@
 - Lint passed with 35 warnings and 1 hint across 10 issue IDs; the report includes security review items for WebView JavaScript, exported service permission policy and Android backup/device-transfer rules. Zero-warning lint has not been achieved.
 - Report artifact [MOSAIC-Direct-Build-Reports](https://github.com/ysfclc/MOSAIC/actions/runs/45890938598/artifacts/15152115702), SHA-256 `dd391bae914c1f8602262b32f42d3267e22c34d2c7044f1c6436df112ea6f659`. This was validation-only; no APK was assembled, signed, uploaded or published.
 - Manual signing-candidate workflow remains gated on the four repository Actions secrets and subsequent Android 14 install-over-existing-app/data-preservation acceptance.
+
+
+## 2026-11-26 — Signing migration workflow merged to main
+
+- Merged PR [#3](https://github.com/ysfclc/MOSAIC/pull/3) as commit `a5b7907f37446eb5efaed87d7163e858afbf95a9` using squash merge.
+- Main post-merge validation-only run [#387](https://github.com/ysfclc/MOSAIC/actions/runs/45891776407) passed source verification, Python contract tests, 67 Android unit tests across 16 suites (0 failures, 0 errors, 0 skipped), lint and read-only Room v1 schema check (9 tables).
+- Main report artifact [MOSAIC-Direct-Build-Reports](https://github.com/ysfclc/MOSAIC/actions/runs/45891776407/artifacts/15151523380), SHA-256 `84051a514803c9fec82a30997e98fcfd76f954acc49a0d4c634928d205ecddb2`. Lint remains at 35 warnings and 1 hint across 10 issue IDs. The validation-only workflow produced no APK.
+- Manual migration candidate workflow is now present on main and still restricted to `security/signing-lineage-migration`. It awaits four repository Actions secrets; no candidate has been built or published.
