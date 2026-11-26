@@ -69,3 +69,14 @@ object AdBlockPolicy {
     private fun matchesDomain(host: String, domain: String): Boolean =
         host == domain || host.endsWith(".$domain")
 }
+
+
+/** Allows only network navigations; custom schemes stay outside the WebView trust boundary. */
+object BrowserNavigationPolicy {
+    fun isAllowedNavigation(url: String): Boolean {
+        val uri = runCatching { URI(url) }.getOrNull() ?: return false
+        val isNetworkScheme = uri.scheme.equals("http", ignoreCase = true) ||
+            uri.scheme.equals("https", ignoreCase = true)
+        return isNetworkScheme && !uri.host.isNullOrBlank()
+    }
+}
